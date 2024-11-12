@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+    <div class="homepage">
+        <h2>Welcome to Pick Up Volleyball PDX!</h2>
+        <p>Join the community, find events, and play volleyball!</p>
+
+        <div id="about" class="section">
+            {% set embedded = True %}
+            {% include "about.html" %}
+        </div>
+
+        <div id="events" class="section">
+            {% set embedded = True %}
+            {% include "events.html" %}
+        </div>
+
+        <div class="subscriptions">
+            {% set embedded = True %}
+            {% include "subscriptions.html" %}
+        </div>
+
+        <div id="hosting" class="section">
+            {% set embedded = True %}
+            {% include "hosting.html" %}
+        </div>
+
+        <div class="faq">
+            {% set embedded = True %}
+            {% include "faq.html" %}
+        </div>
+
+        <div id="contactus" class="section">
+            {% set embedded = True %}
+            {% include "contactus.html" %}
+        </div>
+
+    </div>
+
+    <script>
+    // Highlight the active link based on scroll position
+    document.addEventListener("DOMContentLoaded", function () {
+        const sections = document.querySelectorAll(".section");
+        const navLinks = document.querySelectorAll(".top-bar nav a");
+        const footerLinks = document.querySelectorAll(".footer-content a");
+
+        function highlightLink() {
+            let index = sections.length;
+
+            while (--index && window.scrollY + 50 < sections[index].offsetTop) {}
+
+            // Clear all active classes from both header and footer links
+            navLinks.forEach((link) => link.classList.remove("active"));
+            footerLinks.forEach((link) => link.classList.remove("active"));
+
+            // Determine which links to activate based on the current section
+            if (sections[index].id === "faq" || sections[index].id === "contactus") {
+                footerLinks.forEach((link) => {
+                    if (link.getAttribute("href") === `#${sections[index].id}`) {
+                        link.classList.add("active");
+                    }
+                });
+            } else {
+                navLinks.forEach((link) => {
+                    if (link.getAttribute("href") === `#${sections[index].id}`) {
+                        link.classList.add("active");
+                    }
+                });
+            }
+        }
+
+        // Listen for scroll events
+        window.addEventListener("scroll", highlightLink);
+    });
+    </script>
+
+{% endblock %}

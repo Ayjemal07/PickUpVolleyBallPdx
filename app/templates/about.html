@@ -1,0 +1,31 @@
+{% if not embedded %}
+    {% extends "base.html" %}
+    {% block title %} ABOUT US {% endblock %}
+{% endif %}
+
+
+{% block content %}
+<section class="about-section">
+    <div class="about-container">
+        <!-- Left Side: Large Logo Image -->
+        <div class="about-logo">
+            <img src="{{ url_for('static', filename='images/Big-Logo.jpeg') }}" alt="Pick Up Volleyball PDX Logo">
+        </div>
+        
+        <!-- Right Side: Text Content -->
+        <div class="about-content">
+            <h1>About Us</h1>
+            <p>This group was founded in spring 2021 on the heels of COVID-19 with the goal of providing a welcoming community when people needed it.</p>
+
+            <blockquote>
+                The original inclusion statement has remained the same through the years: 
+                <strong>“Everyone is welcome at these events. The ONLY exception are those opposed to playing with people of all race, religion, gender, orientation, background, age, and skill level.”</strong>
+            </blockquote>
+
+            <p>The culture of inclusivity is one of the things that sets this group apart. You can expect to be welcomed and supported by your fellow players.</p>
+
+            <p><a href="{{ url_for('main.events') }}" class="event-link">Check out our list of events to get started!</a></p>
+        </div>
+    </div>
+</section>
+{% endblock %}

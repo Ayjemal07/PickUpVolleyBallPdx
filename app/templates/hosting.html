@@ -1,0 +1,30 @@
+{% if not embedded %}
+    {% extends "base.html" %}
+    {% block title %}Hosting | Pick Up Volleyball PDX{% endblock %}
+{% endif %}
+
+
+
+{% block content %}
+<section class="hosting-section">
+    <div class="hosting-container">
+        <!-- Left Side: Large Logo Image -->
+        <div class="hosting-logo">
+            <img src="{{ url_for('static', filename='images/Big-Logo.jpeg') }}" alt="Pick Up Volleyball PDX Logo">
+        </div>
+
+        <!-- Right Side: Text Content -->
+        <div class="hosting-content">
+            <h1>Want to Host Events?</h1>
+            <p>Want to host events? You will be responsible for keeping events flowing, answering questions, and embodying our group's culture of inclusivity and growth. Plus, free volleyball and some cool gear!</p>
+
+            <p>(And don’t worry, we will have someone show you the ropes before you run an event.)</p>
+
+            <p>If you think you’d be a good fit for the role, let’s talk!</p>
+
+            <p>Email: <a href="mailto:portlandcourtvolleyball@gmail.com">portlandcourtvolleyball@gmail.com</a></p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

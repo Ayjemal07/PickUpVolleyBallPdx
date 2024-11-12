@@ -1,0 +1,65 @@
+{% if not embedded %}
+    {% extends "base.html" %}
+    {% block title %}Subscriptions - Pick Up Volleyball PDX{% endblock %}
+{% endif %}
+
+
+{% block content %}
+
+<div class="full-width-background-subscriptions">
+    <section class="subscriptions">
+        <h1>Join the Fun!</h1>
+        <p class="intro-text">Whether you want to play a little, a lot, or have a volleyball IV plugged straight into your arm, we’ve got you covered.</p>
+
+        <div class="subscription-plans">
+            <div class="plan" id="single">
+                <h2>Single Sign Up</h2>
+                <p class="price">$15</p>
+                <p class="details">One-time event sign-up. Perfect for the casual player!</p>
+                <button class="btn-signup">Sign Up</button>
+            </div>
+
+            <div class="plan" id="tier1">
+                <h2>Tier 1</h2>
+                <p class="price">$20</p>
+                <p class="details">2 events ($10/ea.)</p>
+                <button class="btn-signup">Sign Up</button>
+            </div>
+
+            <div class="plan" id="tier2">
+                <h2>Tier 2</h2>
+                <p class="price">$35</p>
+                <p class="details">4 events ($8.75/ea.)</p>
+                <button class="btn-signup">Sign Up</button>
+            </div>
+
+            <div class="plan" id="tier3">
+                <h2>Tier 3</h2>
+                <p class="price">$60</p>
+                <p class="details">8 events ($7.5/ea.)</p>
+                <button class="btn-signup">Sign Up</button>
+            </div>
+
+            <div class="plan" id="tier4">
+                <h2>Tier 4</h2>
+                <p class="price">$100</p>
+                <p class="details">Unlimited events (depends how you use it!)</p>
+                <button class="btn-signup">Sign Up</button>
+            </div>
+        </div>
+
+        <p class="note">Subscriptions renew monthly, event credits do not roll over each month.</p>
+        <p class="discount">Every new user automatically gets half off their first sign-up (applied at checkout)!</p>
+    </section>
+</div>
+
+{% endblock %}
+
+<script>
+    // Example function for handling sign-up actions (could be tied to real forms later)
+    document.querySelectorAll('.btn-signup').forEach(button => {
+        button.addEventListener('click', () => {
+            alert('Sign up process initiated! (This is a placeholder)');
+        });
+    });
+</script>
