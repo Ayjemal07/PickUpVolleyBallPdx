@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Events Calendar{% endblock %}
+
+{% block content %}
+    <div id="calendar"></div>
+
+
+    <script src="{{ url_for('static', filename='js/events.js') }}"></script>
+
+{% endblock %}

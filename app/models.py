@@ -23,6 +23,8 @@ from flask_login import LoginManager
 from flask_marshmallow import Marshmallow 
 from flask_sqlalchemy import SQLAlchemy
 import secrets
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -66,3 +68,19 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'User {self.email} has been added to the database'
     
+
+
+
+class Event(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(500), nullable=False)
+    location = db.Column(db.String(100), nullable=False)
+    date_time = db.Column(db.DateTime, nullable=False)
+    max_capacity = db.Column(db.Integer, nullable=False, default=28)
+    rsvp_count = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(20), default='draft')  # 'draft', 'published', 'cancelled'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Event {self.name}>'

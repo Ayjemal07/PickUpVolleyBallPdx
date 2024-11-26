@@ -48,6 +48,10 @@ body {
   }
 
 
+  main{
+    background-color: #EBE9E3;
+  }
+
 
   /* Footer */
 .footer-content {
@@ -72,6 +76,7 @@ header, footer {
 
 .homepage{
   background-color: #EBE9E3;
+  padding: 5px;
 }
 
 .homepage h2 {
@@ -84,7 +89,119 @@ header, footer {
 .homepage p {
   font-size: 1.2rem;
   color: #333;
+  background-color: #EBE9E3;
 }
+
+/* Card container style */
+.card-container {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2rem; /* Use rem for consistent gap, relative to font size */
+  margin: 0;
+  padding: 0;
+}
+
+/* Styling for each card */
+.card {
+  position: relative;
+  width: 30%; /* Default card width for larger screens (30% of the container) */
+  height: 18rem; /* Use rem for consistent height */
+  display: block;
+  overflow: hidden;
+  border-radius: 1rem; /* Optional: round the corners with rem */
+}
+
+/* Card link styling */
+.card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit; /* Remove default link styles */
+  height: 100%;
+  position: relative;
+}
+
+/* Image styles */
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensures the image covers the entire area */
+}
+
+/* Card content styling */
+.card-content {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  color: #7DB3B0;
+  z-index: 2;
+  padding: 1rem;
+  background: white;
+  border-radius: 0.5rem;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 2.2rem; 
+  font-weight: bold;
+}
+
+/* Overlay styling */
+.card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #7DB3B0;
+  color: white;
+  padding: 1rem;
+  display: none; /* Hidden by default */
+  z-index: 2;
+}
+
+/* Show overlay when hovering over the card */
+.card:hover .card-overlay {
+  display: block;
+  opacity: 1;
+}
+
+.overlay-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  color: #7DB3B0; /* Match button text color to overlay color */
+  text-decoration: none;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.overlay-button:hover {
+  background-color: #7DB3B0;
+  color: white;
+}
+
+/* Media Query for Small Screens */
+@media (max-width: 768px) {
+  .card {
+    width: 100%; /* On smaller screens, make cards full width */
+    height: 15rem; /* Adjust the height if necessary */
+  }
+
+  .card-container {
+    flex-direction: column; /* Stack the cards vertically */
+    align-items: center; /* Center the cards horizontally */
+  }
+}
+
+/* Optional: For very large screens (like desktops or TVs) */
+@media (min-width: 1200px) {
+  .card {
+    width: 22%; /* Reduce the card width for very large screens */
+  }
+}
+
+
 
 
 /* About Section Layout */
@@ -475,4 +592,84 @@ html {
       width: 90%;
       padding: 15px;
   }
+}
+
+/* Events Styling Starts here */
+.events-page {
+  text-align: center;
+}
+
+.calendar-widget {
+  margin: 2rem auto;
+  width: 80%;
+  max-width: 600px;
+}
+
+.calendar-image {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.event-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.event-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 250px;
+  padding: 1rem;
+  background-color: #EBE9E3;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.event-card img {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  height: 150px;
+}
+
+.event-info {
+  text-align: left;
+  padding: 1rem 0;
+}
+
+.rsvp-button {
+  background-color: #7DB3B0;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.rsvp-button:hover {
+  background-color: #5e938d;
+}
+
+.full, .limited {
+  color: red;
+  font-weight: bold;
+}
+
+.admin-controls {
+  margin-top: 1rem;
+}
+
+.edit-button, .delete-button {
+  background-color: #B18C76;
+  color: white;
+  padding: 0.3rem 0.7rem;
+  border: none;
+  border-radius: 5px;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background-color: #8a6a54;
 }

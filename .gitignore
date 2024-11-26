@@ -5,7 +5,6 @@ __pycache__/
 # Virtual environment directories
 env/
 venv/
-openai-env/
 
 # Distribution / packaging
 build/
