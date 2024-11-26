@@ -1,4 +1,5 @@
 from flask import Flask
+import os
 # from flask_sqlalchemy import SQLAlchemy
 # from flask_login import LoginManager
 
@@ -11,7 +12,7 @@ def create_app():
 
     # Configuration
     app.config.from_object('config.Config')
-
+    app.config['SECRET_KEY'] = os.urandom(24).hex()
     # # Initialize extensions
     # db.init_app(app)
     # login_manager.init_app(app)
