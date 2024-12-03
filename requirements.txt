@@ -9,3 +9,5 @@ flask-marshmallow
 email_validator
 marshmallow-sqlalchemy
 python-dotenv
+Flask-Migrate
+mysqlclient

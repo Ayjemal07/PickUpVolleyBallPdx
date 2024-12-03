@@ -5,7 +5,22 @@
 {% block content %}
     <div id="calendar"></div>
 
+    <!-- Modal for Creating Event -->
+    <!-- Create Event Modal -->
+    <div id="createEventModal" class="modal">
+        <div class="modal-content">
+            <span class="closeModal">&times;</span> <!-- Close button -->
+            <h2>Create Event</h2>
+            <form id="createEventForm">
+                <label for="eventDate">Date:</label>
+                <input type="date" id="eventDate" name="eventDate" required>
+                <!-- Add other form fields like event name, description, etc. -->
+                <button type="submit">Create Event</button>
+            </form>
+        </div>
+    </div>
+
+
 
     <script src="{{ url_for('static', filename='js/events.js') }}"></script>
-
 {% endblock %}

@@ -1,9 +1,6 @@
 #Models are used for creating classes that are used repeatedly 
 # to populate databases.
 
-# Import db from __init__.py
-# from . import db
-
 #UUID stands for universally unique identifiers. 
 #These are great for creating independent items that won't clash with other items
 import uuid 
@@ -15,34 +12,32 @@ from datetime import datetime
 #Werkzeug is a security package. This allows us to make the password data that we store in our 
 #database secret, so that if we log in to look at our database, 
 #we can't see what users saved as their password!
-import uuid 
-from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from flask_login import LoginManager
-from flask_marshmallow import Marshmallow 
-from flask_sqlalchemy import SQLAlchemy
 import secrets
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from enum import Enum
+
 
 db = SQLAlchemy()
 
 # set variables for class instantiation
 login_manager = LoginManager()
-ma = Marshmallow()
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(user_id)
 
 class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    first_name=db.Column(db.String(150), unique=True, nullable=False)
-    last_name=db.Column(db.String(150), unique=True, nullable=False)
+    id = db.Column(db.String(36), primary_key=True)  # UUID is 36 characters long
+    first_name=db.Column(db.String(150), nullable=False)
+    last_name=db.Column(db.String(150), nullable=False)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
+    token = db.Column(db.String(50))
+    g_auth_verify = db.Column(db.Boolean, default=False)
 
 
     def __init__(self, email, first_name, last_name, password='', token='', g_auth_verify=False):
@@ -84,3 +79,5 @@ class Event(db.Model):
     
     def __repr__(self):
         return f'<Event {self.name}>'
+    
+

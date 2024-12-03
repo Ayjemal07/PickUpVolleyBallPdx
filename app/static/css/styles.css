@@ -227,9 +227,8 @@ header, footer {
 }
 
 .about-logo img {
-  max-width: 100%;
   height: auto;
-  width: 80%; /* Adjust as necessary for the desired logo size */
+  width: 100%; /* Adjust as necessary for the desired logo size */
 }
 
 .about-content {
@@ -251,62 +250,106 @@ header, footer {
   }
 
   .about-logo img {
-      width: 60%; /* Adjust for smaller screens if necessary */
+      width: 100%; /* Adjust for smaller screens if necessary */
   }
 }
 
 
 
 /* Hosting Section Layout */
+
 .hosting-section {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  background-color: #EBE9E3;
-  padding: 40px 20px;
+  width: 100%;
+  background-color: #EBE9E3; /* Background for extra spacing */
+  padding: 0;
 }
 
 .hosting-container {
-  display: flex;
-  max-width: 1200px;
+  max-width: 100%;
+  margin: 0 auto;
+  position: relative;
+}
+
+.hosting-image-container {
+  position: relative;
   width: 100%;
 }
 
-.hosting-logo {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.hosting-logo img {
-  max-width: 100%;
+.hosting-image {
+  width: 100%;
   height: auto;
-  width: 80%; /* Adjust for logo size */
+  object-fit: cover;
 }
 
-.hosting-content {
-  flex: 2;
-  padding-left: 20px;
-  font-size: 1.1em;
+.hosting-text-bubble {
+  position: absolute;
+  font-weight: bold;
+  bottom: 20px; /* Position near the bottom */
+  left: 20px; /* Position near the left */
+  background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
+  border: 2px solid #7DB3B0; /* Teal border */
+  border-radius: 12px;
+  padding: 15px;
+  max-width: 100%; /* Restrict width for readability */
+  text-align: left;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-/* Responsive Design for Smaller Screens */
+.hosting-text-bubble h1 {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.hosting-text-bubble p {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.hosting-application-link {
+  display: inline-block;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #7DB3B0; /* Teal link */
+  text-decoration: none;
+  border-bottom: 2px solid #7DB3B0;
+  margin-top: 10px;
+}
+
+.hosting-application-link:hover {
+  color: #6aa8a1; /* Darker teal on hover */
+  border-bottom-color: #6aa8a1;
+}
+
+/* Mobile Responsiveness */
 @media (max-width: 768px) {
-  .hosting-container {
-      flex-direction: column;
-      align-items: center;
+  .hosting-image {
+    height: 100vh; /* Make the image full height on mobile */
   }
 
-  .hosting-content {
-      padding-left: 0;
-      text-align: center;
+  .hosting-text-bubble {
+    bottom: 19px; /* Adjust for smaller screens */
+    left: 6px;
+    width: 74%; /* Use most of the screen width */
+    padding: 8px;
   }
 
-  .hosting-logo img {
-      width: 60%; /* Adjust for smaller screens */
+  .hosting-text-bubble h1 {
+    font-size: 1.25rem;
+  }
+
+  .hosting-text-bubble p {
+    font-size: 0.9rem;
+  }
+
+  .hosting-application-link {
+    font-size: 0.95rem;
   }
 }
+
+
+
 
 
 
@@ -522,6 +565,62 @@ header, footer {
   color: #007BFF; /* Blue color for the discount message */
 }
 
+/* Specific styles for the promo bubble */
+/* General subscription plan styling */
+.plan {
+  background-color: #fff;
+  border: 2px solid #7DB3B0; /* Light teal border for the regular plans */
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  width: 100%;
+  max-width: 180px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.plan:hover {
+  transform: translateY(-10px); /* Hover effect */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Promo bubble specific styles */
+/* Promo bubble specific styles */
+.plan.promo {
+  background-color: #fff; /* White background for consistency */
+  border: 2px solid #7DB3B0; /* Same teal border as other tiers */
+  color: #333; /* Default text color */
+}
+
+.plan.promo .details {
+  color: #e6c4ec; /* Purple-pink color for the text */
+  font-size: 1.1rem; /* Same font size as the other plans */
+  font-weight: bold;
+  text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.3); /* Black text shadow to make the text pop */
+  -webkit-text-stroke: 0.5px black; /* Add black border around the text */
+  margin-bottom: 20px; /* Space below the text */
+  padding: 10px;
+}
+
+.plan.promo h2 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+/* Optional hover effect for the promo plan */
+.plan.promo:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); /* Hover shadow effect */
+}
+
+.plan.promo button {
+  display: none; /* No signup button for the promo plan */
+}
+
+
+
+
+
+
 
 
 .top-bar nav a.active,
@@ -595,81 +694,80 @@ html {
 }
 
 /* Events Styling Starts here */
-.events-page {
-  text-align: center;
+
+
+#calendar {
+  max-width: 800px; /* Limit calendar width on larger screens */
+  margin: 0 auto; /* Center the calendar */
+  padding: 10px;
 }
 
-.calendar-widget {
-  margin: 2rem auto;
-  width: 80%;
-  max-width: 600px;
+/* Adjust font sizes for smaller screens */
+.fc-toolbar h2 {
+  font-size: 1.25rem; /* Smaller title size */
+}
+.fc-daygrid-day-number {
+  font-size: 0.9rem; /* Smaller day numbers */
+}
+.fc-event {
+  font-size: 0.8em; /* Smaller event font size */
 }
 
-.calendar-image {
+
+/* Mobile view adjustments */
+@media (max-width: 768px) {
+  #calendar {
+    max-width: 100%; /* Full width for smaller screens */
+    padding: 5px;
+  }
+
+  /* Simplify the toolbar */
+  .fc-toolbar {
+    flex-wrap: wrap; /* Allow toolbar elements to wrap */
+    font-size: 0.8rem; /* Reduce toolbar font size */
+  }
+  .fc-toolbar .fc-toolbar-chunk {
+    margin-bottom: 5px; /* Add space between chunks */
+  }
+
+  /* Adjust event appearance */
+  .fc-event {
+    padding: 2px;
+    font-size: 0.7em; /* Smaller event font size */
+  }
+}
+
+
+/* Modal Styles */
+.modal {
+  display: none; /* Initially hidden */
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  border-radius: 8px;
-}
-
-.event-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
   justify-content: center;
+  align-items: center;
 }
 
-.event-card {
-  border: 1px solid #ddd;
+.modal.active {
+  display: flex; /* Show the modal when active */
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 20px;
   border-radius: 8px;
-  width: 250px;
-  padding: 1rem;
-  background-color: #EBE9E3;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.event-card img {
+  position: relative;
+  max-width: 400px;
   width: 100%;
-  border-radius: 8px;
-  object-fit: cover;
-  height: 150px;
 }
 
-.event-info {
-  text-align: left;
-  padding: 1rem 0;
-}
-
-.rsvp-button {
-  background-color: #7DB3B0;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
+.closeModal {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 30px;
   cursor: pointer;
-}
-
-.rsvp-button:hover {
-  background-color: #5e938d;
-}
-
-.full, .limited {
-  color: red;
-  font-weight: bold;
-}
-
-.admin-controls {
-  margin-top: 1rem;
-}
-
-.edit-button, .delete-button {
-  background-color: #B18C76;
-  color: white;
-  padding: 0.3rem 0.7rem;
-  border: none;
-  border-radius: 5px;
-  margin-right: 0.5rem;
-  cursor: pointer;
-}
-
-.delete-button:hover {
-  background-color: #8a6a54;
 }
