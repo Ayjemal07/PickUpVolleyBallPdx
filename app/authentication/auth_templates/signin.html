@@ -1,22 +1,86 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <div class="full-width-container">
-        <div class="form-background">
-            <h2>Sign In</h2>
-            <form action="{{ url_for('auth.signin') }}" method="POST" class="form-style">
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" required class="input-field">
+<div class="full-width-container">
+    <div class="form-background">
+        <h2>Sign In</h2>
+        <!-- Display Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div id="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }}">{{ message }}</div>
+                    {% endfor %}
                 </div>
-                <div class="form-group">
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required class="input-field">
-                </div>
-                <button type="submit" class="submit-btn">Sign In</button>
-            </form>
-            <br>
-            <p class="register-link">Don’t have an account? <a href="{{ url_for('auth.register') }}">Register here</a>.</p>
-        </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Sign-In Form -->
+        <form action="{{ url_for('auth.signin') }}" method="POST" class="form-style" id="signin-form">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required class="input-field" autocomplete="email" placeholder="Your email or username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required class="input-field" autocomplete="current-password" placeholder="Enter your password">
+            </div>
+            <button type="submit" class="submit-btn" id="signin-submit">Sign In</button>
+            <div id="spinner" class="spinner" style="display: none;"></div>
+        </form>
+        <br>
+        <p class="register-link">Don’t have an account? <a href="{{ url_for('auth.register') }}">Register here</a>.</p>
     </div>
+</div>
+
+<div id="welcome-popup" class="popup-container" style="display: none;">
+    <div class="popup-content">
+        <button class="close-btn" onclick="closePopup()">x</button>
+        <p>
+            <span>Hi, {{ first_name }}!</span>
+            <span>Welcome to Pickup Volleyball.</span>
+            <span>Explore volleyball events <a href="{{ url_for('main.events') }}">here</a>.</span>
+        </p>
+    </div>
+</div>
+
+
+<script>
+    document.getElementById("signin-form").addEventListener("submit", function (e) {
+        const submitButton = document.getElementById("signin-submit");
+        const spinner = document.getElementById("spinner");
+
+        // Disable the button and show spinner
+        submitButton.disabled = true;
+        spinner.style.display = "block";
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const firstName = "{{ first_name|default('') }}"; // Handle undefined first_name
+        const popup = document.getElementById("welcome-popup");
+
+        if (firstName.trim()) {
+            popup.style.display = "block";
+
+            // Add event listener for outside clicks
+            document.addEventListener("click", function (event) {
+                if (!popup.contains(event.target) && popup.style.display === "block") {
+                    closePopup();
+                }
+            });
+        }
+    });
+
+    function closePopup() {
+        const popup = document.getElementById("welcome-popup");
+        popup.style.display = "none";
+
+        // Only redirect if explicitly closed
+        setTimeout(() => {
+            window.location.href = "{{ url_for('main.home') }}";
+        }, 100);
+    }
+</script>
+
 {% endblock %}

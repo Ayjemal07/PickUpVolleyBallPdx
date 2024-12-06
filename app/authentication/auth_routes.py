@@ -1,41 +1,82 @@
 # app/authentication/routes.py
 
-
 from flask import Blueprint, render_template, redirect, url_for, flash
-from app.forms import UserLoginForm
+from app.forms import UserLoginForm, UserRegistrationForm
 from ..models import User, db
 from flask_login import login_user, logout_user, login_required
 
 auth = Blueprint('auth', __name__, template_folder='auth_templates')
 
-
-def create_user_from_form(form_data):
-    return User(
-        email=form_data.get('email'),
-        password=form_data.get('password'),
-        first_name=form_data.get('first_name'),
-        last_name=form_data.get('last_name'),
-        username=form_data.get('username')
-    )
-
 @auth.route('/signin', methods=['GET', 'POST'])
 def signin():
     form = UserLoginForm()
-    if form.validate_on_submit():
-        # Login logic here
-        return redirect(url_for('main.home'))
+    try:
+        if form.validate_on_submit():
+            email = form.email.data
+            password = form.password.data
+
+            print(f"Attempting login with Email: {email}, Password: {password}")
+
+            user = User.query.filter_by(email=email).first()
+
+            if user and user.check_password(password):
+                print(f"Found user: {user.email}")
+                login_user(user)
+                flash('Login successful!', 'success')
+
+                print(f"User {email} logged in successfully.")
+                return render_template('signin.html', form=form, first_name=user.first_name)
+            
+            else:
+                flash('Invalid email or password. ', 'error')
+                print(f"No user found with email: {email}")
+                return render_template('signin.html', form=form)
+    except Exception as e:
+        print(f"Error during login: {e}")
+        flash('An error occurred during login. Please try again later.', 'error')
+
     return render_template('signin.html', form=form)
 
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
-    form = UserLoginForm()
+    form = UserRegistrationForm()
+
     if form.validate_on_submit():
-        # Registration logic here
-        return redirect(url_for('auth.signin'))
+        if User.query.filter_by(email=form.email.data).first():
+            flash('Email already registered. Please log in.', 'error')
+            return redirect(url_for('auth.signin'))
+
+        # Create the user from the form data
+        user = User(
+            first_name=form.first_name.data,
+            last_name=form.last_name.data,
+            email=form.email.data
+        )
+        user.set_password(form.password.data)  # Hashes the password
+
+        # Add the user to the database and commit
+        db.session.add(user)
+        db.session.commit()
+
+        # Print for debugging purposes
+        print(f"Registering User: {user}")
+
+        # Automatically log the user in after registration
+        login_user(user)
+        flash('Account created successfully and you are now logged in!', 'success')
+        return render_template('register.html', form=form, first_name=user.first_name)
+
     return render_template('register.html', form=form)
 
-@auth.route('/logout')
+@auth.route('/signout', methods=['POST'])
 @login_required
-def logout():
+def signout():
     logout_user()
+    flash('You have been logged out.', 'success')
     return redirect(url_for('main.home'))
+
+
+@auth.route('/profile')
+@login_required
+def profile():
+    return redirect(url_for('auth.profile'))

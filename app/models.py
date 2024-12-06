@@ -33,9 +33,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.String(36), primary_key=True)  # UUID is 36 characters long
     first_name=db.Column(db.String(150), nullable=False)
     last_name=db.Column(db.String(150), nullable=False)
-    username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(255))  # Increase to 255 characters
     token = db.Column(db.String(50))
     g_auth_verify = db.Column(db.Boolean, default=False)
 
@@ -46,6 +45,7 @@ class User(UserMixin, db.Model):
         self.password = self.set_password(password)
         self.first_name = first_name
         self.last_name = last_name
+
         self.token = self.set_token(24)
 
     def set_token(self, length):

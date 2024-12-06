@@ -1,21 +1,60 @@
 body {
-    background-color: #EBE9E3;
-    font-family: Arial, sans-serif;
+  background-color: #EBE9E3;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Ensures the body takes full height */
+  margin: 0;
+  padding-bottom: 10px; /* Adds space at the bottom of the page */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* Optional: subtle bottom border */
+}
+
+main {
+  flex-grow: 1; /* Ensures the main content area grows to fill available space */
+  padding-bottom: 10px; /* Adds space at the bottom of content */
+}
+
+/* Media Queries for mobile devices */
+@media (max-width: 768px) {
+  body {
+      padding-bottom: 8px; /* Further reduce bottom padding for smaller screens */
   }
+
+  main {
+      padding-bottom: 8px; /* Adjust padding for smaller devices */
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+      padding-bottom: 5px; /* Further reduce bottom padding on very small screens */
+  }
+
+  main {
+      padding-bottom: 5px; /* Adjust for very small devices */
+  }
+}
+
   .top-bar {
     display: flex;
     justify-content: space-between;
-    background: linear-gradient(to right,#00d2ff, #4a00e0, #7b2cff);
     align-items: center;
     padding: 10px 20px;
-    color:#EBE9E3;
- 
-  }
+    color: #7DB3B0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-image: url('/static/images/topo-pattern.jpeg'); /* Add topographic pattern */
+    background-repeat: no-repeat;
+    background-size: cover;
+    border-top: 1px solid rgba(0, 0, 0, 1); /* Darker black top border */
+    border-bottom: 1px solid rgba(0, 0, 0, 1); /* Darker black bottom border */
+}
 
   .logo{
     font-weight: bolder;
     text-decoration: none;
-    color:white;
+    color:#7DB3B0;
   }
 
   .logo-icon {
@@ -41,34 +80,106 @@ body {
   }
 
 
-  nav a, .social a {
-    margin: 0 10px;
-    color: #FFFFFF;
-    text-decoration: none;
-  }
-
-
-  main{
-    background-color: #EBE9E3;
-  }
-
-
-  /* Footer */
-.footer-content {
-  text-align: center;
-  color: #FFFFFF;
-  background: linear-gradient(to right,#00d2ff, #4a00e0, #7b2cff);
-  padding: 10px 20px;
+/* Menus Link Styling */
+nav a, .social a, .right-menu a, .dropdown-toggle {
+  margin: 0 10px;
+  color: #7DB3B0;
+  text-decoration: none;
+  font-weight: bold;
 }
 
+.top-bar nav a:hover, .right-menu a:hover, .dropdown-toggle:hover {
+  color: #5A8E8C; /* Slightly darker shade for hover effect */
+}
+
+
+main{
+    background-color: #EBE9E3;
+}
+
+
+
 /* Sticky Header and Footer */
-header, footer {
+header {
   width: 100%;
 }
 
 
 
 /* Home Page Styling */
+
+/* All Dropdown Styling */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* General dropdown toggle styling */
+.dropdown-toggle {
+  background: none;
+  border: none;
+  font-size: 1.5rem; /* Adjusted font size for better visibility */
+  cursor: pointer;
+}
+
+/* Account Menu specific styling */
+.account-menu .dropdown-toggle::before {
+  content: "👤"; /* Person icon for account menu */
+  font-size: 20px; /* Adjust size of the icon */
+}
+
+/* Menu Items specific styling */
+.menu-items .dropdown-toggle::before {
+  content: "☰"; /* Hamburger icon for menu */
+  font-size: 24px; /* Adjust size of the hamburger icon */
+}
+
+/* Dropdown Menu Styling */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #f8f8f8;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  z-index: 1000;
+}
+
+/* Display dropdown menu on hover */
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+/* Dropdown menu item styling */
+.dropdown-menu a {
+  display: block;
+  padding: 5px 10px;
+  text-decoration: none;
+  color: #333;
+}
+
+.dropdown-menu a:hover {
+  background-color: #EBE9E3; /* Highlight color */
+  border-radius: 4px;
+}
+
+/* Add styles for hovering behavior */
+.account-menu:hover .dropdown-menu,
+.menu-items:hover .dropdown-menu {
+  display: block;
+}
+
+/* Additional small spacing for better layout */
+.right-menu {
+  display: flex;
+  align-items: center;
+}
+
+.right-menu .dropdown {
+  margin-right: 10px; /* Add spacing between dropdowns */
+}
 
 
 /* Styles for homepage */
@@ -131,11 +242,11 @@ header, footer {
 /* Card content styling */
 .card-content {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: 0rem;
+  left: 0rem;
   color: #7DB3B0;
   z-index: 2;
-  padding: 1rem;
+  padding: 0.8rem;
   background: white;
   border-radius: 0.5rem;
 }
@@ -349,47 +460,6 @@ header, footer {
 }
 
 
-
-
-
-
-/* Footer Styling */
-.footer {
-  position: sticky;
-  bottom: 0;
-  background-color: #EBE9E3; /* Footer background color */
-  padding: 10px;
-}
-
-/* Footer Content Styling */
-.footer-content {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
-
-/* Footer Button Styling */
-.footer-button {
-  text-decoration: none;
-  color: #333;
-  background-color: #7DB3B0; /* Use brand color */
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-weight: bold;
-  transition: background-color 0.3s;
-}
-
-.footer-button:hover {
-  background-color: #6aa8a1; /* Darker shade for hover */
-}
-
-/* Optional: Adjust footer positioning for mobile */
-@media (max-width: 768px) {
-  .footer-content {
-      flex-direction: column;
-      align-items: center;
-  }
-}
 
 
 
@@ -618,18 +688,6 @@ header, footer {
 
 
 
-
-
-
-
-
-.top-bar nav a.active,
-.footer-content a.active {
-    color: #f39c12;  /* Highlight color */
-    font-weight: bold;
-    border-bottom: 2px solid #f39c12;  /* Optional underline */
-}
-
 html {
   scroll-behavior: smooth;
 }
@@ -769,5 +827,159 @@ html {
   top: 10px;
   right: 10px;
   font-size: 30px;
+  cursor: pointer;
+}
+
+
+
+/* signin/register/profile extra Styling */
+
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin: 10px auto;
+}
+
+@keyframes spin {
+  to {
+      transform: rotate(360deg);
+  }
+}
+
+.alert {
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  color: #fff;
+}
+
+.alert.success {
+  background-color: #4caf50;
+}
+
+.alert.error {
+  background-color: #f44336;
+}
+
+
+.popup-container {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+  max-width: 350px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.popup-content {
+  position: relative;
+  background: #7DB3B0;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  color: white;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: #E6C4EC;
+}
+
+.popup-content p a {
+  color: #E6C4EC;
+  text-decoration: underline;
+}
+
+.popup-content p a:hover {
+  text-decoration: none;
+}
+
+
+.popup-content p span {
+  display: block; /* Each span will take a full line */
+  margin-bottom: 8px; /* Add some spacing between lines */
+}
+
+.popup-content p span a {
+  color: #E6C4EC; /* Style the link */
+  text-decoration: underline;
+}
+
+.popup-content p span a:hover {
+  text-decoration: none;
+}
+
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  background-color: #f8d7fc;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  z-index: 1;
+}
+
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu a,
+.dropdown-menu button {
+  display: block;
+  padding: 5px 10px;
+  text-decoration: none;
+  color: black;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.dropdown-menu a:hover,
+.dropdown-menu button:hover {
+  background-color: #f0f0f0;
+}
+
+.btn-signout {
+  background-color: transparent;
+  color: black;
+  font-weight: bold;
+  padding: 5px 10px;
   cursor: pointer;
 }
