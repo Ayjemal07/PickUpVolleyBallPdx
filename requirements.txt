@@ -11,3 +11,4 @@ marshmallow-sqlalchemy
 python-dotenv
 Flask-Migrate
 mysqlclient
+pymysql
