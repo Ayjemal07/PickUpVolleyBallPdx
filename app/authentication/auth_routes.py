@@ -1,6 +1,6 @@
 # app/authentication/routes.py
 
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, session
 from app.forms import UserLoginForm, UserRegistrationForm
 from ..models import User, db
 from flask_login import login_user, logout_user, login_required
@@ -23,6 +23,7 @@ def signin():
                 print(f"Found user: {user.email}")
                 login_user(user)
                 flash('Login successful!', 'success')
+                session['role'] = user.role
 
                 print(f"User {email} logged in successfully.")
                 return render_template('signin.html', form=form, first_name=user.first_name)
@@ -47,10 +48,12 @@ def register():
             return redirect(url_for('auth.signin'))
 
         # Create the user from the form data
+        role = 'admin' if form.email.data == 'volley@test.com' else 'user'
         user = User(
             first_name=form.first_name.data,
             last_name=form.last_name.data,
-            email=form.email.data
+            email=form.email.data,
+            role=role
         )
         user.set_password(form.password.data)  # Hashes the password
 
@@ -63,6 +66,7 @@ def register():
 
         # Automatically log the user in after registration
         login_user(user)
+        session['role'] = role 
         flash('Account created successfully and you are now logged in!', 'success')
         return render_template('register.html', form=form, first_name=user.first_name)
 

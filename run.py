@@ -36,10 +36,9 @@ app = create_app()
 
 if __name__ == '__main__':
     # app.run(debug=True)
-    host = '0.0.0.0'  # Listen on all network interfaces
+    host = 'localhost'  # Listen on all network interfaces
+    port = int(5000)
     if os.name == "nt":
-        port = int(5000)
         app.run(debug=True)
     else:
-        port = int(443)
-        app.run(host=host, port=port, ssl_context=("/etc/letsencrypt/live/pickupvolleyballpdx.com/fullchain.pem", "/etc/letsencrypt/live/pickupvolleyballpdx.com/privkey.pem"))
+        app.run(host=host, port=port)

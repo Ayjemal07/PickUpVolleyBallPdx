@@ -3,24 +3,54 @@
 {% block title %}Events Calendar{% endblock %}
 
 {% block content %}
-    <div id="calendar"></div>
+<h1>Upcoming Events</h1>
 
-    <!-- Modal for Creating Event -->
-    <!-- Create Event Modal -->
-    <div id="createEventModal" class="modal">
-        <div class="modal-content">
-            <span class="closeModal">&times;</span> <!-- Close button -->
-            <h2>Create Event</h2>
-            <form id="createEventForm">
-                <label for="eventDate">Date:</label>
-                <input type="date" id="eventDate" name="eventDate" required>
-                <!-- Add other form fields like event name, description, etc. -->
-                <button type="submit">Create Event</button>
-            </form>
+<script>
+    const userRole = "{{ user_role }}";
+    const eventsData = JSON.parse('{{ events_data|tojson|safe }}');
+</script>
+
+<div id="calendar"></div>
+
+{% if user_role == 'admin' %}
+<div id="createEventModal" class="modal">
+    <div class="modal-content">
+        <div class="form-header">
+            <button type="button" class="close-button" aria-label="Close">&times;</button>
         </div>
+
+        <div id="successMessage" style="display: none; color: green; font-weight: bold; margin-bottom: 10px;">
+            Event added successfully!
+        </div>
+        <form method="POST" action="/events">
+            <h2>Add New Event</h2>
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" required>
+
+            <label for="description">Description</label>
+            <textarea id="description" name="description" required></textarea>
+
+            <label for="date">Date</label>
+            <input type="date" id="date" name="date" required>
+
+            <label for="time">Time</label>
+            <input type="time" id="time" name="time" required>
+
+            <label for="location">Location</label>
+            <input type="text" id="location" name="location" required>
+
+            <button type="submit" class="btn btn-green">Add Event</button>
+        </form>
     </div>
+</div>
+
+<button id="addEventButton" class="btn btn-success">+ Add Event</button>
+
+{% endif %}
+
+<div class="events-container"></div>
 
 
 
-    <script src="{{ url_for('static', filename='js/events.js') }}"></script>
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
 {% endblock %}

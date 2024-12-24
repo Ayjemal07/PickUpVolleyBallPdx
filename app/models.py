@@ -34,17 +34,19 @@ class User(UserMixin, db.Model):
     first_name=db.Column(db.String(150), nullable=False)
     last_name=db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
+    role=db.Column(db.String(10), nullable=False, default='user')
     password_hash = db.Column(db.String(255))  # Increase to 255 characters
     token = db.Column(db.String(50))
-    g_auth_verify = db.Column(db.Boolean, default=False)
+    g_auth_verify = db.Column(db.Boolean, default=False, nullable=False)
 
 
-    def __init__(self, email, first_name, last_name, password='', token='', g_auth_verify=False):
+    def __init__(self, email, first_name, last_name, role, password='', token='', g_auth_verify=False):
         self.id = self.set_id() 
         self.email = email
         self.password = self.set_password(password)
         self.first_name = first_name
         self.last_name = last_name
+        self.role=role
 
         self.token = self.set_token(24)
 
@@ -68,16 +70,18 @@ class User(UserMixin, db.Model):
 
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(500), nullable=False)
     location = db.Column(db.String(100), nullable=False)
-    date_time = db.Column(db.DateTime, nullable=False)
+    date = db.Column(db.Date, nullable=False) 
+    time = db.Column(db.Time, nullable=False)  
     max_capacity = db.Column(db.Integer, nullable=False, default=28)
     rsvp_count = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default='draft')  # 'draft', 'published', 'cancelled'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
-        return f'<Event {self.name}>'
+        return f'<Event {self.title}>'
     
+
 

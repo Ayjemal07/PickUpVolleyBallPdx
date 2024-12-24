@@ -1,153 +1,159 @@
 document.addEventListener('DOMContentLoaded', function () {
-    if (typeof FullCalendar !== 'undefined') {
-        console.log("FullCalendar is loaded");
-    } else {
-        console.error("FullCalendar is NOT loaded");
-        return;
-    }
-
-    // Initialize calendar
     const calendarEl = document.getElementById('calendar');
+
     if (!calendarEl) {
-        console.error("Calendar element with id 'calendar' not found.");
+        console.error("Calendar element not found.");
         return;
     }
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        events: '/api/events', // Your endpoint for fetching events
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay'
-        },
+        events: eventsData,
+        selectable: userRole === 'admin',
         dateClick: function (info) {
-            // Open the modal to create an event with the clicked date prefilled
-            const createEventModal = document.getElementById("createEventModal");
-            if (createEventModal) {
-                createEventModal.classList.add("active");
-
-                const eventDateInput = document.getElementById("eventDate");
-                if (eventDateInput) {
-                    eventDateInput.value = info.dateStr; // Prefill the date
-                    console.log("Date prefilled:", info.dateStr);
-                } else {
-                    console.error("Event date input field not found.");
-                }
-            } else {
-                console.error("Create event modal not found.");
+            if (userRole === 'admin') {
+                openCreateEventModal(info.dateStr);
             }
         },
-        eventClick: function (info) {
-            // Open the edit modal with event details for editing
-            const editEventModal = document.getElementById("editEventModal");
-            if (editEventModal) {
-                editEventModal.classList.add("active");
-
-                const event = info.event;
-                document.getElementById("editEventName").value = event.title;
-                document.getElementById("editEventDate").value = event.start.toISOString().split('T')[0]; // Format date
-                document.getElementById("editEventDescription").value = event.extendedProps.description;
-                document.getElementById("editEventLocation").value = event.extendedProps.location;
-                document.getElementById("editEventLevel").value = event.extendedProps.level;
-                document.getElementById("eventId").value = event.id; // Store event ID for deletion or update
-            } else {
-                console.error("Edit event modal not found.");
-            }
-        }
+        headerToolbar: {
+            left: 'prev,next',
+            center: 'title',
+            right: '',
+        },
     });
 
     calendar.render();
 
-    // Handle `touchmove` event to prevent non-passive warnings
-    const handleTouchMove = (e) => {
-        e.preventDefault();
-    };
 
-    const addTouchEventListener = (element) => {
-        element.addEventListener('touchmove', handleTouchMove, { passive: false });
-    };
+    //admin event adding modal;
 
-    // Apply to relevant elements
-    addTouchEventListener(calendarEl);
+    if (userRole === 'admin') {
+        document.getElementById('addEventButton').addEventListener('click', function () {
+            openCreateEventModal();
+        });
+    }
 
-    // Modal and form logic for creating an event
-    const createEventModal = document.getElementById("createEventModal");
-    const createEventForm = document.getElementById("createEventForm");
+    function openCreateEventModal(date) {
+        const modal = document.getElementById('createEventModal');
+        const eventDateInput = document.getElementById('eventDate');
+        modal.style.display = 'block';
 
-    if (createEventModal && createEventForm) {
-        // Close modal
-        const closeModalButtons = document.querySelectorAll(".closeModal");
-        if (closeModalButtons.length > 0) {
-            closeModalButtons.forEach((btn) =>
-                btn.addEventListener("click", () => {
-                    createEventModal.classList.remove("active");
-                })
-            );
-        } else {
-            console.warn("No .closeModal buttons found in the DOM.");
+        if (date) {
+            eventDateInput.value = date;
         }
 
-        // Handle event creation form submission
-        createEventForm.addEventListener("submit", async function (e) {
-            e.preventDefault();
-            const formData = new FormData(createEventForm);
-            const data = Object.fromEntries(formData.entries());
+        document.getElementById('closeModal').onclick = function () {
+            modal.style.display = 'none';
+        };
+    }
+});
 
-            try {
-                await axios.post("/admin/events", data);
-                alert("Event created successfully!");
-                createEventModal.classList.remove("active");
-                calendar.refetchEvents(); // Refresh events on the calendar
-            } catch (error) {
-                console.error(error);
-                alert("Error creating event.");
+//events sorting and displaying.
+
+document.addEventListener('DOMContentLoaded', function () {
+    const userRole = "{{ user_role }}";
+
+    function sortEventsByDate(events) {
+        return events.sort((a, b) => new Date(a.start) - new Date(b.start));
+    }
+
+    function renderEventCards(sortedEvents) {
+        const eventsContainer = document.querySelector('.events-container');
+        eventsContainer.innerHTML = ''; // Clear existing content
+
+        sortedEvents.forEach(event => {
+            const eventCard = document.createElement('div');
+            eventCard.classList.add('event-card');
+
+            // Format date with "Today", "Tomorrow", or regular date
+            const formattedDate = formatEventDate(event.start);
+
+            eventCard.innerHTML = `
+                <div class="event-header">
+                    <p class="event-date">${formattedDate}</p>
+                    <h2 class="event-title">${event.title}</h2>
+                </div>
+                <div class="event-body">
+                    <img src="${event.image_url || ''}" alt="Event image" class="event-image" />
+                    <p class="event-location"><strong>Where:</strong> ${event.location}</p>
+                    <p class="event-going"><strong>Who's Going:</strong> ${event.going_count || 0} going</p>
+                </div>
+            `;
+            eventsContainer.appendChild(eventCard);
+        });
+    }
+
+    function formatEventDate(dateString) {
+        const eventDate = new Date(dateString);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of today
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000); // Normalize to start of tomorrow
+    
+        // Format time (e.g., 10:00 AM PST)
+        const timeString = eventDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        });
+        const timeZone = 'PST'; // Add your timezone abbreviation if required
+    
+        if (eventDate.getTime() >= today.getTime() && eventDate.getTime() < tomorrow.getTime()) {
+            return `Today • ${timeString} ${timeZone}`;
+        }
+        if (eventDate.getTime() >= tomorrow.getTime() && eventDate.getTime() < tomorrow.getTime() + 24 * 60 * 60 * 1000) {
+            return `Tomorrow • ${timeString} ${timeZone}`;
+        }
+    
+        // Format other dates (e.g., Wednesday, January 3 • 10:00 AM PST)
+        return `${eventDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+        })} • ${timeString} ${timeZone}`;
+    }
+
+    const sortedEvents = sortEventsByDate(eventsData);
+    renderEventCards(sortedEvents);
+});
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("addEventForm");
+    const successMessage = document.getElementById("successMessage");
+
+    // Listen for the form submission
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault(); // Prevent the default form submission
+
+        // Gather form data
+        const formData = new FormData(form);
+
+        // Send the form data via Fetch API or similar (replace with your backend implementation)
+        try {
+            const response = await fetch("/events", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (response.ok) {
+                // Show the success message
+                successMessage.style.display = "block";
+
+                // Optionally, reset the form
+                form.reset();
+
+                // Hide the modal after a delay (optional)
+                setTimeout(() => {
+                    successMessage.style.display = "none";
+                    document.getElementById("createEventModal").style.display = "none";
+                }, 3000);
+            } else {
+                // Handle errors (optional)
+                alert("Failed to add event. Please try again.");
             }
-        });
-    } else {
-        console.warn("Modal or form elements not found.");
-    }
-
-    // Event deletion logic
-    const deleteEventButton = document.getElementById("deleteEventButton");
-    if (deleteEventButton) {
-        deleteEventButton.addEventListener("click", async function () {
-            const eventId = document.getElementById("eventId").value; // Hidden input with the event ID
-            try {
-                await axios.delete(`/api/events/${eventId}`);
-                alert("Event deleted successfully");
-                calendar.refetchEvents();
-            } catch (error) {
-                console.error(error);
-                alert("Error deleting event.");
-            }
-        });
-    }
-
-    // RSVP functionality (Event Sign-up)
-    const rsvpButton = document.getElementById("rsvpButton");
-    if (rsvpButton) {
-        rsvpButton.addEventListener("click", async function () {
-            const eventId = document.getElementById("eventId").value; // Get event ID
-            // const userId = /* Your logic to get the current user ID */;
-
-            try {
-                const response = await axios.post(`/api/events/${eventId}/rsvp`, { userId });
-                alert(response.data.message); // Show RSVP success or error message
-                calendar.refetchEvents();
-            } catch (error) {
-                console.error(error);
-                alert("Error RSVPing for the event.");
-            }
-        });
-    }
-
-    // Event level filtering (Beginner/Advanced)
-    const filterLevel = document.getElementById("filterLevel");
-    if (filterLevel) {
-        filterLevel.addEventListener("change", function () {
-            const selectedLevel = filterLevel.value;
-            calendar.refetchEvents(); // Fetch events again after filtering
-        });
-    }
+        } catch (error) {
+            console.error("Error adding event:", error);
+            alert("An error occurred. Please try again.");
+        }
+    });
 });

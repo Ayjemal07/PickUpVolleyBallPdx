@@ -27,12 +27,8 @@ def create_app():
     # # Register Blueprints
     from .views import main
     from .authentication.auth_routes import auth
-    from .admin_routes import admin_bp
-    from .api_routes import api_bp
 
     app.register_blueprint(auth)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(api_bp)
     app.register_blueprint(main)  # Register last to avoid route conflicts
 
 
