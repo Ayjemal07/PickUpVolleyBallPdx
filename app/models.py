@@ -74,10 +74,11 @@ class Event(db.Model):
     description = db.Column(db.String(500), nullable=False)
     location = db.Column(db.String(100), nullable=False)
     date = db.Column(db.Date, nullable=False) 
-    time = db.Column(db.Time, nullable=False)  
+    start_time = db.Column(db.Time, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
     max_capacity = db.Column(db.Integer, nullable=False, default=28)
     rsvp_count = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(20), default='draft')  # 'draft', 'published', 'cancelled'
+    status = db.Column(db.String(20), default='active') 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):

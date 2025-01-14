@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectable: userRole === 'admin',
         dateClick: function (info) {
             if (userRole === 'admin') {
-                openCreateEventModal(info.dateStr);
+                openCreateEventModal(info.dateStr);  // Open the modal with the clicked date
             }
         },
         headerToolbar: {
@@ -24,39 +24,105 @@ document.addEventListener('DOMContentLoaded', function () {
 
     calendar.render();
 
-
-    //admin event adding modal;
-
-    if (userRole === 'admin') {
-        document.getElementById('addEventButton').addEventListener('click', function () {
-            openCreateEventModal();
+    const addEventButton = document.getElementById('addEventButton');
+    if (addEventButton) {
+        addEventButton.addEventListener('click', function () {
+            openCreateEventModal();  // Open modal for a new event
         });
     }
 
-    function openCreateEventModal(date) {
+    // Open the modal for creating or editing events
+    function openCreateEventModal(date = null, event = null) {
         const modal = document.getElementById('createEventModal');
-        const eventDateInput = document.getElementById('eventDate');
+        const eventDateInput = document.getElementById('date');
+        const eventStartTimeInput = document.getElementById('startTime');
+        const eventEndTimeInput = document.getElementById('endTime');
+        const eventTitleInput = document.getElementById('title');
+        const eventDescriptionInput = document.getElementById('description');
+        const eventLocationInput = document.getElementById('location');
+
         modal.style.display = 'block';
 
+        // If it's a new event, populate the date
         if (date) {
             eventDateInput.value = date;
+            eventStartTimeInput.value = '12:00';  // Default start time
+            eventEndTimeInput.value = '12:00';  // Default end time
+        }
+
+        // If editing an existing event, populate the fields
+        if (event) {
+            eventTitleInput.value = event.title;
+            eventDescriptionInput.value = event.description;
+            eventLocationInput.value = event.location;
+            const eventDate = new Date(event.start);
+            eventDateInput.value = eventDate.toISOString().split('T')[0]; // Set date in YYYY-MM-DD format
+            eventStartTimeInput.value = event.start_time || '12:00'; // Set start time, default to 12:00
+            eventEndTimeInput.value = event.end_time || '12:00'; // Set end time, default to 12:00
+            eventDateInput.dataset.eventId = event.id;  // Save the event ID for editing
         }
 
         document.getElementById('closeModal').onclick = function () {
             modal.style.display = 'none';
         };
+
+        // Handle save for event creation or editing
+        document.getElementById('saveEventButton').onclick = function () {
+            const eventData = {
+                title: eventTitleInput.value,
+                description: eventDescriptionInput.value,
+                location: eventLocationInput.value,
+                start: `${eventDateInput.value}T${eventStartTimeInput.value}:00`,
+                end: `${eventDateInput.value}T${eventEndTimeInput.value}:00`,
+            };
+
+            if (eventDateInput.dataset.eventId) {  // Editing an existing event
+                eventData.id = eventDateInput.dataset.eventId;
+                handleEventActions(eventData.id, 'edit', eventData);
+            } else {  // Adding a new event
+                handleEventActions(null, 'add', eventData);
+            }
+            modal.style.display = 'none';  // Close the modal after saving
+        };
     }
-});
 
-//events sorting and displaying.
+    // Handle event actions (add, edit, delete, cancel)
+    function handleEventActions(eventId, action, eventData = null) {
+        let url = '/events/';
+        if (action === 'add') {
+            url += 'add';
+        } else if (action === 'edit') {
+            url += `edit/${eventId}`;
+        } else if (action === 'delete') {
+            url += `delete/${eventId}`;
+        } else if (action === 'cancel') {
+            url += `cancel/${eventId}`;
+        }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const userRole = "{{ user_role }}";
+        // Perform fetch request to interact with the backend
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(eventData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(`${action.charAt(0).toUpperCase() + action.slice(1)} successful.`);
+            location.reload();  // Reload to reflect changes
+        })
+        .catch(err => {
+            alert(`Error during ${action}: ${err.message}`);
+        });
+    }
 
+    // Sort events by date
     function sortEventsByDate(events) {
         return events.sort((a, b) => new Date(a.start) - new Date(b.start));
     }
 
+    // Add event listeners for editing, deleting, and canceling
     function renderEventCards(sortedEvents) {
         const eventsContainer = document.querySelector('.events-container');
         eventsContainer.innerHTML = ''; // Clear existing content
@@ -65,46 +131,91 @@ document.addEventListener('DOMContentLoaded', function () {
             const eventCard = document.createElement('div');
             eventCard.classList.add('event-card');
 
-            // Format date with "Today", "Tomorrow", or regular date
             const formattedDate = formatEventDate(event.start);
 
-            eventCard.innerHTML = `
+            let eventCardHTML = `
                 <div class="event-header">
                     <p class="event-date">${formattedDate}</p>
                     <h2 class="event-title">${event.title}</h2>
+                    <p class="event-times">
+                        <strong>Time:</strong> 
+                        ${formatEventTime(event.start)} - ${formatEventTime(event.end)}
+                    </p>
+            `;
+
+            if (userRole === 'admin') {
+                eventCardHTML += `
+                    <div class="event-menu">
+                        <button class="event-menu-button">⋮</button>
+                        <div class="event-menu-options">
+                            <button class="edit-event" data-event-id="${event.id}">Edit Event</button>
+                            <button class="delete-event" data-event-id="${event.id}">Delete Event</button>
+                            <button class="cancel-event" data-event-id="${event.id}">Cancel Event</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            eventCardHTML += `
                 </div>
                 <div class="event-body">
                     <img src="${event.image_url || ''}" alt="Event image" class="event-image" />
                     <p class="event-location"><strong>Where:</strong> ${event.location}</p>
                     <p class="event-going"><strong>Who's Going:</strong> ${event.going_count || 0} going</p>
+                    <button class="btn btn-success custom-attend-button">Attend</button>
+
                 </div>
             `;
+
+            eventCard.innerHTML = eventCardHTML;
+
+            // Add event listeners for edit, delete, cancel
+            const editButton = eventCard.querySelector('.edit-event');
+            const deleteButton = eventCard.querySelector('.delete-event');
+            const cancelButton = eventCard.querySelector('.cancel-event');
+            
+            if (editButton) {
+                editButton.addEventListener('click', function () {
+                    openCreateEventModal(null, event);
+                });
+            }
+            if (deleteButton) {
+                deleteButton.addEventListener('click', function () {
+                    handleEventActions(event.id, 'delete');
+                });
+            }
+            if (cancelButton) {
+                cancelButton.addEventListener('click', function () {
+                    handleEventActions(event.id, 'cancel');
+                });
+            }
+
             eventsContainer.appendChild(eventCard);
         });
     }
 
+    // Format event date to show "Today", "Tomorrow", or a full date
     function formatEventDate(dateString) {
         const eventDate = new Date(dateString);
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Normalize to start of today
         const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000); // Normalize to start of tomorrow
-    
-        // Format time (e.g., 10:00 AM PST)
+
         const timeString = eventDate.toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
             hour12: true,
         });
+
         const timeZone = 'PST'; // Add your timezone abbreviation if required
-    
+
         if (eventDate.getTime() >= today.getTime() && eventDate.getTime() < tomorrow.getTime()) {
             return `Today • ${timeString} ${timeZone}`;
         }
         if (eventDate.getTime() >= tomorrow.getTime() && eventDate.getTime() < tomorrow.getTime() + 24 * 60 * 60 * 1000) {
             return `Tomorrow • ${timeString} ${timeZone}`;
         }
-    
-        // Format other dates (e.g., Wednesday, January 3 • 10:00 AM PST)
+
         return `${eventDate.toLocaleDateString('en-US', {
             weekday: 'long',
             month: 'long',
@@ -112,48 +223,16 @@ document.addEventListener('DOMContentLoaded', function () {
         })} • ${timeString} ${timeZone}`;
     }
 
+    // Format event time for display
+    function formatEventTime(dateString) {
+        const eventDate = new Date(dateString);
+        return eventDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    }
+
     const sortedEvents = sortEventsByDate(eventsData);
     renderEventCards(sortedEvents);
-});
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("addEventForm");
-    const successMessage = document.getElementById("successMessage");
-
-    // Listen for the form submission
-    form.addEventListener("submit", async (event) => {
-        event.preventDefault(); // Prevent the default form submission
-
-        // Gather form data
-        const formData = new FormData(form);
-
-        // Send the form data via Fetch API or similar (replace with your backend implementation)
-        try {
-            const response = await fetch("/events", {
-                method: "POST",
-                body: formData,
-            });
-
-            if (response.ok) {
-                // Show the success message
-                successMessage.style.display = "block";
-
-                // Optionally, reset the form
-                form.reset();
-
-                // Hide the modal after a delay (optional)
-                setTimeout(() => {
-                    successMessage.style.display = "none";
-                    document.getElementById("createEventModal").style.display = "none";
-                }, 3000);
-            } else {
-                // Handle errors (optional)
-                alert("Failed to add event. Please try again.");
-            }
-        } catch (error) {
-            console.error("Error adding event:", error);
-            alert("An error occurred. Please try again.");
-        }
-    });
 });
