@@ -19,6 +19,10 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24).hex())
 
 
+
+    # Set pool_recycle to prevent connection timeout issues
+    app.config['SQLALCHEMY_POOL_RECYCLE'] = 7200  # Recycle connections every 1 hour
+
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)

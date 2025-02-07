@@ -61,35 +61,61 @@ def events():
     
     # Fetch all events sorted by date
     events = Event.query.order_by(Event.date.asc()).all()
+
+    for event in events:
+        event.formatted_date = event.date.strftime('%b %d, %Y')
+
     events_data = [
         {
+        "id": event.id,   
         "title": event.title,
-        "start": f"{event.start_time.strftime('%Y-%m-%dT%H:%M:%S')}",  # Use start_time for accurate start datetime
-        "end": f"{event.end_time.strftime('%Y-%m-%dT%H:%M:%S')}",  # Add end time using end_time
+        "start": f"{event.date.strftime('%Y-%m-%d')}T{event.start_time.strftime('%H:%M')}",  # No seconds
+        "end": f"{event.date.strftime('%Y-%m-%d')}T{event.end_time.strftime('%H:%M')}",  # No seconds
         "location": event.location,
         "description": event.description,
-        "formatted_date": event.date.strftime("%Y-%m-%d")
+        "formatted_date": event.formatted_date
 
         }
         for event in events
     ]
     print(events_data)
+    for event in events:
+        print(f"ID: {event.id}, Title: {event.title}, Formatted Date: {event.formatted_date if hasattr(event, 'formatted_date') else 'MISSING'}")
 
     return render_template('events.html', events=events, events_data=events_data, user_role=user_role)
 
-@main.route('/events/edit/<int:event_id>', methods=['PUT'])
+@main.route('/events/edit/<int:event_id>', methods=['POST'])
 def edit_event(event_id):
     event = Event.query.get_or_404(event_id)
     data = request.get_json()
 
-    event.title = data.get('title')
-    event.description = data.get('description')
-    event.location = data.get('location')
-    event.start_time = datetime.strptime(f"{data.get('date')} {data.get('start_time')}", "%Y-%m-%d %H:%M").time()
-    event.end_time = datetime.strptime(f"{data.get('date')} {data.get('end_time')}", "%Y-%m-%d %H:%M").time()
+    try:
+        event.title = data.get('title')
+        event.description = data.get('description')
+        event.location = data.get('location')
+        event.date = datetime.strptime(data.get('date'), "%Y-%m-%d").date()
+        event.start_time = datetime.strptime(data.get('start_time'), "%H:%M").time()  # Adjust time parsing
+        event.end_time = datetime.strptime(data.get('end_time'), "%H:%M").time()  # Adjust time parsing
 
+        db.session.commit()
+        return {'message': 'Event updated successfully'}, 200
+    except Exception as e:
+        return {'error': str(e)}, 400
+
+@main.route('/events/delete/<int:event_id>', methods=['POST'])
+def delete_event(event_id):
+    event = Event.query.get_or_404(event_id)
+    db.session.delete(event)
     db.session.commit()
-    return {'message': 'Event updated successfully'}, 200
+    return {'message': 'Event deleted successfully'}, 200
+
+
+@main.route('/events/cancel/<int:event_id>', methods=['POST'])
+def cancel_event(event_id):
+    event = Event.query.get_or_404(event_id)
+    event.status = 'canceled'
+    db.session.commit()
+    return {'message': 'Event canceled successfully'}, 200
 
 
 @main.route('/subscriptions')

@@ -9,6 +9,7 @@
     const userRole = "{{ user_role }}";
     console.log(userRole);
     const eventsData = JSON.parse('{{ events_data|tojson|safe }}');
+    console.log("Parsed eventsData:", eventsData);
 </script>
 
 <div id="calendar"></div>
@@ -48,6 +49,40 @@
     </div>
 </div>
 <button id="addEventButton">Add Event</button>
+
+<div id="editEventModal" class="modal">
+    <div class="modal-content">
+        <div class="form-header">
+            <button type="button" id="closeEditModal" class="close-button" aria-label="Close">&times;</button>
+        </div>
+
+        <h2>Edit Event</h2>
+        <form id="editEventForm">
+            <input type="hidden" id="editEventId">
+
+            <label for="editTitle">Title</label>
+            <input type="text" id="editTitle" name="title" required>
+
+            <label for="editDescription">Description</label>
+            <textarea id="editDescription" name="description" required></textarea>
+
+            <label for="editDate">Date</label>
+            <input type="date" id="editDate" name="date" required>
+
+            <label for="editStartTime">Start Time</label>
+            <input type="time" id="editStartTime" name="start_time" required>
+
+            <label for="editEndTime">End Time</label>
+            <input type="time" id="editEndTime" name="end_time" required>
+
+            <label for="editLocation">Location</label>
+            <input type="text" id="editLocation" name="location" required>
+
+            <button type="submit" class="btn btn-green">Save Changes</button>
+        </form>
+    </div>
+</div>
+
 {% endif %}
 
 <div class="events-container">
@@ -66,6 +101,10 @@
             <p class="event-location"><strong>Where:</strong> {{ event.location }}</p>
             <p class="event-going"><strong>Who's Going:</strong> {{ event.going_count or 0 }} going</p>
             <button class="btn btn-success custom-attend-button">Attend</button>
+
+            {% if user_role == 'admin' %}
+            <button class="edit-event" data-event-id="{{ event.id|int }}">{{ event.title }} - ID: {{ event.id }}</button>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
