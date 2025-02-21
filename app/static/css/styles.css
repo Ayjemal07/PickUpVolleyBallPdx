@@ -1214,3 +1214,21 @@ html, body {
 .event-menu-button:focus + .event-menu-options {
   display: block;
 }
+
+/* Event Cancel Effects */
+
+.event-card.canceled {
+  background-color: #f0f0f0;
+  color: #a9a9a9;
+  text-decoration: line-through;
+}
+
+.event-card.canceled .event-date {
+  color: red;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.event-card.canceled .custom-attend-button {
+  display: none;
+}

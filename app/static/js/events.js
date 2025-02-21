@@ -57,8 +57,8 @@ document.addEventListener('DOMContentLoaded', function () {
             eventLocationInput.value = event.location;
             const eventDate = new Date(event.start);
             eventDateInput.value = eventDate.toISOString().split('T')[0]; // Set date in YYYY-MM-DD format
-            eventStartTimeInput.value = event.start_time || '12:00'; // Set start time, default to 12:00
-            eventEndTimeInput.value = event.end_time || '12:00'; // Set end time, default to 12:00
+            eventStartTimeInput.value = event.start.split('T')[1].slice(0, 5) || '12:00';
+            eventEndTimeInput.value = event.end.split('T')[1].slice(0, 5) || '12:00';
             eventDateInput.dataset.eventId = event.id;  // Save the event ID for editing
         }
 
@@ -66,25 +66,46 @@ document.addEventListener('DOMContentLoaded', function () {
             modal.style.display = 'none';
         };
 
-        // Handle save for event creation or editing
-        document.getElementById('saveEventButton').onclick = function () {
-            const eventData = {
-                title: eventTitleInput.value,
-                description: eventDescriptionInput.value,
-                location: eventLocationInput.value,
-                start: `${eventDateInput.value}T${eventStartTimeInput.value}:00`,
-                end: `${eventDateInput.value}T${eventEndTimeInput.value}:00`,
-            };
-
-            if (eventDateInput.dataset.eventId) {  // Editing an existing event
-                eventData.id = eventDateInput.dataset.eventId;
-                handleEventActions(eventData.id, 'edit', eventData);
-            } else {  // Adding a new event
-                handleEventActions(null, 'add', eventData);
-            }
-            modal.style.display = 'none';  // Close the modal after saving
-        };
     }
+
+    // Handle event form submission for creating events
+    document.getElementById('createEventForm').addEventListener('submit', function (e) {
+        e.preventDefault();  // Prevent the form from doing a full page reload
+
+        const eventData = {
+            title: document.getElementById('title').value,
+            description: document.getElementById('description').value,
+            location: document.getElementById('location').value,
+            startTime: document.getElementById('startTime').value,
+            endTime: document.getElementById('endTime').value,
+            date: document.getElementById('date').value,
+            start: `${document.getElementById('date').value}T${document.getElementById('startTime').value}`,
+            end: `${document.getElementById('date').value}T${document.getElementById('endTime').value}`,
+        };
+
+        fetch('/events/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(eventData),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error adding event');
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message);
+            document.getElementById('createEventModal').style.display = 'none';  // Close modal on success
+            location.reload();  // Reload to display the new event
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Failed to add event');
+        });
+    });
     
 
     // Open the modal for editing an event
@@ -155,13 +176,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Handle event actions (add, edit, delete, cancel)
     function handleEventActions(eventId, action, eventData = null) {
-        let url = `/events/${action}/${eventId}`;
+        let url = action === 'add' ? '/events/add' : `/events/${action}/${eventId}`;
         
-        let method = action === 'edit' || action === 'add' ? 'POST' : 'POST'; // Ensure all use POST
-    
-        // Perform fetch request to interact with the backend
+
         fetch(url, {
-            method: method,
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -178,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
             location.reload();  // Refresh to show changes
         })
         .catch(err => {
-            console.error("Delete action failed:", err); // Log for debugging
+            console.error(`Action ${action} failed:`, err); 
             alert(`Error during ${action}: ${err.message}`);
         });
         
@@ -195,50 +214,61 @@ document.addEventListener('DOMContentLoaded', function () {
         const eventsContainer = document.querySelector('.events-container');
         eventsContainer.innerHTML = ''; // Clear existing content
     
-        sortedEvents.forEach(event => {    
-            // Ensure formatted_date is always used, fallback to "Date Missing"
-            const formattedDate = event.formatted_date ? event.formatted_date : 'Date Missing';    
+        sortedEvents.forEach(event => {
+            const formattedDate = event.formatted_date ? event.formatted_date : 'Date Missing';
+            const isCanceled = event.status === 'canceled';
+            const cancellationReason = event.cancellation_reason ? event.cancellation_reason : 'No reason provided';
+    
             let eventCardHTML = `
-                <div class="event-card">
+                <div class="event-card ${isCanceled ? 'canceled' : ''}">
                     <div class="event-header">
-                        <p class="event-date">${formattedDate}</p>  <!-- This must display the date -->
+                        <p class="event-date">
+                            ${isCanceled 
+                                ? `<strong style="color: red;">${formattedDate} - Cancelled: ${cancellationReason}</strong>` 
+                                : formattedDate}
+                        </p>
                         <h2 class="event-title">${event.title}</h2>
                         <p class="event-times">
                             <strong>Time:</strong> 
                             ${formatEventTime(event.start)} - ${formatEventTime(event.end)}
                         </p>
+                        
+                        <!-- Admin Three-Dot Menu -->
+                        ${userRole === 'admin' ? `
+                            <div class="event-menu">
+                                <button class="event-menu-button">⋮</button>
+                                <div class="event-menu-options hidden">
+                                    <button class="edit-event" data-event-id="${event.id}">Edit</button>
+                                    <button class="delete-event" data-event-id="${event.id}">Delete</button>
+                                    <button class="cancel-event" data-event-id="${event.id}">Cancel</button>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+    
+                    <div class="event-body">
+                        <p class="event-location"><strong>Where:</strong> ${event.location}</p>
+                        <p class="event-going"><strong>Who's Going:</strong> ${event.going_count || 0} going</p>
+                        <button 
+                            class="btn btn-success custom-attend-button" 
+                            ${isCanceled ? 'disabled' : ''}
+                        >
+                            Attend
+                        </button>
+                    </div>
+                </div>
             `;
     
-            if (userRole === 'admin') {
-                eventCardHTML += `
-                    <div class="event-menu">
-                        <button class="event-menu-button">⋮</button>
-                        <div class="event-menu-options">
-                            <button class="edit-event" data-event-id="${event.id}">Edit Event</button>
-                            <button class="delete-event" data-event-id="${event.id}">Delete Event</button>
-                            <button class="cancel-event" data-event-id="${event.id}">Cancel Event</button>
-                        </div>
-                    </div>
-                `;
-            }
-    
-            eventCardHTML += `
-                </div>
-                <div class="event-body">
-                    <img src="${event.image_url || ''}" alt="Event image" class="event-image" />
-                    <p class="event-location"><strong>Where:</strong> ${event.location}</p>
-                    <p class="event-going"><strong>Who's Going:</strong> ${event.going_count || 0} going</p>
-                    <button class="btn btn-success custom-attend-button">Attend</button>
-                </div>
-            `;    
             const eventCard = document.createElement('div');
             eventCard.innerHTML = eventCardHTML;
             eventsContainer.appendChild(eventCard);
         });
     
-        // **Reattach Event Listeners After Rendering**
-        attachEventListeners();
+        attachEventListeners(); // This handles click events, so no need for extra logic!
     }
+    
+    
+    
     
     
     
@@ -305,13 +335,44 @@ document.addEventListener('DOMContentLoaded', function () {
                 handleEventActions(eventId, 'delete');
             });
         });
-    
+
+        //Cancellation Event Logic
         document.querySelectorAll('.cancel-event').forEach(button => {
             button.addEventListener('click', function () {
                 const eventId = this.getAttribute('data-event-id');
-                handleEventActions(eventId, 'cancel');
+                document.getElementById('cancelEventId').value = eventId;
+                document.getElementById('cancelEventModal').style.display = 'block';
             });
         });
+
+        // Confirm cancellation with reason
+        document.getElementById('confirmCancelEvent').addEventListener('click', function () {
+            const eventId = document.getElementById('cancelEventId').value;
+            const cancellationReason = document.getElementById('cancelReason').value;
+
+            fetch(`/events/cancel/${eventId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cancellation_reason: cancellationReason })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Event canceled successfully');
+                location.reload();
+            })
+            .catch(err => {
+                console.error('Error canceling event:', err);
+                alert('Failed to cancel event');
+            });
+            
+            document.getElementById('cancelEventModal').style.display = 'none';
+        });
+
+        // Close the modal
+        document.getElementById('closeCancelModal').onclick = function () {
+            document.getElementById('cancelEventModal').style.display = 'none';
+        };
+
     }
     
 

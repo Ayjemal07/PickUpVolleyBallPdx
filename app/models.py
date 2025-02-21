@@ -79,6 +79,7 @@ class Event(db.Model):
     max_capacity = db.Column(db.Integer, nullable=False, default=28)
     rsvp_count = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default='active') 
+    cancellation_reason = db.Column(db.String(255), nullable=True)  # New field for cancellation reason
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):

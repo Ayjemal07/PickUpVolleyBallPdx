@@ -73,7 +73,9 @@ def events():
         "end": f"{event.date.strftime('%Y-%m-%d')}T{event.end_time.strftime('%H:%M')}",  # No seconds
         "location": event.location,
         "description": event.description,
-        "formatted_date": event.formatted_date
+        "formatted_date": event.formatted_date,
+        "status": event.status,
+        "cancellation_reason": event.cancellation_reason
 
         }
         for event in events
@@ -84,6 +86,47 @@ def events():
 
     return render_template('events.html', events=events, events_data=events_data, user_role=user_role)
 
+#Route to add an event
+@main.route('/events/add', methods=['POST'])
+def add_event():
+    user_role = session.get('role', 'user')
+    
+    if user_role != 'admin':
+        return {'error': 'Unauthorized'}, 403
+
+    data = request.get_json()
+    print(f"Received event data: {data}")  # Debugging
+    title = data.get('title')
+    description = data.get('description')
+    date = data.get('date')
+    start_time = data.get('start')
+    end_time = data.get('end')
+    location = data.get('location')
+
+    try:
+        start_datetime = datetime.strptime(start_time, "%Y-%m-%dT%H:%M")
+        end_datetime = datetime.strptime(end_time, "%Y-%m-%dT%H:%M")
+        event_date = datetime.strptime(date, "%Y-%m-%d").date()
+
+    except ValueError:
+        return {'error': 'Invalid date or time format'}, 400
+
+    new_event = Event(
+        title=title,
+        description=description,
+        date=event_date,
+        start_time=start_datetime,
+        end_time=end_datetime,
+        location=location,
+        status='active'
+    )
+    db.session.add(new_event)
+    db.session.commit()
+    print(f"Event for {date} {start_time} has been posted")
+
+    return {'message': 'Event added successfully'}, 201
+
+#Route to edit an event
 @main.route('/events/edit/<int:event_id>', methods=['POST'])
 def edit_event(event_id):
     event = Event.query.get_or_404(event_id)
@@ -113,7 +156,10 @@ def delete_event(event_id):
 @main.route('/events/cancel/<int:event_id>', methods=['POST'])
 def cancel_event(event_id):
     event = Event.query.get_or_404(event_id)
+    data = request.get_json()
     event.status = 'canceled'
+    event.cancellation_reason = data.get('cancellation_reason', 'Cancelled Event, contact event organizer')
+    
     db.session.commit()
     return {'message': 'Event canceled successfully'}, 200
 

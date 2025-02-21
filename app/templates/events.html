@@ -24,7 +24,7 @@
         <div id="successMessage" class="success-message" style="display: none;">
             Event added successfully!
         </div>
-        <form method="POST" action="/events">
+        <form id="createEventForm">
             <h2>Add New Event</h2>
             <label for="title">Title</label>
             <input type="text" id="title" name="title" required>
@@ -35,11 +35,11 @@
             <label for="date">Date</label>
             <input type="date" id="date" name="date" required>
 
-            <label for="start_time">Start Time</label>
-            <input type="time" id="startTime" name="startTime" required>
+            <label for="startTime">Start Time</label>
+            <input type="time" id="startTime" name="start_time" required>
 
-            <label for="end_time">End Time</label>
-            <input type="time" id="endTime" name="endTime" required> 
+            <label for="endTime">End Time</label>
+            <input type="time" id="endTime" name="end_time" required> 
 
             <label for="location">Location</label>
             <input type="text" id="location" name="location" required>
@@ -48,7 +48,9 @@
         </form>
     </div>
 </div>
-<button id="addEventButton">Add Event</button>
+<button id="addEventButton" class="btn" style="background-color: green; color: white;">Add Event</button>
+
+<!-- Modal for Event Editing -->
 
 <div id="editEventModal" class="modal">
     <div class="modal-content">
@@ -83,31 +85,65 @@
     </div>
 </div>
 
+<!-- Modal for Event Cancellation -->
+<div id="cancelEventModal" class="modal">
+    <div class="modal-content">
+        <h2>Cancel Event</h2>
+        <input type="hidden" id="cancelEventId">
+        
+        <label for="cancelReason">Cancellation Reason</label>
+        <textarea id="cancelReason" placeholder="Reason for cancellation" required></textarea>
+        
+        <button id="confirmCancelEvent" class="btn btn-red">Confirm Cancellation</button>
+        <button id="closeCancelModal" class="btn btn-grey">Close</button>
+    </div>
+</div>
+
 {% endif %}
 
+<!-- Event Cards -->
 <div class="events-container">
     {% for event in events %}
-    <div class="event-card">
+    <div class="event-card {{ 'canceled' if event.status == 'canceled' else '' }}">
         <div class="event-header">
-            <p class="event-date">{{ event.formatted_date }}</p>
+            <p class="event-date">
+                {% if event.status == 'canceled' %}
+                    <strong style="color: red;">{{ event.formatted_date }} - Cancelled: {{ event.cancellation_reason }}</strong>
+                {% else %}
+                    {{ event.formatted_date }}
+                {% endif %}
+            </p>
             <h2 class="event-title">{{ event.title }}</h2>
             <p class="event-times">
                 <strong>When:</strong> 
                 {{ event.start_time.strftime('%I:%M %p') }} - {{ event.end_time.strftime('%I:%M %p') }}
             </p>
-        </div>
-        <div class="event-body">
-            <img src="{{ event.image_url or '' }}" alt="Event image" class="event-image" />
-            <p class="event-location"><strong>Where:</strong> {{ event.location }}</p>
-            <p class="event-going"><strong>Who's Going:</strong> {{ event.going_count or 0 }} going</p>
-            <button class="btn btn-success custom-attend-button">Attend</button>
 
+            <!-- Admin Three-Dot Menu -->
             {% if user_role == 'admin' %}
-            <button class="edit-event" data-event-id="{{ event.id|int }}">{{ event.title }} - ID: {{ event.id }}</button>
+            <div class="event-menu">
+                <button class="event-menu-button">⋮</button>
+                <div class="event-menu-options hidden">
+                    <button class="edit-event" data-event-id="{{ event.id }}">Edit</button>
+                    <button class="delete-event" data-event-id="{{ event.id }}">Delete</button>
+                    <button class="cancel-event" data-event-id="{{ event.id }}">Cancel</button>
+                </div>
+            </div>
             {% endif %}
         </div>
-    </div>
+        
+        <div class="event-body">
+            <p class="event-location"><strong>Where:</strong> {{ event.location }}</p>
+            <p class="event-going"><strong>Who's Going:</strong> {{ event.going_count or 0 }} going</p>
+            <button 
+                class="btn btn-success custom-attend-button" 
+                {% if event.status == 'canceled' %}disabled{% endif %}>
+                Attend
+            </button>
+        </div>
+    </div> 
     {% endfor %}
 </div>
+
 
 {% endblock %}
