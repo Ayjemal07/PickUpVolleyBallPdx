@@ -6,11 +6,13 @@
 <h1>Upcoming Events</h1>
 
 <script>
-    const userRole = "{{ user_role }}";
-    console.log(userRole);
+    let userRole = "{{ session.get('role', 'user') }}";  // Default to "user"
+    console.log("User Role after signout:", userRole);
+
     const eventsData = JSON.parse('{{ events_data|tojson|safe }}');
     console.log("Parsed eventsData:", eventsData);
 </script>
+
 
 <div id="calendar"></div>
 

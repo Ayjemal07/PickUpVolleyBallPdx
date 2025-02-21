@@ -1,4 +1,4 @@
-# app/authentication/routes.py
+# app/authentication/auth_routes.py
 
 from flask import Blueprint, render_template, redirect, url_for, flash, session
 from app.forms import UserLoginForm, UserRegistrationForm
@@ -76,6 +76,7 @@ def register():
 @login_required
 def signout():
     logout_user()
+    session.pop('role', None)  # ✅ Ensure role is removed
     flash('You have been logged out.', 'success')
     return redirect(url_for('main.home'))
 

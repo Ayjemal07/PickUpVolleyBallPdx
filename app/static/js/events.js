@@ -270,6 +270,17 @@ document.addEventListener('DOMContentLoaded', function () {
     
     
     
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!userRole) {
+            userRole = 'user'; // Ensure it's always "user" after logout
+        }
+        
+        console.log("Updated User Role:", userRole);
+    
+        const sortedEvents = sortEventsByDate(eventsData);
+        renderEventCards(sortedEvents);
+        attachEventListeners(); // Fix for lost event listeners!
+    });
     
     
 
