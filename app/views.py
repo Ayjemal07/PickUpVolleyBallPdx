@@ -7,6 +7,10 @@ from .models import Event, User, db
 from flask import request
 from datetime import datetime
 
+import os
+from flask import current_app
+from werkzeug.utils import secure_filename
+
 
 main = Blueprint('main', __name__)
 
@@ -103,6 +107,13 @@ def add_event():
     end_time = data.get('end')
     location = data.get('location')
 
+    event_image = request.files.get('eventImage')
+
+    if event_image:
+        filename = secure_filename(event_image.filename)
+        image_path = os.path.join(current_app.root_path, 'static/images', filename)
+        event_image.save(image_path)
+
     try:
         start_datetime = datetime.strptime(start_time, "%Y-%m-%dT%H:%M")
         end_datetime = datetime.strptime(end_time, "%Y-%m-%dT%H:%M")
@@ -163,6 +174,13 @@ def cancel_event(event_id):
     db.session.commit()
     return {'message': 'Event canceled successfully'}, 200
 
+
+
+@main.route('/events/<int:event_id>')
+def event_details(event_id):
+    event = Event.query.get_or_404(event_id)
+    event.formatted_date = event.date.strftime('%b %d, %Y')
+    return render_template('event_details.html', event=event)
 
 @main.route('/subscriptions')
 def subscriptions():

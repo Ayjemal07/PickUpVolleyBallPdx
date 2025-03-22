@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Event Details{% endblock %}
+
+{% block content %}
+<div class="event-details">
+    <h1>{{ event.title }}</h1>
+
+    <p>
+        <i class="bi bi-calendar-event"></i> <strong>Date:</strong> {{ event.formatted_date }}
+    </p>
+    
+    <p>
+        <i class="bi bi-clock"></i> <strong>Time:</strong> {{ event.start_time.strftime('%I:%M %p') }} - {{ event.end_time.strftime('%I:%M %p') }}
+    </p>
+    
+    <p>
+        <i class="bi bi-geo-alt"></i> <strong>Location:</strong> {{ event.location }}
+    </p>
+    
+    <p>
+        <i class="bi bi-people"></i> <strong>Who's Going:</strong> {{ event.going_count or 0 }} people
+    </p>
+
+    <p><strong>Description:</strong> {{ event.description }}</p>
+
+    <a href="{{ url_for('main.events') }}" class="btn btn-success">Back to Events</a>
+</div>
+{% endblock %}

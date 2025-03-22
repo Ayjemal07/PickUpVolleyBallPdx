@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formattedDate = event.formatted_date ? event.formatted_date : 'Date Missing';
             const isCanceled = event.status === 'canceled';
             const cancellationReason = event.cancellation_reason ? event.cancellation_reason : 'No reason provided';
-    
+            const descriptionPreview = event.description ? event.description.split(' ').slice(0, 2).join(' ') + '...' : 'No description available';
             let eventCardHTML = `
                 <div class="event-card ${isCanceled ? 'canceled' : ''}">
                     <div class="event-header">
@@ -248,11 +248,14 @@ document.addEventListener('DOMContentLoaded', function () {
     
                     <div class="event-body">
                         <p class="event-location"><strong>Where:</strong> ${event.location}</p>
+                        <p class="event-description"><strong>Description:</strong> ${descriptionPreview}</p>
+                        <button class="see-more-button" data-event-id="${event.id}">See More</button>
+                        <div class="full-description" id="desc-${event.id}" style="display: none;">
+                            <p>${event.description}</p>
+                            <a href="/events/${event.id}" class="btn btn-info">View Details</a>
+                        </div>
                         <p class="event-going"><strong>Who's Going:</strong> ${event.going_count || 0} going</p>
-                        <button 
-                            class="btn btn-success custom-attend-button" 
-                            ${isCanceled ? 'disabled' : ''}
-                        >
+                        <button class="btn btn-success custom-attend-button" ${isCanceled ? 'disabled' : ''}>
                             Attend
                         </button>
                     </div>
@@ -267,7 +270,22 @@ document.addEventListener('DOMContentLoaded', function () {
         attachEventListeners(); // This handles click events, so no need for extra logic!
     }
     
-    
+    function attachEventListeners() {
+        document.querySelectorAll('.see-more-button').forEach(button => {
+            button.addEventListener('click', function () {
+                const eventId = this.getAttribute('data-event-id');
+                const fullDescription = document.getElementById(`desc-${eventId}`);
+                if (fullDescription.style.display === 'none') {
+                    fullDescription.style.display = 'block';
+                    this.textContent = 'See Less';
+                } else {
+                    fullDescription.style.display = 'none';
+                    this.textContent = 'See More';
+                }
+            });
+        });
+        
+    }
     
     
     document.addEventListener('DOMContentLoaded', function () {
