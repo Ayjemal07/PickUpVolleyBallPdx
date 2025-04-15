@@ -1242,3 +1242,11 @@ html, body {
   padding: 3px;
   margin:2px;
 }
+
+.paypal-loading {
+  padding: 1rem;
+  text-align: center;
+  font-size: 1rem;
+  color: #333;
+  font-style: italic;
+}

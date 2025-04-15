@@ -174,12 +174,26 @@
             <p class="event-going"><strong>Who's Going:</strong> {{ event.going_count or 0 }} going</p>
             <button 
                 class="btn btn-success custom-attend-button" 
+                data-event-id="{{ event.id }}"
                 {% if event.status == 'canceled' %}disabled{% endif %}>
                 Attend
             </button>
+        
+
+            <!-- PayPal Buttons -->
+            <div id="paypal-button-container-{{ event.id }}" class="paypal-button-container" style="display: none;"></div>
         </div>
     </div> 
     {% endfor %}
 </div>
+
+
+
+
+
+<!-- PayPal SDK -->
+<script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
+<script src="{{ url_for('static', filename='events.js') }}"></script>
+
 
 {% endblock %}

@@ -48,7 +48,7 @@ def register():
             return redirect(url_for('auth.signin'))
 
         # Create the user from the form data
-        role = 'admin' if form.email.data == 'volley@test.com' else 'user'
+        role = 'admin' if form.email.data == 'tester@gmail.com' else 'user'
         user = User(
             first_name=form.first_name.data,
             last_name=form.last_name.data,

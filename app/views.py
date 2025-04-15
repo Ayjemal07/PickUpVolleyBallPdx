@@ -199,3 +199,60 @@ def faq():
 @main.route('/contactus')
 def contactus():
     return render_template('contactus.html')
+
+
+
+#paypal logic starts here:
+
+import json
+import os
+import requests
+from flask import jsonify, request
+
+# PayPal credentials (use your actual client ID/secret or load from env)
+PAYPAL_CLIENT_ID = "AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx"
+PAYPAL_SECRET = "EKOLBO_CdpzLvMZ9q7yWNzgFQj7srp00Sntt1a3kBF5-b2l5zcH9QmDCa_-5vzLu8wVqReTlhpiTiboN"
+PAYPAL_BASE = "https://api-m.sandbox.paypal.com"  # use live URL when in production
+
+def get_access_token():
+    auth = (PAYPAL_CLIENT_ID, PAYPAL_SECRET)
+    headers = { "Accept": "application/json", "Accept-Language": "en_US" }
+    data = { "grant_type": "client_credentials" }
+    response = requests.post(f"{PAYPAL_BASE}/v1/oauth2/token", headers=headers, data=data, auth=auth)
+    return response.json()["access_token"]
+
+@main.route("/api/orders", methods=["POST"])
+def create_order():
+    data = request.get_json()
+    cart = data.get("cart", [])
+
+    access_token = get_access_token()
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}",
+    }
+
+    # Use cart data to create items (can be dynamic)
+    body = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "amount": {
+                "currency_code": "USD",
+                "value": "10.00"  # You can replace this with event-specific pricing
+            }
+        }]
+    }
+
+    response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders", headers=headers, json=body)
+    return jsonify(response.json())
+
+@main.route("/api/orders/<order_id>/capture", methods=["POST"])
+def capture_order(order_id):
+    access_token = get_access_token()
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}",
+    }
+
+    response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders/{order_id}/capture", headers=headers)
+    return jsonify(response.json())

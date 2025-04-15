@@ -255,9 +255,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             <a href="/events/${event.id}" class="btn btn-info">View Details</a>
                         </div>
                         <p class="event-going"><strong>Who's Going:</strong> ${event.going_count || 0} going</p>
-                        <button class="btn btn-success custom-attend-button" ${isCanceled ? 'disabled' : ''}>
+                        <button class="btn btn-success custom-attend-button" data-event-id="${event.id}" ${isCanceled ? 'disabled' : ''}>
                             Attend
                         </button>
+                        <div id="paypal-button-container-${event.id}" class="paypal-button-container" style="display: none;"></div>
                     </div>
                 </div>
             `;
@@ -410,3 +411,55 @@ document.addEventListener('DOMContentLoaded', function () {
     attachEventListeners(); // Fix for lost event listeners!
 
 });
+
+// Move PayPal button logic here, outside of DOMContentLoaded
+document.querySelectorAll(".custom-attend-button").forEach(button => {
+    button.addEventListener("click", () => {
+        const eventId = button.getAttribute("data-event-id");
+        const containerId = `paypal-button-container-${eventId}`;
+        const container = document.getElementById(containerId);
+
+        if (container && !container.dataset.rendered) {
+            container.style.display = "block";
+            container.innerHTML = `<div class="paypal-loading">Loading payment options...</div>`;
+
+            paypal.Buttons({
+                createOrder: async function(data, actions) {
+                    const response = await fetch("/api/orders", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            cart: [{ id: `event_ticket_${eventId}`, quantity: 1 }]
+                        }),
+                    });
+                    const orderData = await response.json();
+                    return orderData.id;
+                },
+                onApprove: async function(data, actions) {
+                    const response = await fetch(`/api/orders/${data.orderID}/capture`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                    });
+                    const orderData = await response.json();
+                    const transaction = orderData.purchase_units?.[0]?.payments?.captures?.[0];
+
+                    const resultMessage = transaction?.status === "COMPLETED"
+                        ? `Transaction completed: ${transaction.id}`
+                        : `Transaction failed: ${transaction?.status}`;
+
+                    alert(resultMessage);
+                },
+                onInit: function(data, actions) {
+                    const loadingMessage = container.querySelector(".paypal-loading");
+                    if (loadingMessage) loadingMessage.remove();
+                }
+            }).render(`#${containerId}`);
+
+            container.dataset.rendered = "true";
+            container.scrollIntoView({ behavior: "smooth" });
+        }
+    });
+});
+
+
+

@@ -43,7 +43,7 @@ class User(UserMixin, db.Model):
     def __init__(self, email, first_name, last_name, role, password='', token='', g_auth_verify=False):
         self.id = self.set_id() 
         self.email = email
-        self.password = self.set_password(password)
+        self.set_password(password)
         self.first_name = first_name
         self.last_name = last_name
         self.role=role
