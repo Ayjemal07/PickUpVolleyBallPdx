@@ -72,6 +72,7 @@ class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(500), nullable=False)
+    image_filename = db.Column(db.String(255))
     location = db.Column(db.String(100), nullable=False)
     date = db.Column(db.Date, nullable=False) 
     start_time = db.Column(db.Time, nullable=False)
@@ -81,6 +82,9 @@ class Event(db.Model):
     status = db.Column(db.String(20), default='active') 
     cancellation_reason = db.Column(db.String(255), nullable=True)  # New field for cancellation reason
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    ticket_price = db.Column(db.Float, nullable=False, default=10.0)
+    allow_guests = db.Column(db.Boolean, default=False)
+    guest_limit = db.Column(db.Integer, nullable=True)
     
     def __repr__(self):
         return f'<Event {self.title}>'

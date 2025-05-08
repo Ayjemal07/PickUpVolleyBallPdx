@@ -68,44 +68,80 @@ document.addEventListener('DOMContentLoaded', function () {
 
     }
 
-    // Handle event form submission for creating events
-    document.getElementById('createEventForm').addEventListener('submit', function (e) {
-        e.preventDefault();  // Prevent the form from doing a full page reload
 
-        const eventData = {
-            title: document.getElementById('title').value,
-            description: document.getElementById('description').value,
-            location: document.getElementById('location').value,
-            startTime: document.getElementById('startTime').value,
-            endTime: document.getElementById('endTime').value,
-            date: document.getElementById('date').value,
-            start: `${document.getElementById('date').value}T${document.getElementById('startTime').value}`,
-            end: `${document.getElementById('date').value}T${document.getElementById('endTime').value}`,
-        };
+        // Image option toggle logic
+    const imageOptionSelect = document.getElementById('imageOption');
+    const existingImageContainer = document.getElementById('existingImageContainer');
+    const uploadImageContainer = document.getElementById('uploadImageContainer');
+    const previewImage = document.getElementById('previewImage');
 
-        fetch('/events/add', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(eventData),
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error adding event');
+    if (imageOptionSelect) {
+        imageOptionSelect.addEventListener('change', function () {
+            const selected = this.value;
+            if (selected === 'upload') {
+                uploadImageContainer.style.display = 'block';
+                existingImageContainer.style.display = 'none';
+                previewImage.style.display = 'none';
+            } else {
+                uploadImageContainer.style.display = 'none';
+                existingImageContainer.style.display = 'block';
+                const existingImage = document.getElementById('existingImage').value;
+                if (existingImage) {
+                    previewImage.src = `/static/images/${existingImage}`;
+                    previewImage.style.display = 'block';
+                }
             }
-            return response.json();
-        })
-        .then(data => {
-            alert(data.message);
-            document.getElementById('createEventModal').style.display = 'none';  // Close modal on success
-            location.reload();  // Reload to display the new event
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Failed to add event');
         });
-    });
+    }
+
+    const existingImageSelect = document.getElementById('existingImage');
+    if (existingImageSelect) {
+        existingImageSelect.addEventListener('change', function () {
+            const selected = this.value;
+            if (selected) {
+                previewImage.src = `/static/images/${selected}`;
+                previewImage.style.display = 'block';
+            } else {
+                previewImage.style.display = 'none';
+            }
+        });
+    }
+
+
+    // Handle event form submission for creating events
+
+document.getElementById('createEventForm')
+  .addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;                  // your <form>
+    const data = new FormData(form);        // grabs all inputs + any file
+
+    // (If you need to include which existingImage was picked, make sure your <select name="existingImage">
+    // is in the form — FormData will pick it up automatically.)
+
+    try {
+      const res = await fetch('/events/add', {
+        method: 'POST',
+        body: data,                         // browser sets Content-Type for you
+      });
+
+      if (!res.ok) {
+        // assume your Flask returns JSON {message: "..."} on error
+        const err = await res.json().catch(() => ({message: 'Unknown error'}));
+        throw new Error(err.message);
+      }
+
+      const result = await res.json();
+      alert(result.message || 'Event created!');
+      form.closest('.modal').style.display = 'none';  // close the modal
+      window.location.reload();                        // show the new event
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Failed to add event: ' + err.message);
+    }
+  });
+
     
 
     // Open the modal for editing an event
@@ -404,6 +440,53 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
     }
+
+    document.querySelectorAll(".custom-attend-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const eventId = button.getAttribute("data-event-id");
+            const containerId = `paypal-button-container-${eventId}`;
+            const container = document.getElementById(containerId);
+
+            if (container && !container.dataset.rendered) {
+                container.style.display = "block";
+                container.innerHTML = `<div class="paypal-loading">Loading payment options...</div>`;
+
+                paypal.Buttons({
+                    createOrder: async function(data, actions) {
+                        const response = await fetch("/api/orders", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                cart: [{ id: `event_ticket_${eventId}`, quantity: 1 }]
+                            }),
+                        });
+                        const orderData = await response.json();
+                        return orderData.id;
+                    },
+                    onApprove: async function(data, actions) {
+                        const response = await fetch(`/api/orders/${data.orderID}/capture`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                        });
+                        const orderData = await response.json();
+                        const transaction = orderData.purchase_units?.[0]?.payments?.captures?.[0];
+
+                        const resultMessage = transaction?.status === "COMPLETED"
+                            ? `Transaction completed: ${transaction.id}`
+                            : `Transaction failed: ${transaction?.status}`;
+
+                        alert(resultMessage);
+                    },
+                    onInit: function(data, actions) {
+                        const loadingMessage = container.querySelector(".paypal-loading");
+                        if (loadingMessage) loadingMessage.remove();
+                    }
+                }).render(`#${containerId}`);
+
+                container.dataset.rendered = "true";
+            }
+        });
+    });
     
 
     const sortedEvents = sortEventsByDate(eventsData);
@@ -460,6 +543,5 @@ document.querySelectorAll(".custom-attend-button").forEach(button => {
         }
     });
 });
-
 
 

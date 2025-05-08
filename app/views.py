@@ -25,6 +25,11 @@ def about():
 @main.route('/events', methods=['GET', 'POST'])
 def events():
     user_role = session.get('role', 'user')  # Default to 'user'
+        
+    # Get list of image filenames
+    image_folder = os.path.join(current_app.root_path, 'static', 'images')
+    image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+
     
     # For admin: Handle event creation if the form is submitted
     if request.method == 'POST' and user_role == 'admin':
@@ -88,7 +93,7 @@ def events():
     for event in events:
         print(f"ID: {event.id}, Title: {event.title}, Formatted Date: {event.formatted_date if hasattr(event, 'formatted_date') else 'MISSING'}")
 
-    return render_template('events.html', events=events, events_data=events_data, user_role=user_role)
+    return render_template('events.html', events=events, events_data=events_data, user_role=user_role,image_files=image_files)
 
 #Route to add an event
 @main.route('/events/add', methods=['POST'])
@@ -98,25 +103,32 @@ def add_event():
     if user_role != 'admin':
         return {'error': 'Unauthorized'}, 403
 
-    data = request.get_json()
-    print(f"Received event data: {data}")  # Debugging
-    title = data.get('title')
-    description = data.get('description')
-    date = data.get('date')
-    start_time = data.get('start')
-    end_time = data.get('end')
-    location = data.get('location')
+    title = request.form.get('title')
+    description = request.form.get('description')
+    date = request.form.get('date')
+    start_time = request.form.get('start_time')
+    end_time = request.form.get('end_time')
+    location = request.form.get('location')
+    image_filename = None
 
-    event_image = request.files.get('eventImage')
+    image_filename = None
 
-    if event_image:
-        filename = secure_filename(event_image.filename)
-        image_path = os.path.join(current_app.root_path, 'static/images', filename)
-        event_image.save(image_path)
+    # Handle uploaded file
+    if 'eventImage' in request.files:
+        image = request.files['eventImage']
+        if image and image.filename:
+            filename = secure_filename(image.filename)
+            upload_path = os.path.join(current_app.root_path, 'static', 'images', filename)
+            image.save(upload_path)
+            image_filename = filename
+    
+    # Handle existing image option
+    elif request.form.get('existingImage'):
+        image_filename = request.form.get('existingImage')
 
     try:
-        start_datetime = datetime.strptime(start_time, "%Y-%m-%dT%H:%M")
-        end_datetime = datetime.strptime(end_time, "%Y-%m-%dT%H:%M")
+        start_datetime = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+        end_datetime = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
         event_date = datetime.strptime(date, "%Y-%m-%d").date()
 
     except ValueError:
@@ -129,6 +141,7 @@ def add_event():
         start_time=start_datetime,
         end_time=end_datetime,
         location=location,
+        image_filename=image_filename,
         status='active'
     )
     db.session.add(new_event)
@@ -232,17 +245,21 @@ def create_order():
         "Authorization": f"Bearer {access_token}",
     }
 
-    # Use cart data to create items (can be dynamic)
+
+    total = 0
+    for item in cart:
+        quantity = item.get("quantity", 1)
+        total += quantity * 10  # $10 per ticket
+
     body = {
         "intent": "CAPTURE",
         "purchase_units": [{
             "amount": {
                 "currency_code": "USD",
-                "value": "10.00"  # You can replace this with event-specific pricing
+                "value": f"{total:.2f}"
             }
         }]
     }
-
     response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders", headers=headers, json=body)
     return jsonify(response.json())
 

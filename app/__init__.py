@@ -17,6 +17,7 @@ def create_app():
     # Configuration
     app.config.from_object('config.Config')
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24).hex())
+    app.config['UPLOAD_FOLDER'] = 'static/images'
 
 
 
