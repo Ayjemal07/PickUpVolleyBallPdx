@@ -110,37 +110,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Handle event form submission for creating events
 
-document.getElementById('createEventForm')
-  .addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const form = e.target;                  // your <form>
-    const data = new FormData(form);        // grabs all inputs + any file
-
-    // (If you need to include which existingImage was picked, make sure your <select name="existingImage">
-    // is in the form — FormData will pick it up automatically.)
-
-    try {
-      const res = await fetch('/events/add', {
-        method: 'POST',
-        body: data,                         // browser sets Content-Type for you
+    const createForm = document.getElementById('createEventForm');
+    if (createForm) {
+      createForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+    
+        try {
+          const res = await fetch('/events/add', {
+            method: 'POST',
+            body: data,
+          });
+    
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Unknown error' }));
+            throw new Error(err.message);
+          }
+    
+          const result = await res.json();
+          alert(result.message || 'Event created!');
+          form.closest('.modal').style.display = 'none';
+          window.location.reload();
+        } catch (err) {
+          console.error('Upload failed:', err);
+          alert('Failed to add event: ' + err.message);
+        }
       });
-
-      if (!res.ok) {
-        // assume your Flask returns JSON {message: "..."} on error
-        const err = await res.json().catch(() => ({message: 'Unknown error'}));
-        throw new Error(err.message);
-      }
-
-      const result = await res.json();
-      alert(result.message || 'Event created!');
-      form.closest('.modal').style.display = 'none';  // close the modal
-      window.location.reload();                        // show the new event
-    } catch (err) {
-      console.error('Upload failed:', err);
-      alert('Failed to add event: ' + err.message);
     }
-  });
+    
 
     
 
@@ -168,45 +166,51 @@ document.getElementById('createEventForm')
     
     
     // Close the Edit Modal when clicking the close button
-    document.getElementById("closeEditModal").addEventListener("click", function () {
-        document.getElementById("editEventModal").style.display = "none";
-    });
-
-    document.getElementById("editEventForm").addEventListener("submit", function (e) {
-        e.preventDefault();
-    
-        const eventId = document.getElementById("editEventId").value;
-        const updatedEvent = {
-            title: document.getElementById("editTitle").value,
-            description: document.getElementById("editDescription").value,
-            date: document.getElementById("editDate").value,
-            start_time: `${document.getElementById("editStartTime").value}`,
-            end_time: `${document.getElementById("editEndTime").value}`,
-            location: document.getElementById("editLocation").value,
-        };
-    
-        console.log("Submitting updated event:", updatedEvent); // Debugging
-    
-        fetch(`/events/edit/${eventId}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(updatedEvent),
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert("Event updated successfully!");
-            location.reload();
-        })
-        .catch(err => {
-            console.error("Error updating event:", err); // Debugging
-            alert(`Error updating event: ${err.message}`);
+    const closeEdit = document.getElementById("closeEditModal");
+    if (closeEdit) {
+        closeEdit.addEventListener("click", function () {
+            const modal = document.getElementById("editEventModal");
+            if (modal) modal.style.display = "none";
         });
+    }
+
+    const editForm = document.getElementById("editEventForm");
+    if (editForm) {
+        editForm.addEventListener("submit", function (e) {
+            e.preventDefault();
     
-        document.getElementById("editEventModal").style.display = "none";
-    });
+            const eventId = document.getElementById("editEventId").value;
+            const updatedEvent = {
+                title: document.getElementById("editTitle").value,
+                description: document.getElementById("editDescription").value,
+                date: document.getElementById("editDate").value,
+                start_time: `${document.getElementById("editStartTime").value}`,
+                end_time: `${document.getElementById("editEndTime").value}`,
+                location: document.getElementById("editLocation").value,
+            };
     
+            console.log("Submitting updated event:", updatedEvent); // Debugging
+    
+            fetch(`/events/edit/${eventId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(updatedEvent),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("Event updated successfully!");
+                location.reload();
+            })
+            .catch(err => {
+                console.error("Error updating event:", err);
+                alert(`Error updating event: ${err.message}`);
+            });
+    
+            document.getElementById("editEventModal").style.display = "none";
+        });
+    }
     
     
 
@@ -299,43 +303,17 @@ document.getElementById('createEventForm')
                 </div>
             `;
     
-            const eventCard = document.createElement('div');
-            eventCard.innerHTML = eventCardHTML;
-            eventsContainer.appendChild(eventCard);
+            eventsContainer.insertAdjacentHTML('beforeend', eventCardHTML);
+
         });
-    
-        attachEventListeners(); // This handles click events, so no need for extra logic!
+        console.log("Event cards rendered successfully.");
     }
     
-    function attachEventListeners() {
-        document.querySelectorAll('.see-more-button').forEach(button => {
-            button.addEventListener('click', function () {
-                const eventId = this.getAttribute('data-event-id');
-                const fullDescription = document.getElementById(`desc-${eventId}`);
-                if (fullDescription.style.display === 'none') {
-                    fullDescription.style.display = 'block';
-                    this.textContent = 'See Less';
-                } else {
-                    fullDescription.style.display = 'none';
-                    this.textContent = 'See More';
-                }
-            });
-        });
-        
+    if (!userRole) {
+        userRole = 'user'; // Ensure it's always "user" after logout
     }
     
-    
-    document.addEventListener('DOMContentLoaded', function () {
-        if (!userRole) {
-            userRole = 'user'; // Ensure it's always "user" after logout
-        }
-        
-        console.log("Updated User Role:", userRole);
-    
-        const sortedEvents = sortEventsByDate(eventsData);
-        renderEventCards(sortedEvents);
-        attachEventListeners(); // Fix for lost event listeners!
-    });
+    console.log("Updated User Role:", userRole);
     
     
 
@@ -368,17 +346,15 @@ document.getElementById('createEventForm')
         })} • ${timeString} ${timeZone}`;
     }
 
-    // Format event time for display
-    function formatEventTime(dateString) {
-        const eventDate = new Date(dateString);
-        return eventDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    }
-
     function attachEventListeners() {
+        // SEE MORE toggle
+        document.querySelectorAll('.see-more-button').forEach(button => {
+            button.addEventListener('click', function () {
+                const eventId = this.getAttribute('data-event-id');
+                window.location.href = `/events/${eventId}`;
+            });
+        });
+        
         document.querySelectorAll('.edit-event').forEach(button => {
             button.addEventListener('click', function () {
                 const eventId = this.getAttribute('data-event-id');
@@ -412,107 +388,121 @@ document.getElementById('createEventForm')
         });
 
         // Confirm cancellation with reason
-        document.getElementById('confirmCancelEvent').addEventListener('click', function () {
-            const eventId = document.getElementById('cancelEventId').value;
-            const cancellationReason = document.getElementById('cancelReason').value;
-
-            fetch(`/events/cancel/${eventId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cancellation_reason: cancellationReason })
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert('Event canceled successfully');
-                location.reload();
-            })
-            .catch(err => {
-                console.error('Error canceling event:', err);
-                alert('Failed to cancel event');
+        const confirmCancel = document.getElementById("confirmCancelEvent");
+        if (confirmCancel) {
+            confirmCancel.addEventListener("click", function () {
+                const eventId = document.getElementById("cancelEventId").value;
+                const cancellationReason = document.getElementById("cancelReason").value;
+        
+                fetch(`/events/cancel/${eventId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cancellation_reason: cancellationReason })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Event canceled successfully');
+                    location.reload();
+                })
+                .catch(err => {
+                    console.error('Error canceling event:', err);
+                    alert('Failed to cancel event');
+                });
+        
+                const cancelModal = document.getElementById('cancelEventModal');
+                if (cancelModal) cancelModal.style.display = 'none';
             });
-            
-            document.getElementById('cancelEventModal').style.display = 'none';
-        });
+        }
+        
 
         // Close the modal
-        document.getElementById('closeCancelModal').onclick = function () {
-            document.getElementById('cancelEventModal').style.display = 'none';
-        };
+        const closeCancel = document.getElementById("closeCancelModal");
+        if (closeCancel) {
+            closeCancel.onclick = function () {
+                const cancelModal = document.getElementById("cancelEventModal");
+                if (cancelModal) cancelModal.style.display = "none";
+            };
+        }        
 
     }
+        
+    const sortedEvents = sortEventsByDate(eventsData);
+    renderEventCards(sortedEvents);
+    attachEventListeners();
+    setupCustomAttendButtons();  
+});
 
+
+// Format event time for display
+function formatEventTime(dateString) {
+    const eventDate = new Date(dateString);
+    return eventDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+function setupCustomAttendButtons() {
     document.querySelectorAll(".custom-attend-button").forEach(button => {
         button.addEventListener("click", () => {
             const eventId = button.getAttribute("data-event-id");
-            const containerId = `paypal-button-container-${eventId}`;
-            const container = document.getElementById(containerId);
+            const event = eventsData.find(e => e.id == eventId);
+            if (!event) return;
+        
+            const rsvpModal = document.getElementById("rsvpModal");
+            const rsvpEventInfo = document.getElementById("rsvpEventInfo");
+            const guestCountSpan = document.getElementById("guestCount");
+            const totalPriceSpan = document.getElementById("totalPrice");
+        
+            let guestCount = 0;
+            const ticketPrice = 10; // You can pull from event.ticket_price if needed
+        
+            // Fill modal
+            rsvpEventInfo.textContent = `${event.title}, ${event.formatted_date} • ${formatEventTime(event.start)}–${formatEventTime(event.end)}`;
+            guestCountSpan.textContent = guestCount;
+            totalPriceSpan.textContent = `$${ticketPrice}`;
+        
+            // Show modal
+            rsvpModal.style.display = "block";
+        
+            // Guest controls
+            document.getElementById("guestIncrement").onclick = () => {
+                guestCount++;
+                guestCountSpan.textContent = guestCount;
+                totalPriceSpan.textContent = `$${(ticketPrice * (1 + guestCount)).toFixed(2)}`;
+            };
+        
+            document.getElementById("guestDecrement").onclick = () => {
+                if (guestCount > 0) {
+                    guestCount--;
+                    guestCountSpan.textContent = guestCount;
+                    totalPriceSpan.textContent = `$${(ticketPrice * (1 + guestCount)).toFixed(2)}`;
+                }
+            };
+        
+            // Close button
+            document.getElementById("closeRsvpModal").onclick = () => {
+                rsvpModal.style.display = "none";
+                document.getElementById("paypal-container").innerHTML = ""; // Clear PayPal buttons
+            };
 
-            if (container && !container.dataset.rendered) {
-                container.style.display = "block";
-                container.innerHTML = `<div class="paypal-loading">Loading payment options...</div>`;
-
-                paypal.Buttons({
-                    createOrder: async function(data, actions) {
-                        const response = await fetch("/api/orders", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                cart: [{ id: `event_ticket_${eventId}`, quantity: 1 }]
-                            }),
-                        });
-                        const orderData = await response.json();
-                        return orderData.id;
-                    },
-                    onApprove: async function(data, actions) {
-                        const response = await fetch(`/api/orders/${data.orderID}/capture`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                        });
-                        const orderData = await response.json();
-                        const transaction = orderData.purchase_units?.[0]?.payments?.captures?.[0];
-
-                        const resultMessage = transaction?.status === "COMPLETED"
-                            ? `Transaction completed: ${transaction.id}`
-                            : `Transaction failed: ${transaction?.status}`;
-
-                        alert(resultMessage);
-                    },
-                    onInit: function(data, actions) {
-                        const loadingMessage = container.querySelector(".paypal-loading");
-                        if (loadingMessage) loadingMessage.remove();
-                    }
-                }).render(`#${containerId}`);
-
-                container.dataset.rendered = "true";
-            }
-        });
-    });
-    
-
-    const sortedEvents = sortEventsByDate(eventsData);
-    renderEventCards(sortedEvents);
-    attachEventListeners(); // Fix for lost event listeners!
-
-});
-
-// Move PayPal button logic here, outside of DOMContentLoaded
-document.querySelectorAll(".custom-attend-button").forEach(button => {
-    button.addEventListener("click", () => {
-        const eventId = button.getAttribute("data-event-id");
-        const containerId = `paypal-button-container-${eventId}`;
-        const container = document.getElementById(containerId);
-
-        if (container && !container.dataset.rendered) {
-            container.style.display = "block";
+            document.getElementById("closeRsvpX").onclick = () => {
+                document.getElementById("rsvpModal").style.display = "none";
+                document.getElementById("paypal-container").innerHTML = "";
+            };
+            
+        
+            // Render PayPal
+            const container = document.getElementById("paypal-container");
             container.innerHTML = `<div class="paypal-loading">Loading payment options...</div>`;
-
             paypal.Buttons({
                 createOrder: async function(data, actions) {
                     const response = await fetch("/api/orders", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            cart: [{ id: `event_ticket_${eventId}`, quantity: 1 }]
+                            cart: [{ id: `event_ticket_${eventId}`, quantity: 1 + guestCount }]
                         }),
                     });
                     const orderData = await response.json();
@@ -525,23 +515,17 @@ document.querySelectorAll(".custom-attend-button").forEach(button => {
                     });
                     const orderData = await response.json();
                     const transaction = orderData.purchase_units?.[0]?.payments?.captures?.[0];
-
                     const resultMessage = transaction?.status === "COMPLETED"
                         ? `Transaction completed: ${transaction.id}`
                         : `Transaction failed: ${transaction?.status}`;
-
                     alert(resultMessage);
                 },
                 onInit: function(data, actions) {
                     const loadingMessage = container.querySelector(".paypal-loading");
                     if (loadingMessage) loadingMessage.remove();
                 }
-            }).render(`#${containerId}`);
-
-            container.dataset.rendered = "true";
-            container.scrollIntoView({ behavior: "smooth" });
-        }
+            }).render("#paypal-container");
+        });        
     });
-});
-
+}
 

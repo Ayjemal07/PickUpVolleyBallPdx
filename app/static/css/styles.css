@@ -1281,3 +1281,34 @@ html, body {
   gap: 10px;
   margin: 10px 0;
 }
+
+
+.guest-counter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  font-size: 1.25rem;
+}
+
+.guest-counter button {
+  padding: 6px 14px;
+  font-size: 1.25rem;
+  background-color: #7DB3B0;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.guest-counter button:hover {
+  background-color: #639996;
+}
+
+#guestCount {
+  min-width: 30px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.4rem;
+}

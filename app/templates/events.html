@@ -133,9 +133,33 @@
         <button id="closeCancelModal" class="btn btn-grey">Close</button>
     </div>
 </div>
-
 {% endif %}
 
+
+<!-- RSVP Modal -->
+<div id="rsvpModal" class="modal">
+    <div class="modal-content">
+        <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="rsvpTitle" style="margin: 0;">You're booking:</h2>
+            <button type="button" id="closeRsvpX" class="close-button" aria-label="Close" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>          
+      <p id="rsvpEventInfo"></p>
+  
+      <label>Are you bringing a guest?</label>
+      <div class="guest-counter">
+        <button type="button" id="guestDecrement">-</button>
+        <span id="guestCount">0</span>
+        <button type="button" id="guestIncrement">+</button>
+      </div>
+  
+      <p>Total Price: <strong id="totalPrice">$10</strong></p>
+  
+      <!-- PayPal buttons will render here -->
+      <div id="paypal-container" style="margin-top: 15px;"></div>
+  
+      <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
+    </div>
+</div>
 <!-- Event Cards -->
 <div class="events-container">
     {% for event in events %}
@@ -172,10 +196,6 @@
                 <strong>Description:</strong> {{ event.description.split()[:2] | join(' ') }}...
             </p>
             <button class="see-more-button" data-event-id="{{ event.id }}">See More</button>
-            <div class="full-description" id="desc-{{ event.id }}" style="display: none;">
-                <p>{{ event.description }}</p>
-                <a href="{{ url_for('main.events') }}/{{ event.id }}" class="btn btn-info">View Details</a>
-            </div>
             <p class="event-going"><strong>Who's Going:</strong> {{ event.going_count or 0 }} going</p>
             <button 
                 class="btn btn-success custom-attend-button" 
@@ -194,6 +214,5 @@
 
 <!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
-<script src="{{ url_for('static', filename='events.js') }}"></script>
 
 {% endblock %}
