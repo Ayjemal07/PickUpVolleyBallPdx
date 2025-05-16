@@ -4,8 +4,25 @@ from flask import Blueprint, render_template, redirect, url_for, flash, session
 from app.forms import UserLoginForm, UserRegistrationForm
 from ..models import User, db
 from flask_login import login_user, logout_user, login_required
+from flask import request
+from itsdangerous import URLSafeTimedSerializer
+from flask_mail import Mail, Message
+import re
+
+mail = Mail()
+serializer = URLSafeTimedSerializer('your-secret-key')  # Replace with your secret key
 
 auth = Blueprint('auth', __name__, template_folder='auth_templates')
+
+
+def is_strong_password(password):
+    return (
+        len(password) >= 8 and
+        re.search(r'[A-Z]', password) and
+        re.search(r'[a-z]', password) and
+        re.search(r'\d', password) and
+        re.search(r'[!@#$%^&*(),.?":{}|<>]', password)
+    )
 
 @auth.route('/signin', methods=['GET', 'POST'])
 def signin():
@@ -46,6 +63,11 @@ def register():
         if User.query.filter_by(email=form.email.data).first():
             flash('Email already registered. Please log in.', 'error')
             return redirect(url_for('auth.signin'))
+        
+        if not is_strong_password(form.password.data):
+            flash('Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.', 'error')
+            return redirect(url_for('auth.register'))
+
 
         # Create the user from the form data
         role = 'admin' if form.email.data == 'tester@gmail.com' else 'user'
@@ -85,3 +107,46 @@ def signout():
 @login_required
 def profile():
     return redirect(url_for('auth.profile'))
+
+
+
+@auth.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form['email']
+        user = User.query.filter_by(email=email).first()
+        if user:
+            token = serializer.dumps(email, salt='password-reset-salt')
+            reset_url = url_for('auth.reset_password', token=token, _external=True)
+            msg = Message(subject="Reset Your Password",
+                          sender="no-reply@pickupvolleyballpdx.com",
+                          recipients=[email],
+                          body=f'Click the link to reset your password: {reset_url}')
+            mail.send(msg)
+            flash('If your email exists in our system, a password reset link has been sent. Please check your inbox.', 'success')
+        else:
+            flash('No account with that email.', 'error')
+        return redirect(url_for('auth.forgot_password'))
+    return render_template('forgot_password.html')
+
+
+@auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        email = serializer.loads(token, salt='password-reset-salt', max_age=3600)
+    except Exception as e:
+        flash('The password reset link is invalid or expired.', 'error')
+        return redirect(url_for('auth.signin'))
+
+    if request.method == 'POST':
+        user = User.query.filter_by(email=email).first()
+        if user:
+            new_password = request.form['password']
+            if not is_strong_password(new_password):
+                flash('Password must meet complexity requirements.', 'error')
+                return render_template('reset_password.html', token=token)
+            user.set_password(new_password)
+            db.session.commit()
+            flash('Your password has been reset. Please log in.', 'success')
+            return redirect(url_for('auth.signin'))
+    return render_template('reset_password.html', token=token)

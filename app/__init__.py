@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 import os
 from app.models import db, login_manager
 
+from flask_mail import Mail
+
+mail = Mail()
+
 # Load environment variables
 load_dotenv()
 
@@ -35,6 +39,7 @@ def create_app():
 
     app.register_blueprint(auth)
     app.register_blueprint(main)  # Register last to avoid route conflicts
+    mail.init_app(app)
 
 
     return app

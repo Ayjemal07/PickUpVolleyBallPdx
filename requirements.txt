@@ -12,3 +12,4 @@ python-dotenv
 Flask-Migrate
 mysqlclient
 pymysql
+Flask-Mail==0.10.1
