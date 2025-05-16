@@ -119,7 +119,7 @@ def forgot_password():
             token = serializer.dumps(email, salt='password-reset-salt')
             reset_url = url_for('auth.reset_password', token=token, _external=True)
             msg = Message(subject="Reset Your Password",
-                          sender="no-reply@pickupvolleyballpdx.com",
+                          sender="ayjemal0707@gmail.com",
                           recipients=[email],
                           body=f'Click the link to reset your password: {reset_url}')
             mail.send(msg)
