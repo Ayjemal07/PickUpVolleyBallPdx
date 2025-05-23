@@ -17,7 +17,7 @@ from flask_login import UserMixin
 from flask_login import LoginManager
 import secrets
 from flask_sqlalchemy import SQLAlchemy
-from enum import Enum
+from sqlalchemy import Text
 
 
 db = SQLAlchemy()
@@ -71,7 +71,7 @@ class User(UserMixin, db.Model):
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(500), nullable=False)
+    description = db.Column(Text, nullable=False)
     image_filename = db.Column(db.String(255))
     location = db.Column(db.String(100), nullable=False)
     date = db.Column(db.Date, nullable=False) 

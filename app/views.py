@@ -39,6 +39,10 @@ def events():
         start_time = request.form.get('start_time')
         end_time = request.form.get('end_time')
         location = request.form.get('location')
+        allow_guests = request.form.get('allow_guests') == 'on'
+        guest_limit = int(request.form.get('guest_limit') or 0)
+        ticket_price = float(request.form.get('ticket_price') or 0.0)
+        max_capacity = int(request.form.get('max_capacity') or 28)
 
         # Create datetime objects for start and end times
         try:
@@ -59,7 +63,12 @@ def events():
             start_time=start_datetime,
             end_time=end_datetime,
             location=location,
-            status='active'
+            status='active',
+            allow_guests=allow_guests,
+            guest_limit=guest_limit,
+            ticket_price=ticket_price,
+            max_capacity=max_capacity,
+            date=datetime.strptime(date, "%Y-%m-%d").date()
         )
         db.session.add(new_event)
         db.session.commit()
@@ -84,7 +93,11 @@ def events():
         "description": event.description,
         "formatted_date": event.formatted_date,
         "status": event.status,
-        "cancellation_reason": event.cancellation_reason
+        "cancellation_reason": event.cancellation_reason,
+        "allow_guests": event.allow_guests,
+        "guest_limit": event.guest_limit,
+        "ticket_price": event.ticket_price,
+        "max_capacity": event.max_capacity
 
         }
         for event in events
@@ -110,8 +123,11 @@ def add_event():
     end_time = request.form.get('end_time')
     location = request.form.get('location')
     image_filename = None
+    allow_guests = request.form.get('allow_guests') == 'on'
+    guest_limit = int(request.form.get('guest_limit') or 0)
+    ticket_price = float(request.form.get('ticket_price') or 0.0)
+    max_capacity = int(request.form.get('max_capacity') or 28)
 
-    image_filename = None
 
     # Handle uploaded file
     if 'eventImage' in request.files:
@@ -142,7 +158,11 @@ def add_event():
         end_time=end_datetime,
         location=location,
         image_filename=image_filename,
-        status='active'
+        status='active',
+        allow_guests=allow_guests,
+        guest_limit=guest_limit,
+        ticket_price=ticket_price,
+        max_capacity=max_capacity
     )
     db.session.add(new_event)
     db.session.commit()
@@ -189,11 +209,30 @@ def cancel_event(event_id):
 
 
 
+# views.py > event_details()
 @main.route('/events/<int:event_id>')
 def event_details(event_id):
     event = Event.query.get_or_404(event_id)
     event.formatted_date = event.date.strftime('%b %d, %Y')
-    return render_template('event_details.html', event=event)
+
+    event_dict = {
+        "id": event.id,
+        "title": event.title,
+        "location": event.location,
+        "description": event.description,
+        "start": event.start_time.strftime('%Y-%m-%dT%H:%M'),
+        "end": event.end_time.strftime('%Y-%m-%dT%H:%M'),
+        "formatted_date": event.formatted_date,
+        "status": event.status,
+        "cancellation_reason": event.cancellation_reason,
+        "allow_guests": event.allow_guests,
+        "guest_limit": event.guest_limit,
+        "ticket_price": float(event.ticket_price),
+        "max_capacity": event.max_capacity,
+        "rsvp_count": getattr(event, 'going_count', 0) or 0
+    }
+
+    return render_template('event_details.html', event=event, event_data=event_dict)
 
 @main.route('/subscriptions')
 def subscriptions():

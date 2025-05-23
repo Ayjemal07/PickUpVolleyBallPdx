@@ -34,79 +34,69 @@
         <i class="bi bi-person-plus"></i> <strong>Guests Allowed:</strong> Up to {{ event.guest_limit }} per attendee
     </p>
     {% endif %}
-    <p><strong>Description:</strong> {{ event.description }}</p>
+
+    <p><strong>Price:</strong> ${{ "%.2f" % event.ticket_price }}</p>
+    <p><strong>Max Capacity:</strong> {{ event.max_capacity }}</p>
+
+    <p><strong>Description:</strong></p>
+    <div>{{ event.description | safe }}</div>
 
     {% if event.status == 'canceled' %}
         <p style="color: red;"><strong>Cancelled:</strong> {{ event.cancellation_reason }}</p>
     {% else %}
-    
+    <div style="margin-top: 20px;">
         <button 
-            class="btn btn-success custom-attend-button" 
+            class="btn btn-success custom-attend-button"
             data-event-id="{{ event.id }}"
-            data-ticket-price="{{ "%.2f" % event.ticket_price }}"
-            data-guest-limit="{{ event.guest_limit if event.allow_guests else 0 }}">
+            data-title="{{ event.title }}"
+            data-time="{{ event.formatted_date }} {{ event.start_time.strftime('%I:%M %p') }}"
+            data-ticket-price="{{ '%.2f' % event.ticket_price }}"
+            data-guest-limit="{{ event.guest_limit if event.allow_guests else 0 }}"
+            {% if event.rsvp_count >= event.max_capacity %}disabled{% endif %}>
             Attend
         </button>
-        
-        <div id="paypal-button-container-{{ event.id }}" class="paypal-button-container" style="margin-top: 15px;"></div>
-    {% endif %}
+        <br>
+        <a href="{{ url_for('main.events') }}" class="btn btn-secondary" style="margin-top: 10px;">Back to Events</a>
+    </div>
 
-<a href="{{ url_for('main.events') }}" class="btn btn-secondary" style="margin-top: 20px;">Back to Events</a>
+    {% endif %}
 </div>
 
 
-<!-- PayPal SDK -->
-<script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
+<!-- RSVP Modal -->
+<div id="rsvpModal" class="modal">
+  <div class="modal-content">
+    <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="rsvpTitle" style="margin: 0;">You're booking:</h2>
+        <button type="button" id="closeRsvpX" class="close-button" aria-label="Close" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">&times;</button>
+    </div>          
+    <p id="rsvpEventInfo"></p>
+
+    <label>Are you bringing a guest?</label>
+    <div class="guest-counter">
+      <button type="button" id="guestDecrement">-</button>
+      <span id="guestCount">0</span>
+      <button type="button" id="guestIncrement">+</button>
+    </div>
+
+    <p>Total Price: <strong id="totalPrice">$10</strong></p>
+
+    <!-- PayPal buttons will render here -->
+    <div id="paypal-container" style="margin-top: 15px;"></div>
+
+    <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
+  </div>
+</div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const attendButton = document.querySelector('.custom-attend-button');
-        const containerId = "paypal-button-container-{{ event.id }}";
-        const container = document.getElementById(containerId);
-
-        attendButton.addEventListener('click', function () {
-            // Avoid re-rendering if already loaded
-            if (container.dataset.rendered) return;
-
-            container.style.display = "block";
-            container.innerHTML = `<div class="paypal-loading">Loading payment options...</div>`;
-
-            paypal.Buttons({
-                createOrder: async function(data, actions) {
-                    const response = await fetch("/api/orders", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            cart: [{ id: `event_ticket_{{ event.id }}`, quantity: 1 }]
-                        }),
-                    });
-                    const orderData = await response.json();
-                    return orderData.id;
-                },
-                onApprove: async function(data, actions) {
-                    const response = await fetch(`/api/orders/${data.orderID}/capture`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                    });
-                    const orderData = await response.json();
-                    const transaction = orderData.purchase_units?.[0]?.payments?.captures?.[0];
-
-                    const resultMessage = transaction?.status === "COMPLETED"
-                        ? `Transaction completed: ${transaction.id}`
-                        : `Transaction failed: ${transaction?.status}`;
-
-                    alert(resultMessage);
-                },
-                onInit: function() {
-                    const loading = container.querySelector(".paypal-loading");
-                    if (loading) loading.remove();
-                }
-            }).render(`#${containerId}`);
-
-            container.dataset.rendered = "true";
-        });
-    });
+    const eventsData = [{{ event_data|tojson|safe }}];
 </script>
 
-
+<script src="{{ url_for('static', filename='events.js') }}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        setupCustomAttendButtons();  // re-initialize button listeners
+    });
+</script>
+<script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
 {% endblock %}

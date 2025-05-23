@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
       createForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const form = e.target;
+        tinymce.triggerSave();
         const data = new FormData(form);
     
         try {
@@ -449,6 +450,11 @@ function setupCustomAttendButtons() {
             const eventId = button.getAttribute("data-event-id");
             const event = eventsData.find(e => e.id == eventId);
             if (!event) return;
+
+            if (event.rsvp_count >= event.max_capacity) {
+                alert("Sorry, this event is full.");
+                return;
+            }
         
             const rsvpModal = document.getElementById("rsvpModal");
             const rsvpEventInfo = document.getElementById("rsvpEventInfo");
@@ -456,7 +462,7 @@ function setupCustomAttendButtons() {
             const totalPriceSpan = document.getElementById("totalPrice");
         
             let guestCount = 0;
-            const ticketPrice = 10; // You can pull from event.ticket_price if needed
+            const ticketPrice = event.ticket_price || 12.00;;
         
             // Fill modal
             rsvpEventInfo.textContent = `${event.title}, ${event.formatted_date} • ${formatEventTime(event.start)}–${formatEventTime(event.end)}`;
@@ -465,10 +471,18 @@ function setupCustomAttendButtons() {
         
             // Show modal
             rsvpModal.style.display = "block";
+
+            if (!event.allow_guests) {
+                document.querySelector('.guest-counter').style.display = 'none';
+            } else {
+                document.querySelector('.guest-counter').style.display = 'flex';
+            }
         
             // Guest controls
             document.getElementById("guestIncrement").onclick = () => {
-                guestCount++;
+                if (guestCount < event.guest_limit) {
+                    guestCount++;
+                }
                 guestCountSpan.textContent = guestCount;
                 totalPriceSpan.textContent = `$${(ticketPrice * (1 + guestCount)).toFixed(2)}`;
             };
