@@ -112,34 +112,54 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const createForm = document.getElementById('createEventForm');
     if (createForm) {
-      createForm.addEventListener('submit', async function(e) {
+    const quill = new Quill('#quillEditor', {
+        theme: 'snow',
+        placeholder: 'Write event details here...',
+        modules: {
+        toolbar: [
+            [{ header: [1, 2, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link'],
+            ['clean']
+        ]
+        }
+    });
+
+    createForm.addEventListener('submit', async function (e) {
         e.preventDefault();
+
+        // ✅ Replace tinymce.triggerSave() with this:
+        const descriptionInput = document.getElementById('descriptionInput');
+        if (descriptionInput) {
+        descriptionInput.value = quill.root.innerHTML;
+        }
+
         const form = e.target;
-        tinymce.triggerSave();
         const data = new FormData(form);
-    
+
         try {
-          const res = await fetch('/events/add', {
+        const res = await fetch('/events/add', {
             method: 'POST',
             body: data,
-          });
-    
-          if (!res.ok) {
+        });
+
+        if (!res.ok) {
             const err = await res.json().catch(() => ({ message: 'Unknown error' }));
             throw new Error(err.message);
-          }
-    
-          const result = await res.json();
-          alert(result.message || 'Event created!');
-          form.closest('.modal').style.display = 'none';
-          window.location.reload();
-        } catch (err) {
-          console.error('Upload failed:', err);
-          alert('Failed to add event: ' + err.message);
         }
-      });
+
+        const result = await res.json();
+        alert(result.message || 'Event created!');
+        form.closest('.modal').style.display = 'none';
+        window.location.reload();
+        } catch (err) {
+        console.error('Upload failed:', err);
+        alert('Failed to add event: ' + err.message);
+        }
+    });
     }
-    
+
 
     
 

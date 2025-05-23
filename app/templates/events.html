@@ -250,25 +250,6 @@
 
 <!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
-<script>
-  const quill = new Quill('#quillEditor', {
-    theme: 'snow',
-    placeholder: 'Write event details here...',
-    modules: {
-      toolbar: [
-        [{ header: [1, 2, false] }],
-        ['bold', 'italic', 'underline'],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        ['link'],
-        ['clean']
-      ]
-    }
-  });
 
-  // Submit HTML content to hidden input on form submit
-  document.getElementById("createEventForm").addEventListener("submit", function () {
-    document.getElementById("descriptionInput").value = quill.root.innerHTML;
-  });
-</script>
 
 {% endblock %}
