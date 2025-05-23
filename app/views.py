@@ -10,6 +10,8 @@ from datetime import datetime
 import os
 from flask import current_app
 from werkzeug.utils import secure_filename
+import uuid 
+
 
 
 main = Blueprint('main', __name__)
@@ -131,12 +133,15 @@ def add_event():
 
     # Handle uploaded file
     if 'eventImage' in request.files:
-        image = request.files['eventImage']
+        image = request.files['eventImage']  
         if image and image.filename:
-            filename = secure_filename(image.filename)
+            import uuid  # make sure this is at the top of your file
+            ext = os.path.splitext(image.filename)[1]  # get file extension
+            filename = f"{uuid.uuid4().hex}{ext}"  # generate unique filename
             upload_path = os.path.join(current_app.root_path, 'static', 'images', filename)
             image.save(upload_path)
             image_filename = filename
+
     
     # Handle existing image option
     elif request.form.get('existingImage'):
