@@ -12,6 +12,8 @@ from flask import current_app
 from werkzeug.utils import secure_filename
 import uuid 
 
+from .models import EventAttendee
+
 
 
 main = Blueprint('main', __name__)
@@ -179,20 +181,42 @@ def add_event():
 @main.route('/events/edit/<int:event_id>', methods=['POST'])
 def edit_event(event_id):
     event = Event.query.get_or_404(event_id)
-    data = request.get_json()
 
     try:
-        event.title = data.get('title')
-        event.description = data.get('description')
-        event.location = data.get('location')
-        event.date = datetime.strptime(data.get('date'), "%Y-%m-%d").date()
-        event.start_time = datetime.strptime(data.get('start_time'), "%H:%M").time()  # Adjust time parsing
-        event.end_time = datetime.strptime(data.get('end_time'), "%H:%M").time()  # Adjust time parsing
+        # Handle basic text inputs
+        event.title = request.form.get('title')
+        event.description = request.form.get('description')
+        event.location = request.form.get('location')
+        event.date = datetime.strptime(request.form.get('date'), "%Y-%m-%d").date()
+        event.start_time = datetime.strptime(request.form.get('start_time'), "%H:%M").time()
+        event.end_time = datetime.strptime(request.form.get('end_time'), "%H:%M").time()
+
+        # Optional fields
+        event.allow_guests = request.form.get('allow_guests') == 'on'
+        event.guest_limit = int(request.form.get('guest_limit') or 0)
+        event.ticket_price = float(request.form.get('ticket_price') or 0.0)
+        event.max_capacity = int(request.form.get('max_capacity') or 28)
+
+        # Handle image upload (new file)
+        if 'eventImage' in request.files:
+            image = request.files['eventImage']
+            if image and image.filename:
+                ext = os.path.splitext(image.filename)[1]
+                filename = f"{uuid.uuid4().hex}{ext}"
+                upload_path = os.path.join(current_app.root_path, 'static', 'images', filename)
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                image.save(upload_path)
+                event.image_filename = filename
+
+        # Handle existing image selection if no file was uploaded
+        elif request.form.get('existingImage'):
+            event.image_filename = request.form.get('existingImage')
 
         db.session.commit()
-        return {'message': 'Event updated successfully'}, 200
+        return {'success': True, 'message': 'Event updated successfully'}, 200
+
     except Exception as e:
-        return {'error': str(e)}, 400
+        return {'success': False, 'message': str(e)}, 400
 
 @main.route('/events/delete/<int:event_id>', methods=['POST'])
 def delete_event(event_id):
@@ -219,6 +243,7 @@ def cancel_event(event_id):
 def event_details(event_id):
     event = Event.query.get_or_404(event_id)
     event.formatted_date = event.date.strftime('%b %d, %Y')
+    attendees = db.session.query(User).join(EventAttendee).filter(EventAttendee.event_id == event.id).all()
 
     event_dict = {
         "id": event.id,
@@ -237,7 +262,7 @@ def event_details(event_id):
         "rsvp_count": getattr(event, 'going_count', 0) or 0
     }
 
-    return render_template('event_details.html', event=event, event_data=event_dict)
+    return render_template('event_details.html', event=event, event_data=event_dict, attendees=attendees)
 
 @main.route('/subscriptions')
 def subscriptions():
@@ -309,6 +334,15 @@ def create_order():
 
 @main.route("/api/orders/<order_id>/capture", methods=["POST"])
 def capture_order(order_id):
+
+    event_id = extract_event_id_from_cart_item(request.json)  # parse this from cart id
+    user_id = current_user.id
+
+    existing = EventAttendee.query.filter_by(event_id=event_id, user_id=user_id).first()
+    if not existing:
+        attendee = EventAttendee(event_id=event_id, user_id=user_id)
+        db.session.add(attendee)
+        db.session.commit()
     access_token = get_access_token()
     headers = {
         "Content-Type": "application/json",

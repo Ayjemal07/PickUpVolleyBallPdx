@@ -34,6 +34,7 @@ class User(UserMixin, db.Model):
     first_name=db.Column(db.String(150), nullable=False)
     last_name=db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
+    profile_image = db.Column(db.String(255), nullable=True)  
     role=db.Column(db.String(10), nullable=False, default='user')
     password_hash = db.Column(db.String(255))  # Increase to 255 characters
     token = db.Column(db.String(50))
@@ -91,3 +92,10 @@ class Event(db.Model):
     
 
 
+class EventAttendee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='event_attendances')

@@ -34,26 +34,36 @@ document.addEventListener('DOMContentLoaded', function () {
     // Open the modal for creating events
     function openCreateEventModal(date = null, event = null) {
         const modal = document.getElementById('createEventModal');
-        const eventDateInput = document.getElementById('date');
-        const eventStartTimeInput = document.getElementById('startTime');
-        const eventEndTimeInput = document.getElementById('endTime');
-        const eventTitleInput = document.getElementById('title');
-        const eventDescriptionInput = document.getElementById('description');
-        const eventLocationInput = document.getElementById('location');
+
 
         modal.style.display = 'block';
+        document.querySelector('#createEventForm h2').textContent = 'Add New Event';
+        const submitBtn = document.querySelector('#createEventForm button[type="submit"]');
+        submitBtn.textContent = 'Add Event';
 
-        // If it's a new event, populate the date
-        if (date) {
-            eventDateInput.value = date;
-            eventStartTimeInput.value = '12:00';  // Default start time
-            eventEndTimeInput.value = '12:00';  // Default end time
+        // reset simple fields...
+        document.getElementById('eventId').value = '';
+        document.getElementById('title').value = '';
+        document.getElementById('location').value = '';
+        document.getElementById('date').value = date || '';
+        document.getElementById('startTime').value = '19:00';
+        document.getElementById('endTime').value   = '21:00';  // 
+
+
+        // reset image pickers (your existing code)…
+        existingImageSelect.selectedIndex = 0;
+        existingImageSelect.disabled = false;
+        previewImage.style.display = 'none';
+        fileInput.value = '';
+
+        if (window.quill) {
+            window.quill.setContents([]);
         }
 
         // If editing an existing event, populate the fields
         if (event) {
             eventTitleInput.value = event.title;
-            eventDescriptionInput.value = event.description;
+            descriptionInput.value = event.description;
             eventLocationInput.value = event.location;
             const eventDate = new Date(event.start);
             eventDateInput.value = eventDate.toISOString().split('T')[0]; // Set date in YYYY-MM-DD format
@@ -62,49 +72,112 @@ document.addEventListener('DOMContentLoaded', function () {
             eventDateInput.dataset.eventId = event.id;  // Save the event ID for editing
         }
 
-        document.getElementById('closeModal').onclick = function () {
-            modal.style.display = 'none';
-        };
+        // Close button should refer to the correct modal
+        const closeModalButton = document.getElementById("closeModal");
+        if (closeModalButton) {
+            closeModalButton.addEventListener("click", function () {
+                const modal = document.getElementById("createEventModal");
+                modal.style.display = "none";
+                document.getElementById("eventId").value = ''; // Clear on close
+            });
+        }
 
-    }
+        }
 
+            // Image option logic
+        // Image option logic
+        const imageOptionSelect        = document.getElementById('imageOption');
+        const existingImageContainer   = document.getElementById('existingImageContainer');
+        const uploadImageContainer     = document.getElementById('uploadImageContainer');
+        const previewImage             = document.getElementById('previewImage');
+        const existingImageSelect      = document.getElementById('existingImage');
+        const fileInput                = document.getElementById('eventImage');
 
-        // Image option toggle logic
-    const imageOptionSelect = document.getElementById('imageOption');
-    const existingImageContainer = document.getElementById('existingImageContainer');
-    const uploadImageContainer = document.getElementById('uploadImageContainer');
-    const previewImage = document.getElementById('previewImage');
-
-    if (imageOptionSelect) {
+        if (imageOptionSelect) {
         imageOptionSelect.addEventListener('change', function () {
-            const selected = this.value;
-            if (selected === 'upload') {
-                uploadImageContainer.style.display = 'block';
-                existingImageContainer.style.display = 'none';
-                previewImage.style.display = 'none';
-            } else {
-                uploadImageContainer.style.display = 'none';
-                existingImageContainer.style.display = 'block';
-                const existingImage = document.getElementById('existingImage').value;
-                if (existingImage) {
-                    previewImage.src = `/static/images/${existingImage}`;
-                    previewImage.style.display = 'block';
-                }
-            }
-        });
-    }
+            if (this.value === 'upload') {
+            // show file upload, hide existing list
+            uploadImageContainer.style.display    = 'block';
+            existingImageContainer.style.display  = 'none';
+            previewImage.style.display            = 'none';
 
-    const existingImageSelect = document.getElementById('existingImage');
-    if (existingImageSelect) {
-        existingImageSelect.addEventListener('change', function () {
-            const selected = this.value;
-            if (selected) {
-                previewImage.src = `/static/images/${selected}`;
+            // disable existing-select, enable file-input
+            existingImageSelect.disabled = true;
+            fileInput.disabled          = false;
+            existingImageSelect.selectedIndex = 0;
+            fileInput.value             = '';
+            } else {
+            // show existing list, hide file upload
+            uploadImageContainer.style.display    = 'none';
+            existingImageContainer.style.display  = 'block';
+
+            // enable existing-select, disable file-input
+            existingImageSelect.disabled = false;
+            fileInput.disabled          = true;
+            fileInput.value             = '';
+
+            // update preview if one is already selected
+            if (existingImageSelect.value) {
+                previewImage.src       = `/static/images/${existingImageSelect.value}`;
                 previewImage.style.display = 'block';
             } else {
                 previewImage.style.display = 'none';
             }
+            }
         });
+        }
+
+        // When user picks an existing image, disable file-input
+        if (existingImageSelect) {
+        existingImageSelect.addEventListener('change', function () {
+            if (this.value) {
+            fileInput.disabled = true;
+            previewImage.src   = `/static/images/${this.value}`;
+            previewImage.style.display = 'block';
+            } else {
+            fileInput.disabled = false;
+            previewImage.style.display = 'none';
+            }
+        });
+        }
+
+        // When user picks a file, disable existing-select
+        if (fileInput) {
+        fileInput.addEventListener('change', function () {
+            if (this.files.length > 0) {
+            existingImageSelect.disabled = true;
+            existingImageSelect.selectedIndex = 0;
+            previewImage.style.display = 'none';
+            } else {
+            existingImageSelect.disabled = false;
+            }
+        });
+        }
+
+        // Update preview when selecting an existing image
+        if (existingImageSelect) {
+            existingImageSelect.addEventListener('change', function () {
+                const selected = this.value;
+                if (selected) {
+                    previewImage.src = `/static/images/${selected}`;
+                    previewImage.style.display = 'block';
+                } else {
+                    previewImage.style.display = 'none';
+                }
+            });
+        }
+
+        // Disable existing dropdown if a new image file is uploaded
+        if (fileInput && existingImageSelect) {
+            fileInput.addEventListener('change', function () {
+                if (fileInput.files.length > 0) {
+                    existingImageSelect.selectedIndex = 0;
+                    existingImageSelect.disabled = true;
+                    previewImage.style.display = 'none';
+                } else {
+                    existingImageSelect.disabled = false;
+                }
+            });
     }
 
 
@@ -112,125 +185,125 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const createForm = document.getElementById('createEventForm');
     if (createForm) {
-    const quill = new Quill('#quillEditor', {
-        theme: 'snow',
-        placeholder: 'Write event details here...',
-        modules: {
-        toolbar: [
-            [{ header: [1, 2, false] }],
-            ['bold', 'italic', 'underline'],
-            [{ list: 'ordered' }, { list: 'bullet' }],
-            ['link'],
-            ['clean']
-        ]
-        }
-    });
+        // ✅ Initialize Quill
+        const quill = new Quill('#quillEditor', {
+            theme: 'snow',
+            placeholder: 'Write event details here...',
+            modules: {
+                toolbar: [
+                    [{ header: [1, 2, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link'],
+                    ['clean']
+                ]
+            }
+        });
+        window.quill = quill;
 
-    createForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
 
-        // ✅ Replace tinymce.triggerSave() with this:
-        const descriptionInput = document.getElementById('descriptionInput');
-        if (descriptionInput) {
-        descriptionInput.value = quill.root.innerHTML;
-        }
+        // ✅ Form submit handler (create or edit)
+        createForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
 
-        const form = e.target;
-        const data = new FormData(form);
+            const descriptionInput = document.getElementById('descriptionInput');
+            if (window.quill) {
+                descriptionInput.value = window.quill.root.innerHTML;
+            }
 
-        try {
-        const res = await fetch('/events/add', {
-            method: 'POST',
-            body: data,
+            const eventId = document.getElementById('eventId').value;
+            const url = eventId ? `/events/edit/${eventId}` : '/events/add';
+
+              if (existingImageSelect.value) {
+                fileInput.disabled = true;
+            } else {
+                existingImageSelect.disabled = true;
+            }
+
+            const formData = new FormData(createForm);
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await res.json();
+
+                if (!res.ok) throw new Error(result.message || 'Something went wrong');
+
+                alert(result.message || (eventId ? 'Event updated!' : 'Event created!'));
+                document.getElementById('createEventModal').style.display = 'none';
+                window.location.reload();
+            } catch (err) {
+                console.error(err);
+                alert('Error: ' + err.message);
+            }
         });
 
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ message: 'Unknown error' }));
-            throw new Error(err.message);
-        }
-
-        const result = await res.json();
-        alert(result.message || 'Event created!');
-        form.closest('.modal').style.display = 'none';
-        window.location.reload();
-        } catch (err) {
-        console.error('Upload failed:', err);
-        alert('Failed to add event: ' + err.message);
-        }
-    });
     }
 
 
     
-
     // Open the modal for editing an event
 
 
     function openEditEventModal(event) {
-        const modal = document.getElementById("editEventModal");
-    
-        document.getElementById("editEventId").value = event.id;
-        document.getElementById("editTitle").value = event.title;
-        document.getElementById("editDescription").value = event.description;
-        document.getElementById("editDate").value = event.start.split("T")[0]; 
-    
-        // Convert datetime format to HH:MM
-        const startTime = new Date(event.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-        const endTime = new Date(event.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-    
-        document.getElementById("editStartTime").value = startTime;
-        document.getElementById("editEndTime").value = endTime;
-        document.getElementById("editLocation").value = event.location;
-    
-        modal.style.display = "block";
-    }
-    
-    
-    // Close the Edit Modal when clicking the close button
-    const closeEdit = document.getElementById("closeEditModal");
-    if (closeEdit) {
-        closeEdit.addEventListener("click", function () {
-            const modal = document.getElementById("editEventModal");
-            if (modal) modal.style.display = "none";
-        });
-    }
+        const modal = document.getElementById('createEventModal');
+        modal.style.display = 'block';
 
-    const editForm = document.getElementById("editEventForm");
-    if (editForm) {
-        editForm.addEventListener("submit", function (e) {
-            e.preventDefault();
-    
-            const eventId = document.getElementById("editEventId").value;
-            const updatedEvent = {
-                title: document.getElementById("editTitle").value,
-                description: document.getElementById("editDescription").value,
-                date: document.getElementById("editDate").value,
-                start_time: `${document.getElementById("editStartTime").value}`,
-                end_time: `${document.getElementById("editEndTime").value}`,
-                location: document.getElementById("editLocation").value,
-            };
-    
-            console.log("Submitting updated event:", updatedEvent); // Debugging
-    
-            fetch(`/events/edit/${eventId}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(updatedEvent),
-            })
-            .then(response => response.json())
-            .then(data => {
-                alert("Event updated successfully!");
-                location.reload();
-            })
-            .catch(err => {
-                console.error("Error updating event:", err);
-                alert(`Error updating event: ${err.message}`);
+        document.querySelector('#createEventForm h2').textContent = 'Edit Event';
+        const submitBtn = document.querySelector('#createEventForm button[type="submit"]');
+        submitBtn.textContent = 'Update Event';
+
+        document.getElementById('eventId').value = event.id;
+        document.getElementById('title').value = event.title;
+        document.getElementById('location').value = event.location;
+        document.getElementById('date').value = event.start.split('T')[0];
+        document.getElementById('startTime').value = new Date(event.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+        document.getElementById('endTime').value = new Date(event.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+        document.getElementById('guestLimit').value = event.guest_limit || 0;
+        document.getElementById('ticketPrice').value = event.ticket_price || 0;
+        document.getElementById('maxCapacity').value = event.max_capacity || 28;
+        document.getElementById('allowGuests').checked = event.allow_guests;
+
+        // ── NEW: load HTML into Quill AND hidden input
+        if (window.quill) {
+            window.quill.setContents(
+            window.quill.clipboard.convert(event.description || '')
+            );
+        }
+        document.getElementById('descriptionInput').value = event.description;
+
+
+        fileInput.value = '';
+        existingSelect.disabled = false;
+
+        if (event.image_filename && ![...existingSelect.options].some(opt => opt.value === event.image_filename)) {
+            const opt = new Option(event.image_filename, event.image_filename, true, true);
+            existingSelect.add(opt);
+        }
+
+
+        if (event.image_filename) {
+            existingSelect.value = event.image_filename;
+            previewImage.src = `/static/images/${event.image_filename}`;
+            previewImage.style.display = 'block';
+        } else {
+            existingSelect.selectedIndex = 0;
+            previewImage.style.display = 'none';
+        }
+
+        
+
+        const closeModalButton = document.getElementById("closeModal");
+        if (closeModalButton) {
+            closeModalButton.addEventListener("click", function () {
+                const modal = document.getElementById("createEventModal");
+                modal.style.display = "none";
+                document.getElementById("eventId").value = '';
             });
-    
-            document.getElementById("editEventModal").style.display = "none";
-        });
+        }
     }
     
     
@@ -454,6 +527,22 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
+// after DOMContentLoaded, at top of your script
+const closeCreateBtn = document.getElementById('closeModal');
+if (closeCreateBtn) {
+  closeCreateBtn.onclick = () => {
+    document.getElementById('createEventModal').style.display = 'none';
+  };
+}
+
+const closeEditBtn = document.getElementById('closeEditModal');
+if (closeEditBtn) {
+  closeEditBtn.onclick = () => {
+    document.getElementById('editEventModal').style.display = 'none';
+  };
+}
+
+
 // Format event time for display
 function formatEventTime(dateString) {
     const eventDate = new Date(dateString);
@@ -563,3 +652,31 @@ function setupCustomAttendButtons() {
     });
 }
 
+const fileInput = document.getElementById("eventImage");
+const existingImageSelect = document.getElementById("existingImage");
+const previewImage = document.getElementById("previewImage");
+
+// ✅ Always active listeners for both create/edit modes
+if (existingImageSelect) {
+    existingImageSelect.addEventListener('change', function () {
+        const selected = this.value;
+        if (selected) {
+            previewImage.src = `/static/images/${selected}`;
+            previewImage.style.display = 'block';
+        } else {
+            previewImage.style.display = 'none';
+        }
+    });
+}
+
+if (fileInput && existingImageSelect) {
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files.length > 0) {
+            existingImageSelect.selectedIndex = 0;
+            existingImageSelect.disabled = true;
+            previewImage.style.display = 'none';
+        } else {
+            existingImageSelect.disabled = false;
+        }
+    });
+}

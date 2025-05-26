@@ -26,7 +26,19 @@
     </p>
     
     <p>
+        {% if attendees %}
         <i class="bi bi-people"></i> <strong>Who's Going:</strong> {{ event.going_count or 0 }} people
+        <ul class="attendees-list">
+            {% for person in attendees %}
+                <li style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <img src="{{ url_for('static', filename='profile_images/' + (person.profile_image or 'default.png')) }}"
+                        alt="User Image"
+                        style="width: 40px; height: 40px; border-radius: 50%;">
+                    {{ person.first_name }} {{ person.last_name }}
+                </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     </p>
 
     {% if event.allow_guests %}

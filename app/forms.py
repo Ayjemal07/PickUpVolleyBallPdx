@@ -8,8 +8,10 @@ submit the right kinds of data when they're logging in.
 user only uses string, PasswordField prevents showing it on the screen etc.
 """
 from flask_wtf import FlaskForm 
-from wtforms import StringField, PasswordField, SubmitField, IntegerField
+from wtforms import StringField, PasswordField, SubmitField, IntegerField,FileField
 from wtforms.validators import DataRequired, Email, Length
+from wtforms.validators import DataRequired, Optional, EqualTo
+from flask_wtf.file import FileAllowed
 
 class UserLoginForm(FlaskForm):
     # email, password, submit
@@ -28,3 +30,15 @@ class UserRegistrationForm(FlaskForm):
 
 
 
+class ProfileUpdateForm(FlaskForm):
+    first_name = StringField('First Name', validators=[Optional()])
+    last_name = StringField('Last Name', validators=[Optional()])
+    profile_image = FileField('Profile Image', validators=[
+        Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Images only!')
+    ])
+    
+    current_password = PasswordField('Current Password', validators=[Optional()])
+    new_password = PasswordField('New Password', validators=[Optional()])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        Optional(), EqualTo('new_password', message='Passwords must match')
+    ])

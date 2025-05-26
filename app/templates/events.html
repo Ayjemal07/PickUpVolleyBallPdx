@@ -37,22 +37,23 @@
         </div>
         <form id="createEventForm"
             method="POST"
-            action="/events/add"
             enctype="multipart/form-data">
+            <input type="hidden" id="eventId" name="event_id">
             <h2>Add New Event</h2>
             <label for="title">Title</label>
             <input type="text" id="title" name="title" required style="width: 100%; padding: 8px; border-radius: 6px;">
 
-            <label for="eventImage">Image (optional)</label>
+            <label for="eventImage"> Upload New Image </label>
             <input type="file" name="eventImage" id="eventImage" accept="image/*" style="padding: 4px;">
             
             <div id="existingImageContainer">
                 <label for="existingImage">Select Existing Image File</label>
                 <select id="existingImage" name="existingImage" style="width: 100%; padding: 6px; border-radius: 6px;">
-                    {% for image in image_files %}
-                      <option value="{{ image }}">{{ image }}</option>
-                    {% endfor %}
-                  </select>                  
+                <option value="" selected disabled>Select an image</option>
+                {% for image in image_files %}
+                    <option value="{{ image }}">{{ image }}</option>
+                {% endfor %}
+                </select>
             </div>
             
             <div id="uploadImageContainer" style="display:none;">
@@ -150,6 +151,31 @@
 
             <label for="editLocation">Location</label>
             <input type="text" id="editLocation" name="location" required>
+
+            <label for="editAllowGuests">Guests Allowed?</label>
+            <input type="checkbox" id="editAllowGuests" name="allow_guests">
+
+            <label for="editGuestLimit">Guest Limit</label>
+            <input type="number" id="editGuestLimit" name="guest_limit" min="0">
+
+            <label for="editTicketPrice">Ticket Price ($)</label>
+            <input type="number" step="0.01" id="editTicketPrice" name="ticket_price">
+
+            <label for="editMaxCapacity">Max Capacity</label>
+            <input type="number" id="editMaxCapacity" name="max_capacity" min="1">
+
+            <label for="editEventImage">Upload New Image</label>
+            <input type="file" id="editEventImage" name="eventImage" accept="image/*">
+
+            <label for="editExistingImage">Select Existing Image</label>
+            <select id="editExistingImage" name="existingImage">
+                <option value="" selected disabled>Select an image</option>
+                {% for image in image_files %}
+                <option value="{{ image }}">{{ image }}</option>
+                {% endfor %}
+            </select>
+
+            <img id="editPreviewImage" src="" alt="Image Preview" style="max-width: 100%; margin-top: 10px; display: none;">
 
             <button type="submit" class="btn btn-green">Save Changes</button>
         </form>
@@ -251,5 +277,24 @@
 <!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const imageUpload = document.getElementById("eventImage");
+    const existingSelect = document.getElementById("existingImage");
 
+    if (imageUpload && existingSelect) {
+    imageUpload.addEventListener("change", function () {
+        if (imageUpload.files.length > 0) {
+        existingSelect.selectedIndex = 0; // Reset dropdown to "Select an image"
+        existingSelect.disabled = true;   // Disable dropdown if a file is uploaded
+        } else {
+        existingSelect.disabled = false;  // Re-enable if file input is cleared
+        }
+    });
+    }
+    });
+
+
+
+</script>
 {% endblock %}

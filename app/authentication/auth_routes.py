@@ -9,6 +9,11 @@ from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Mail, Message
 import re
 
+import uuid
+from werkzeug.utils import secure_filename
+import os
+from flask import current_app
+from flask_login import current_user
 mail = Mail()
 serializer = URLSafeTimedSerializer('your-secret-key')  # Replace with your secret key
 
@@ -67,7 +72,17 @@ def register():
         if not is_strong_password(form.password.data):
             flash('Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.', 'error')
             return redirect(url_for('auth.register'))
-
+        
+        profile_image_filename = None
+        if 'profileImage' in request.files:
+            image = request.files['profileImage']
+            if image and image.filename:
+                ext = os.path.splitext(image.filename)[1]
+                filename = f"{uuid.uuid4().hex}{ext}"
+                upload_path = os.path.join(current_app.root_path, 'static', 'profile_images', filename)
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                image.save(upload_path)
+                profile_image_filename = filename
 
         # Create the user from the form data
         role = 'admin' if form.email.data == 'tester@gmail.com' else 'user'
@@ -78,6 +93,7 @@ def register():
             role=role
         )
         user.set_password(form.password.data)  # Hashes the password
+        user.profile_image = profile_image_filename or 'default.png'
 
         # Add the user to the database and commit
         db.session.add(user)
@@ -103,11 +119,18 @@ def signout():
     return redirect(url_for('main.home'))
 
 
-@auth.route('/profile')
+@auth.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    return redirect(url_for('auth.profile'))
+    from app.forms import ProfileUpdateForm  # Make sure this form exists
+    form = ProfileUpdateForm(obj=current_user)
 
+    if form.validate_on_submit():
+        # You can plug in update logic here
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('auth.profile'))
+
+    return render_template('profile.html', form=form)
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])
