@@ -43,26 +43,25 @@
             <label for="title">Title</label>
             <input type="text" id="title" name="title" required style="width: 100%; padding: 8px; border-radius: 6px;">
 
-            <label for="eventImage"> Upload New Image </label>
-            <input type="file" name="eventImage" id="eventImage" accept="image/*" style="padding: 4px;">
-            
-            <div id="existingImageContainer">
-                <label for="existingImage">Select Existing Image File</label>
-                <select id="existingImage" name="existingImage" style="width: 100%; padding: 6px; border-radius: 6px;">
-                <option value="" selected disabled>Select an image</option>
-                {% for image in image_files %}
-                    <option value="{{ image }}">{{ image }}</option>
-                {% endfor %}
-                </select>
-            </div>
-            
-            <div id="uploadImageContainer" style="display:none;">
-                <label for="eventImage">Upload New Image</label>
-                <input type="file"
-                       id="eventImage"
-                       name="eventImage"
-                       accept="image/*">
-            </div>            
+            <label for="eventImage">Upload New Image</label>
+            <input 
+            type="file" 
+            id="eventImage" 
+            name="eventImage" 
+            accept="image/*" 
+            />
+
+            <label for="existingImage">Or choose an existing image</label>
+            <select 
+            id="existingImage" 
+            name="existingImage"
+            >
+            <option value="" disabled selected>Select an image</option>
+            {% for image in image_files %}
+                <option value="{{ image }}">{{ image }}</option>
+            {% endfor %}
+            </select>
+            <img id="previewImage" style="display:none; max-height:150px; margin-top:8px;" />            
             
             <label for="quillEditor">Description:</label>
             <div id="quillEditor" style="height: 250px; background: white; border-radius: 6px;"></div>
@@ -253,21 +252,23 @@
         </div>
         
         <div class="event-body">
-            <p class="event-location"><strong>Where:</strong> {{ event.location }}</p>
-            <p class="event-description">
-                <strong>Description:</strong> {{ event.description.split()[:2] | join(' ') }}...
-            </p>
-            <button class="see-more-button" data-event-id="{{ event.id }}">See More</button>
-            <p class="event-going"><strong>Who's Going:</strong> {{ event.going_count or 0 }} going</p>
-            <button 
-                class="btn btn-success custom-attend-button" 
-                data-title="{{ event.title }}"
-                data-time="{{ event.formatted_date }} {{ event.start_time.strftime('%I:%M %p') }}"
-                {% if event.status == 'canceled' or event.rsvp_count >= event.max_capacity %}disabled{% endif %}>
-                Attend
-            </button>
+            <p class="event-going"><strong>Who's Going:</strong> {{ event.rsvp_count or 0 }} going</p>
 
-            <div id="paypal-button-container-{{ event.id }}" class="paypal-button-container" style="display: none;"></div>
+            {% if event.is_attending %}
+                <div class="rsvp-box" style="margin-top: 10px;">
+                    <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
+                    <a href="#" class="edit-rsvp" data-event-id="{{ event.id }}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
+                </div>
+            {% else %}
+                <button 
+                    class="btn btn-success custom-attend-button" 
+                    data-title="{{ event.title }}"
+                    data-time="{{ event.formatted_date }} {{ event.start_time.strftime('%I:%M %p') }}"
+                    {% if event.status == 'canceled' or event.rsvp_count >= event.max_capacity %}disabled{% endif %}>
+                    Attend
+                </button>
+                <div id="paypal-button-container-{{ event.id }}" class="paypal-button-container" style="display: none;"></div>
+            {% endif %}
         </div>
     </div> 
     {% endfor %}
@@ -277,24 +278,4 @@
 <!-- PayPal SDK -->
 <script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-    const imageUpload = document.getElementById("eventImage");
-    const existingSelect = document.getElementById("existingImage");
-
-    if (imageUpload && existingSelect) {
-    imageUpload.addEventListener("change", function () {
-        if (imageUpload.files.length > 0) {
-        existingSelect.selectedIndex = 0; // Reset dropdown to "Select an image"
-        existingSelect.disabled = true;   // Disable dropdown if a file is uploaded
-        } else {
-        existingSelect.disabled = false;  // Re-enable if file input is cleared
-        }
-    });
-    }
-    });
-
-
-
-</script>
 {% endblock %}

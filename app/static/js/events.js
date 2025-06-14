@@ -82,103 +82,103 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        }
+    }
 
-            // Image option logic
         // Image option logic
-        const imageOptionSelect        = document.getElementById('imageOption');
-        const existingImageContainer   = document.getElementById('existingImageContainer');
-        const uploadImageContainer     = document.getElementById('uploadImageContainer');
-        const previewImage             = document.getElementById('previewImage');
-        const existingImageSelect      = document.getElementById('existingImage');
-        const fileInput                = document.getElementById('eventImage');
+    // Image option logic
+    const imageOptionSelect        = document.getElementById('imageOption');
+    const existingImageContainer   = document.getElementById('existingImageContainer');
+    const uploadImageContainer     = document.getElementById('uploadImageContainer');
+    const previewImage             = document.getElementById('previewImage');
+    const existingImageSelect      = document.getElementById('existingImage');
+    const fileInput                = document.getElementById('eventImage');
 
-        if (imageOptionSelect) {
-        imageOptionSelect.addEventListener('change', function () {
-            if (this.value === 'upload') {
-            // show file upload, hide existing list
-            uploadImageContainer.style.display    = 'block';
-            existingImageContainer.style.display  = 'none';
-            previewImage.style.display            = 'none';
+    if (imageOptionSelect) {
+    imageOptionSelect.addEventListener('change', function () {
+        if (this.value === 'upload') {
+        // show file upload, hide existing list
+        uploadImageContainer.style.display    = 'block';
+        existingImageContainer.style.display  = 'none';
+        previewImage.style.display            = 'none';
 
-            // disable existing-select, enable file-input
-            existingImageSelect.disabled = true;
-            fileInput.disabled          = false;
-            existingImageSelect.selectedIndex = 0;
-            fileInput.value             = '';
-            } else {
-            // show existing list, hide file upload
-            uploadImageContainer.style.display    = 'none';
-            existingImageContainer.style.display  = 'block';
+        // disable existing-select, enable file-input
+        existingImageSelect.disabled = true;
+        fileInput.disabled          = false;
+        existingImageSelect.selectedIndex = 0;
+        fileInput.value             = '';
+        } else {
+        // show existing list, hide file upload
+        uploadImageContainer.style.display    = 'none';
+        existingImageContainer.style.display  = 'block';
 
-            // enable existing-select, disable file-input
-            existingImageSelect.disabled = false;
-            fileInput.disabled          = true;
-            fileInput.value             = '';
+        // enable existing-select, disable file-input
+        existingImageSelect.disabled = false;
+        fileInput.disabled          = true;
+        fileInput.value             = '';
 
-            // update preview if one is already selected
-            if (existingImageSelect.value) {
-                previewImage.src       = `/static/images/${existingImageSelect.value}`;
+        // update preview if one is already selected
+        if (existingImageSelect.value) {
+            previewImage.src       = `/static/images/${existingImageSelect.value}`;
+            previewImage.style.display = 'block';
+        } else {
+            previewImage.style.display = 'none';
+        }
+        }
+    });
+    }
+
+    // When user picks an existing image, disable file-input
+    if (existingImageSelect) {
+    existingImageSelect.addEventListener('change', function () {
+        if (this.value) {
+        fileInput.disabled = true;
+        previewImage.src   = `/static/images/${this.value}`;
+        previewImage.style.display = 'block';
+        } else {
+        fileInput.disabled = false;
+        previewImage.style.display = 'none';
+        }
+    });
+    }
+
+    // When user picks a file, disable existing-select
+    if (fileInput) {
+    fileInput.addEventListener('change', function () {
+        if (this.files.length > 0) {
+        existingImageSelect.disabled = true;
+        existingImageSelect.selectedIndex = 0;
+        previewImage.style.display = 'none';
+        } else {
+        existingImageSelect.disabled = false;
+        }
+    });
+    }
+
+    // Update preview when selecting an existing image
+    if (existingImageSelect) {
+        existingImageSelect.addEventListener('change', function () {
+            const selected = this.value;
+            if (selected) {
+                previewImage.src = `/static/images/${selected}`;
                 previewImage.style.display = 'block';
             } else {
                 previewImage.style.display = 'none';
             }
-            }
         });
-        }
-
-        // When user picks an existing image, disable file-input
-        if (existingImageSelect) {
-        existingImageSelect.addEventListener('change', function () {
-            if (this.value) {
-            fileInput.disabled = true;
-            previewImage.src   = `/static/images/${this.value}`;
-            previewImage.style.display = 'block';
-            } else {
-            fileInput.disabled = false;
-            previewImage.style.display = 'none';
-            }
-        });
-        }
-
-        // When user picks a file, disable existing-select
-        if (fileInput) {
-        fileInput.addEventListener('change', function () {
-            if (this.files.length > 0) {
-            existingImageSelect.disabled = true;
-            existingImageSelect.selectedIndex = 0;
-            previewImage.style.display = 'none';
-            } else {
-            existingImageSelect.disabled = false;
-            }
-        });
-        }
-
-        // Update preview when selecting an existing image
-        if (existingImageSelect) {
-            existingImageSelect.addEventListener('change', function () {
-                const selected = this.value;
-                if (selected) {
-                    previewImage.src = `/static/images/${selected}`;
-                    previewImage.style.display = 'block';
-                } else {
-                    previewImage.style.display = 'none';
-                }
-            });
-        }
-
-        // Disable existing dropdown if a new image file is uploaded
-        if (fileInput && existingImageSelect) {
-            fileInput.addEventListener('change', function () {
-                if (fileInput.files.length > 0) {
-                    existingImageSelect.selectedIndex = 0;
-                    existingImageSelect.disabled = true;
-                    previewImage.style.display = 'none';
-                } else {
-                    existingImageSelect.disabled = false;
-                }
-            });
     }
+
+    // Disable existing dropdown if a new image file is uploaded
+    if (fileInput && existingImageSelect) {
+        fileInput.addEventListener('change', function () {
+            if (fileInput.files.length > 0) {
+                existingImageSelect.selectedIndex = 0;
+                existingImageSelect.disabled = true;
+                previewImage.style.display = 'none';
+            } else {
+                existingImageSelect.disabled = false;
+            }
+        });
+}
 
 
     // Handle event form submission for creating events
@@ -213,12 +213,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const eventId = document.getElementById('eventId').value;
             const url = eventId ? `/events/edit/${eventId}` : '/events/add';
-
-              if (existingImageSelect.value) {
-                fileInput.disabled = true;
-            } else {
-                existingImageSelect.disabled = true;
-            }
 
             const formData = new FormData(createForm);
 
@@ -277,20 +271,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
         fileInput.value = '';
-        existingSelect.disabled = false;
+        existingImageSelect.disabled = false;
 
-        if (event.image_filename && ![...existingSelect.options].some(opt => opt.value === event.image_filename)) {
+        if (event.image_filename && ![...existingImageSelect.options].some(opt => opt.value === event.image_filename)) {
             const opt = new Option(event.image_filename, event.image_filename, true, true);
-            existingSelect.add(opt);
+            existingImageSelect.add(opt);
         }
 
 
         if (event.image_filename) {
-            existingSelect.value = event.image_filename;
+            existingImageSelect.value = event.image_filename;
             previewImage.src = `/static/images/${event.image_filename}`;
             previewImage.style.display = 'block';
         } else {
-            existingSelect.selectedIndex = 0;
+            existingImageSelect.selectedIndex = 0;
             previewImage.style.display = 'none';
         }
 
@@ -388,11 +382,18 @@ document.addEventListener('DOMContentLoaded', function () {
                             <p>${event.description}</p>
                             <a href="/events/${event.id}" class="btn btn-info">View Details</a>
                         </div>
-                        <p class="event-going"><strong>Who's Going:</strong> ${event.going_count || 0} going</p>
-                        <button class="btn btn-success custom-attend-button" data-event-id="${event.id}" ${isCanceled ? 'disabled' : ''}>
-                            Attend
-                        </button>
-                        <div id="paypal-button-container-${event.id}" class="paypal-button-container" style="display: none;"></div>
+                        <p class="event-going"><strong>Who's Going:</strong> ${event.rsvp_count || 0} going</p>
+                        ${event.is_attending ? `
+                            <div class="rsvp-box" style="margin-top: 10px;">
+                                <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
+                                <a href="#" class="edit-rsvp" data-event-id="${event.id}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
+                            </div>
+                        ` : `
+                            <button class="btn btn-success custom-attend-button" data-event-id="${event.id}" ${isCanceled ? 'disabled' : ''}>
+                                Attend
+                            </button>
+                            <div id="paypal-button-container-${event.id}" class="paypal-button-container" style="display: none;"></div>
+                        `}
                     </div>
                 </div>
             `;
@@ -523,7 +524,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const sortedEvents = sortEventsByDate(eventsData);
     renderEventCards(sortedEvents);
     attachEventListeners();
-    setupCustomAttendButtons();  
+    setupCustomAttendButtons();
+    setupEditRsvpButtons();
 });
 
 
@@ -625,7 +627,9 @@ function setupCustomAttendButtons() {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            cart: [{ id: `event_ticket_${eventId}`, quantity: 1 + guestCount }]
+                            cart: [{ id: `event_ticket_${eventId}`, quantity: 1 + guestCount }],
+                            event_id: eventId,
+                            guest_count: guestCount
                         }),
                     });
                     const orderData = await response.json();
@@ -635,13 +639,88 @@ function setupCustomAttendButtons() {
                     const response = await fetch(`/api/orders/${data.orderID}/capture`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ event_id: eventId, guest_count: guestCount })
                     });
                     const orderData = await response.json();
                     const transaction = orderData.purchase_units?.[0]?.payments?.captures?.[0];
-                    const resultMessage = transaction?.status === "COMPLETED"
-                        ? `Transaction completed: ${transaction.id}`
-                        : `Transaction failed: ${transaction?.status}`;
-                    alert(resultMessage);
+
+                    const modal = document.getElementById("rsvpModal");
+                    if (modal) modal.style.display = "none";
+
+                    if (transaction?.status === "COMPLETED") {
+                        console.log("✅ Payment success - updating UI");
+
+                        const card = document.querySelector(`.event-card .custom-attend-button[data-event-id="${eventId}"]`)?.closest('.event-card');
+                        const rsvpArea = card || document.querySelector(".event-rsvp-area");
+                        if (rsvpArea) {
+                            rsvpArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                            const successMsg = document.createElement("div");
+                            successMsg.className = "rsvp-success-message";
+                            successMsg.style = "margin-top: 10px; font-weight: bold; color: green;";
+                            successMsg.textContent = "🎉 Thank you! You're confirmed for this event.";
+                            rsvpArea.appendChild(successMsg);
+
+                            const attendBtn = rsvpArea.querySelector(".custom-attend-button");
+                            if (attendBtn) attendBtn.remove();
+
+                            const paypalDiv = rsvpArea.querySelector(".paypal-button-container");
+                            if (paypalDiv) paypalDiv.remove();
+
+                            // If on event_details page, replace content with RSVP box (edit + share)
+                            if (!card && rsvpArea.classList.contains("event-rsvp-area")) {
+                                const detailsBox = document.createElement("div");
+                                detailsBox.className = "rsvp-box";
+                                detailsBox.innerHTML = `
+                                    <p style="font-weight: bold;">You're going!</p>
+                                    <button 
+                                        class="btn btn-success edit-rsvp-button"
+                                        data-event-id="{{ event.id }}"
+                                        data-title="{{ event.title }}"
+                                        data-time="{{ event.formatted_date }} {{ event.start_time.strftime('%I:%M %p') }}"
+                                        data-ticket-price="{{ '%.2f' % event.ticket_price }}"
+                                        data-guest-limit="{{ event.guest_limit if event.allow_guests else 0 }}">
+                                        Edit RSVP
+                                    </button>
+                                `;
+                                rsvpArea.appendChild(detailsBox);
+                            }
+
+                            // Mini box for event cards (optional to show both on events.html)
+                            if (card) {
+                                const confirmBox = document.createElement("div");
+                                confirmBox.className = "rsvp-box";
+                                confirmBox.style = "margin-top: 10px;";
+                                confirmBox.innerHTML = `
+                                    <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
+                                    <a href="#" class="edit-rsvp" data-event-id="${eventId}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
+                                    <button class="btn btn-outline-info" style="margin-left: 10px;">
+                                        Share <i class="bi bi-box-arrow-up"></i>
+                                    </button>
+                                `;
+                                rsvpArea.appendChild(confirmBox);
+                            }
+
+                            // Optional RSVP count update
+                            const rsvpCountElem = rsvpArea.querySelector(".event-going");
+                            if (rsvpCountElem) {
+                                let current = parseInt((rsvpCountElem.textContent.match(/\d+/) || [0])[0]);
+                                rsvpCountElem.textContent = `Who's Going: ${current + 1 + guestCount} going`;
+                            }
+
+                            // Optional: Attendee refresh for event_details.html
+                            const attendeeList = document.querySelector(".attendees-list");
+                            if (attendeeList) {
+                                const reloadButton = document.createElement("button");
+                                reloadButton.className = "btn btn-sm btn-outline-secondary";
+                                reloadButton.textContent = "↻ Refresh Who's Going";
+                                reloadButton.onclick = () => window.location.reload();
+                                rsvpArea.appendChild(reloadButton);
+                            }
+                        }
+                    } else {
+                        alert("Transaction failed. Please try again.");
+                    }
                 },
                 onInit: function(data, actions) {
                     const loadingMessage = container.querySelector(".paypal-loading");
@@ -652,31 +731,25 @@ function setupCustomAttendButtons() {
     });
 }
 
+function openAttendModal(eventId, title, time, ticketPrice, guestLimit, isEdit = false) {
+    // Open modal
+    document.getElementById("rsvpModal").style.display = "block";
+    document.getElementById("rsvpTitle").innerText = isEdit ? "You're going!" : "You're booking:";
+    document.getElementById("rsvpEventInfo").innerText = `${title} — ${time}`;
+
+    // Reset guest count
+    guestCount = 0;
+    document.getElementById("guestCount").innerText = guestCount;
+    currentEventId = eventId;
+    currentTicketPrice = ticketPrice;
+    maxGuestsAllowed = guestLimit;
+
+    updatePrice();
+
+    renderPayPalButtons(eventId, ticketPrice);
+}
+
+
 const fileInput = document.getElementById("eventImage");
 const existingImageSelect = document.getElementById("existingImage");
 const previewImage = document.getElementById("previewImage");
-
-// ✅ Always active listeners for both create/edit modes
-if (existingImageSelect) {
-    existingImageSelect.addEventListener('change', function () {
-        const selected = this.value;
-        if (selected) {
-            previewImage.src = `/static/images/${selected}`;
-            previewImage.style.display = 'block';
-        } else {
-            previewImage.style.display = 'none';
-        }
-    });
-}
-
-if (fileInput && existingImageSelect) {
-    fileInput.addEventListener('change', function () {
-        if (fileInput.files.length > 0) {
-            existingImageSelect.selectedIndex = 0;
-            existingImageSelect.disabled = true;
-            previewImage.style.display = 'none';
-        } else {
-            existingImageSelect.disabled = false;
-        }
-    });
-}

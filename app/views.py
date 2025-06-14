@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 import uuid 
 
 from .models import EventAttendee
+from flask_login import current_user
 
 
 
@@ -29,6 +30,8 @@ def about():
 @main.route('/events', methods=['GET', 'POST'])
 def events():
     user_role = session.get('role', 'user')  # Default to 'user'
+    user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
+    print("User ID in session:", user_id)
         
     # Get list of image filenames
     image_folder = os.path.join(current_app.root_path, 'static', 'images')
@@ -86,6 +89,11 @@ def events():
 
     for event in events:
         event.formatted_date = event.date.strftime('%b %d, %Y')
+        attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+        event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
+        event.is_attending = any(a.user_id == user_id for a in attendees)
+        print(f"User {user_id} attending event {event.id}? {event.is_attending}")
+
 
     events_data = [
         {
@@ -101,7 +109,9 @@ def events():
         "allow_guests": event.allow_guests,
         "guest_limit": event.guest_limit,
         "ticket_price": event.ticket_price,
-        "max_capacity": event.max_capacity
+        "max_capacity": event.max_capacity,
+        "rsvp_count": event.rsvp_count,
+        "is_attending": event.is_attending
 
         }
         for event in events
@@ -148,6 +158,7 @@ def add_event():
     # Handle existing image option
     elif request.form.get('existingImage'):
         image_filename = request.form.get('existingImage')
+        print("existingImage:", request.form.get("existingImage"))
 
     try:
         start_datetime = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
@@ -238,12 +249,15 @@ def cancel_event(event_id):
 
 
 
-# views.py > event_details()
+# event_details()
 @main.route('/events/<int:event_id>')
 def event_details(event_id):
     event = Event.query.get_or_404(event_id)
     event.formatted_date = event.date.strftime('%b %d, %Y')
-    attendees = db.session.query(User).join(EventAttendee).filter(EventAttendee.event_id == event.id).all()
+    attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+    event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
+    user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
+    is_attending = any(a.user_id == user_id for a in attendees)
 
     event_dict = {
         "id": event.id,
@@ -259,10 +273,11 @@ def event_details(event_id):
         "guest_limit": event.guest_limit,
         "ticket_price": float(event.ticket_price),
         "max_capacity": event.max_capacity,
-        "rsvp_count": getattr(event, 'going_count', 0) or 0
+        "rsvp_count": event.rsvp_count
     }
 
-    return render_template('event_details.html', event=event, event_data=event_dict, attendees=attendees)
+
+    return render_template('event_details.html', event=event, event_data=event_dict, attendees=attendees,is_attending=is_attending)
 
 @main.route('/subscriptions')
 def subscriptions():
@@ -334,15 +349,37 @@ def create_order():
 
 @main.route("/api/orders/<order_id>/capture", methods=["POST"])
 def capture_order(order_id):
+    event_id = request.json.get("event_id")
+    guest_count = int(request.json.get("guest_count", 0))
+    user_id = session.get('user_id') or current_user.id
 
-    event_id = extract_event_id_from_cart_item(request.json)  # parse this from cart id
-    user_id = current_user.id
+    if not user_id and current_user.is_authenticated:
+        user_id = current_user.id
 
+    if not user_id:
+        print("❌ No user_id found for RSVP!")
+        return jsonify({"error": "User not authenticated"}), 401
+    
+    print(f"✅ Capturing RSVP for user_id={user_id}, event_id={event_id}, guests={guest_count}")
+
+
+    # Update or create RSVP record
     existing = EventAttendee.query.filter_by(event_id=event_id, user_id=user_id).first()
     if not existing:
-        attendee = EventAttendee(event_id=event_id, user_id=user_id)
+        attendee = EventAttendee(event_id=event_id, user_id=user_id, guest_count=guest_count)
         db.session.add(attendee)
-        db.session.commit()
+    else:
+        existing.guest_count = guest_count
+
+    # Update total RSVP count: each user + their guest_count
+    event = Event.query.get(event_id)
+    if event:
+        attendees = EventAttendee.query.filter_by(event_id=event_id).all()
+        event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
+
+    db.session.commit()
+
+    # Capture order from PayPal
     access_token = get_access_token()
     headers = {
         "Content-Type": "application/json",
@@ -351,3 +388,4 @@ def capture_order(order_id):
 
     response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders/{order_id}/capture", headers=headers)
     return jsonify(response.json())
+

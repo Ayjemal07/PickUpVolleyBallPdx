@@ -97,5 +97,9 @@ class EventAttendee(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    guest_count = db.Column(db.Integer, nullable=False, default=0)
+
+    user = db.relationship('User', backref='attendances')
+    event = db.relationship('Event', backref='attendees')
 
     user = db.relationship('User', backref='event_attendances')
