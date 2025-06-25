@@ -253,8 +253,9 @@
         
         <div class="event-body">
             <p class="event-going"><strong>Who's Going:</strong> {{ event.rsvp_count or 0 }} going</p>
-
-            {% if event.is_attending %}
+            {% if event.rsvp_count >= event.max_capacity %}
+                <button class="btn btn-secondary" disabled>Event Full</button>
+            {% elif event.is_attending %}
                 <div class="rsvp-box" style="margin-top: 10px;">
                     <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
                     <a href="#" class="edit-rsvp" data-event-id="{{ event.id }}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
@@ -267,7 +268,6 @@
                     {% if event.status == 'canceled' or event.rsvp_count >= event.max_capacity %}disabled{% endif %}>
                     Attend
                 </button>
-                <div id="paypal-button-container-{{ event.id }}" class="paypal-button-container" style="display: none;"></div>
             {% endif %}
         </div>
     </div> 

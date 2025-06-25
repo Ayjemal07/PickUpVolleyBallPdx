@@ -1,3 +1,12 @@
+let guestCount = 0;
+let currentEventId = null;
+let currentTicketPrice = 0;
+let maxGuestsAllowed = 0;
+let isEditMode = false;
+let existingGuestCount = 0;
+
+
+
 document.addEventListener('DOMContentLoaded', function () {
     const calendarEl = document.getElementById('calendar');
 
@@ -572,8 +581,13 @@ function setupCustomAttendButtons() {
             const guestCountSpan = document.getElementById("guestCount");
             const totalPriceSpan = document.getElementById("totalPrice");
         
-            let guestCount = 0;
+            guestCount = 0;
             const ticketPrice = event.ticket_price || 12.00;;
+
+            if ((event.rsvp_count || 0) + 1 + guestCount > event.max_capacity) {
+                alert("Sorry, this event is full.");
+                return;
+            }
         
             // Fill modal
             rsvpEventInfo.textContent = `${event.title}, ${event.formatted_date} • ${formatEventTime(event.start)}–${formatEventTime(event.end)}`;
@@ -627,12 +641,19 @@ function setupCustomAttendButtons() {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                            cart: [{ id: `event_ticket_${eventId}`, quantity: 1 + guestCount }],
+                            cart: [{ 
+                            id: `event_ticket_${eventId}`, 
+                            quantity: isEditMode ? guestCount : 1 + guestCount 
+                            }],
                             event_id: eventId,
                             guest_count: guestCount
                         }),
                     });
                     const orderData = await response.json();
+                    if (!orderData.id) {
+                        console.error("❌ PayPal order creation failed:", orderData);
+                        throw new Error("Failed to create PayPal order.");
+                    }
                     return orderData.id;
                 },
                 onApprove: async function(data, actions) {
@@ -731,10 +752,10 @@ function setupCustomAttendButtons() {
     });
 }
 
-function openAttendModal(eventId, title, time, ticketPrice, guestLimit, isEdit = false) {
+function openAttendModal(eventId, title, time, ticketPrice, guestLimit) {
     // Open modal
     document.getElementById("rsvpModal").style.display = "block";
-    document.getElementById("rsvpTitle").innerText = isEdit ? "You're going!" : "You're booking:";
+    document.getElementById("rsvpTitle").innerText = isEditMode ? "You're going!" : "You're booking:";
     document.getElementById("rsvpEventInfo").innerText = `${title} — ${time}`;
 
     // Reset guest count
@@ -744,10 +765,107 @@ function openAttendModal(eventId, title, time, ticketPrice, guestLimit, isEdit =
     currentTicketPrice = ticketPrice;
     maxGuestsAllowed = guestLimit;
 
-    updatePrice();
+    document.getElementById("guestIncrement").onclick = () => {
+        if (guestCount < maxGuestsAllowed) {
+            guestCount++;
+            updatePrice();
+        }
+    };
 
+    document.getElementById("guestDecrement").onclick = () => {
+        if (guestCount > 0) {
+            guestCount--;
+            updatePrice();
+        }
+    };
+
+    document.getElementById("closeRsvpModal").onclick =
+    document.getElementById("closeRsvpX").onclick = () => {
+        document.getElementById("rsvpModal").style.display = "none";
+        document.getElementById("paypal-container").innerHTML = "";
+    };
+
+ 
     renderPayPalButtons(eventId, ticketPrice);
 }
+
+function updatePrice() {
+    const totalGuests = isEditMode ? guestCount : 1 + guestCount;
+    const total = currentTicketPrice * totalGuests;
+
+
+    const guestCountEl = document.getElementById("guestCount");
+    const totalPriceEl = document.getElementById("totalPrice");
+
+    if (guestCountEl) guestCountEl.innerText = guestCount;
+    if (totalPriceEl) totalPriceEl.innerText = `$${total.toFixed(2)}`;
+}
+
+
+
+function setupEditRsvpButtons() {
+    document.querySelectorAll('.edit-rsvp').forEach(button => {
+        button.addEventListener('click', async () => {
+            const eventId = button.getAttribute('data-event-id');
+            const event = eventsData.find(e => e.id == eventId);
+            if (!event) return;
+
+            const res = await fetch(`/api/attendee/${eventId}`);
+            const result = await res.json();
+            const currentGuestCount = result.guest_count || 0;
+
+            guestCount = currentGuestCount;
+            openAttendModal(
+                eventId,
+                event.title,
+                `${event.formatted_date} • ${formatEventTime(event.start)}–${formatEventTime(event.end)}`,
+                event.ticket_price,
+                event.guest_limit,
+                true // isEdit
+            );
+        });
+    });
+}
+
+function renderPayPalButtons(eventId, ticketPrice) {
+    const container = document.getElementById("paypal-container");
+    container.innerHTML = `<div class="paypal-loading">Loading payment options...</div>`;
+
+    paypal.Buttons({
+        createOrder: async function (data, actions) {
+            const response = await fetch("/api/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    cart: [{id: `event_ticket_${eventId}`, 
+                            quantity: isEditMode  ? guestCount : 1 + guestCount  }],
+                    event_id: eventId,
+                    guest_count: guestCount
+                })
+            });
+            const orderData = await response.json();
+            return orderData.id;
+        },
+        onApprove: async function (data) {
+            const response = await fetch(`/api/orders/${data.orderID}/capture`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ event_id: eventId, guest_count: guestCount })
+            });
+            const result = await response.json();
+            if (result.status !== "COMPLETED") {
+                alert("Transaction failed.");
+            } else {
+                alert("Payment completed!");
+                window.location.reload();
+            }
+        },
+        onInit: function () {
+            container.querySelector(".paypal-loading")?.remove();
+        }
+    }).render("#paypal-container");
+}
+
 
 
 const fileInput = document.getElementById("eventImage");

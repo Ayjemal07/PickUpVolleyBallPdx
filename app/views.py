@@ -279,6 +279,14 @@ def event_details(event_id):
 
     return render_template('event_details.html', event=event, event_data=event_dict, attendees=attendees,is_attending=is_attending)
 
+
+@main.route("/api/attendee/<int:event_id>")
+def get_attendee_info(event_id):
+    user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
+    attendee = EventAttendee.query.filter_by(event_id=event_id, user_id=user_id).first()
+    return jsonify({"guest_count": attendee.guest_count if attendee else 0})
+
+
 @main.route('/subscriptions')
 def subscriptions():
     return render_template('subscriptions.html')
@@ -351,32 +359,38 @@ def create_order():
 def capture_order(order_id):
     event_id = request.json.get("event_id")
     guest_count = int(request.json.get("guest_count", 0))
-    user_id = session.get('user_id') or current_user.id
-
-    if not user_id and current_user.is_authenticated:
-        user_id = current_user.id
+    user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
 
     if not user_id:
         print("❌ No user_id found for RSVP!")
         return jsonify({"error": "User not authenticated"}), 401
-    
+
     print(f"✅ Capturing RSVP for user_id={user_id}, event_id={event_id}, guests={guest_count}")
 
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
 
-    # Update or create RSVP record
+    # Calculate RSVP total if this user changes or adds their RSVP
     existing = EventAttendee.query.filter_by(event_id=event_id, user_id=user_id).first()
+
+    current_attendees = EventAttendee.query.filter_by(event_id=event_id).all()
+
+    other_attendee_total = sum(1 + (a.guest_count or 0) for a in current_attendees if a.user_id != user_id)
+    this_user_total = 1 + guest_count
+
+    if other_attendee_total + this_user_total > event.max_capacity:
+        return jsonify({"error": "Event is full"}), 400
+
+    # Update or create RSVP
     if not existing:
         attendee = EventAttendee(event_id=event_id, user_id=user_id, guest_count=guest_count)
         db.session.add(attendee)
     else:
         existing.guest_count = guest_count
 
-    # Update total RSVP count: each user + their guest_count
-    event = Event.query.get(event_id)
-    if event:
-        attendees = EventAttendee.query.filter_by(event_id=event_id).all()
-        event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
-
+    # Save new total rsvp_count
+    event.rsvp_count = other_attendee_total + this_user_total
     db.session.commit()
 
     # Capture order from PayPal

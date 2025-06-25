@@ -50,7 +50,9 @@
         <p style="color: red;"><strong>Cancelled:</strong> {{ event.cancellation_reason }}</p>
     {% else %}
 
-        {% if is_attending %}
+        {% if event.rsvp_count >= event.max_capacity %}
+            <button class="btn btn-secondary" disabled>Event Full</button>
+        {% elif is_attending %}
             <div class="rsvp-box event-rsvp-area">
                 <p style="font-weight: bold;">You're going!</p>
                 <a href="#" style="color: teal; text-decoration: underline;">Edit RSVP</a>
