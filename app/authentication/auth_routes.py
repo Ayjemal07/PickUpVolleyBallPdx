@@ -102,6 +102,49 @@ def register():
         # Print for debugging purposes
         print(f"Registering User: {user}")
 
+
+        # ✅ Generate waiver PDF after user is created
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+        from datetime import datetime
+
+        def generate_waiver_pdf(name, path):
+            c = canvas.Canvas(path, pagesize=letter)
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(72, 750, "Waiver, Assumption of Risk, and Release of Liability")
+            c.setFont("Helvetica", 12)
+            text = c.beginText(72, 720)
+            waiver_text = f"""
+            I, {name}, acknowledge that I have voluntarily signed this waiver on {datetime.now().strftime('%B %d, %Y')}.
+            I understand that participating in volleyball involves risks and I release all organizers from liability.
+            """
+            for line in waiver_text.strip().splitlines():
+                text.textLine(line.strip())
+            c.drawText(text)
+            c.showPage()
+            c.save()
+
+        waiver_filename = f"waiver_{user.id}.pdf"
+        waiver_path = os.path.join(current_app.root_path, 'static', 'waivers', waiver_filename)
+        os.makedirs(os.path.dirname(waiver_path), exist_ok=True)
+        generate_waiver_pdf(f"{user.first_name} {user.last_name}", waiver_path)
+
+        # ✅ Email the waiver to both user and admin
+        from flask_mail import Message
+        with open(waiver_path, 'rb') as f:
+            waiver_data = f.read()
+
+        def send_waiver_email(user_email, admin_email, pdf_bytes):
+            subject = "Waiver Confirmation – Pick Up Volleyball"
+            body = "Attached is your signed waiver for Pick Up Volleyball PDX."
+
+            for recipient in [user_email, admin_email]:
+                msg = Message(subject=subject, recipients=[recipient])
+                msg.body = body
+                msg.attach("waiver.pdf", "application/pdf", pdf_bytes)
+                mail.send(msg)
+
+        send_waiver_email(user.email, "ayjemal0707@gmail.com", waiver_data)
         # Automatically log the user in after registration
         login_user(user)
         session['role'] = role 

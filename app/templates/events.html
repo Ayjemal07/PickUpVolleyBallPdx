@@ -9,20 +9,53 @@
     let userRole = "{{ session.get('role', 'user') }}";  // Default to "user"
     console.log("User Role after signout:", userRole);
 
-    const eventsData = JSON.parse(`{{ events_data|tojson|safe }}`.replace(/\\/g, "\\").replace(/\n/g, "\\n").replace(/\r/g, ""));
+    const eventsData = JSON.parse(`{{ events_data|tojson|safe }}`.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\r/g, "\\r"));
     console.log("Parsed eventsData:", eventsData);
 
-    document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll(".see-more-button").forEach(button => {
-            button.addEventListener("click", function () {
-                const eventId = this.getAttribute("data-event-id");
-                window.location.href = `/events/${eventId}`;
-            });
-        });
-    });
+    // This block is no longer needed as event listeners are attached in events.js
+    // document.addEventListener("DOMContentLoaded", function () {
+    //     document.querySelectorAll(".see-more-button").forEach(button => {
+    //         button.addEventListener("click", function () {
+    //             const eventId = this.getAttribute("data-event-id");
+    //             window.location.href = `/events/${eventId}`;
+    //         });
+    //     });
+    // });
 </script>
 
-<div id="calendar"></div>
+<ul class="nav-tabs">
+    <li class="nav-item">
+        <a class="nav-link active" href="#upcoming">Upcoming Events</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#calendar-view">Calendar</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#past">Past Events</a>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div id="upcoming" class="tab-pane active">
+        <h1>Upcoming Events</h1>
+        <div class="events-container">
+            </div>
+    </div>
+
+    <div id="calendar-view" class="tab-pane">
+        <h1>Event Calendar</h1>
+        <div id="calendar"></div>
+        <h2 style="margin-top: 2rem;">Events List</h2>
+        <div class="events-container">
+            </div>
+    </div>
+
+    <div id="past" class="tab-pane">
+        <h1>Past Events</h1>
+        <p>Past events will be shown here in a future update.</p>
+    </div>
+</div>
+
 
 {% if user_role == 'admin' %}
 <!-- Modal for Creating Events -->
@@ -201,19 +234,18 @@
 <div id="rsvpModal" class="modal">
     <div class="modal-content">
         <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h2 id="rsvpTitle" style="margin: 0;">You're booking:</h2>
+            <h2 id="rsvpTitle" style="margin: 0;"></h2>
             <button type="button" id="closeRsvpX" class="close-button" aria-label="Close" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">&times;</button>
         </div>          
       <p id="rsvpEventInfo"></p>
-  
-      <label>Are you bringing a guest?</label>
-      <div class="guest-counter">
+      <p id="editGuestPrompt" style="margin: 4px 0 10px; font-weight: bold;"></p>
+        <div class="guest-counter">
         <button type="button" id="guestDecrement">-</button>
         <span id="guestCount">0</span>
         <button type="button" id="guestIncrement">+</button>
       </div>
   
-      <p>Total Price: <strong id="totalPrice">$10</strong></p>
+      <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
   
       <!-- PayPal buttons will render here -->
       <div id="paypal-container" style="margin-top: 15px;"></div>
@@ -222,7 +254,7 @@
     </div>
 </div>
 <!-- Event Cards -->
-<div class="events-container">
+<!-- <div class="events-container">
     {% for event in events %}
     <div class="event-card {{ 'canceled' if event.status == 'canceled' else '' }}">
         <div class="event-header">
@@ -252,6 +284,19 @@
         </div>
         
         <div class="event-body">
+             {% if event.image_filename %}
+                    <img src="{{ url_for('static', filename='images/' + event.image_filename) }}"
+                    alt="Event Image"
+                    style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
+            {% endif %}
+            <p class="event-location"><strong>Where:</strong> {{ event.location }}</p>
+            <p class="event-description"><strong>Description:</strong> {{ event.description[:100] }}...</p>
+            <button class="see-more-button" data-event-id="{{ event.id }}">See More</button>
+            <div class="full-description" id="desc-{{ event.id }}" style="display: none;">
+                <p>{{ event.description }}</p>
+                <a href="/events/{{ event.id }}" class="btn btn-info">View Details</a>
+            </div>
+
             <p class="event-going"><strong>Who's Going:</strong> {{ event.rsvp_count or 0 }} going</p>
             {% if event.rsvp_count >= event.max_capacity %}
                 <button class="btn btn-secondary" disabled>Event Full</button>
@@ -263,8 +308,12 @@
             {% else %}
                 <button 
                     class="btn btn-success custom-attend-button" 
+                    data-event-id="{{ event.id }}"
                     data-title="{{ event.title }}"
                     data-time="{{ event.formatted_date }} {{ event.start_time.strftime('%I:%M %p') }}"
+                    data-ticket-price="{{ event.ticket_price | float }}"
+                    data-guest-limit="{{ event.guest_limit | int }}"
+                    data-location="{{ event.location }}" 
                     {% if event.status == 'canceled' or event.rsvp_count >= event.max_capacity %}disabled{% endif %}>
                     Attend
                 </button>
@@ -272,10 +321,7 @@
         </div>
     </div> 
     {% endfor %}
-</div>
+</div> -->
 
-
-<!-- PayPal SDK -->
-<script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
 
 {% endblock %}

@@ -13,3 +13,4 @@ Flask-Migrate
 mysqlclient
 pymysql
 Flask-Mail==0.10.1
+reportlab>=3.5.0

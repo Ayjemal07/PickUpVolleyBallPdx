@@ -56,5 +56,11 @@
 
         <button type="submit" class="btn btn-primary">Update Profile</button>
     </form>
+    <div class="form-group">
+        <h4>Signed Waiver</h4>
+        <a href="{{ url_for('static', filename='waivers/waiver_' ~ current_user.id ~ '.pdf') }}" target="_blank" class="btn btn-outline-secondary">
+            View Signed Waiver
+        </a>
+    </div>
 </div>
 {% endblock %}

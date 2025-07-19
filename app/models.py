@@ -101,5 +101,3 @@ class EventAttendee(db.Model):
 
     user = db.relationship('User', backref='attendances')
     event = db.relationship('Event', backref='attendees')
-
-    user = db.relationship('User', backref='event_attendances')

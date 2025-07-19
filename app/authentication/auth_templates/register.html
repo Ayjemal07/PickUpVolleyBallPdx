@@ -49,6 +49,13 @@
                 placeholder="Minimum 8 chars, upper/lowercase, number, special character">         
             </div>
 
+            <div class="form-group">
+                <input type="checkbox" id="waiver" name="waiver" required>
+                <label for="waiver">
+                    I agree to the 
+                    <a href="{{ url_for('static', filename='waiver.pdf') }}" target="_blank">Waiver, Assumption of Risk, and Release of Liability</a>
+                </label>
+            </div>
             <button type="submit" class="submit-btn" id="register-submit">Create Account</button>
             <div id="spinner" class="spinner" style="display: none;"></div>
         </form>

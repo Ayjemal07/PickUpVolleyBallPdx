@@ -1,3 +1,5 @@
+
+
 /* General Reset for Consistency */
 * {
   margin: 0;
@@ -8,7 +10,7 @@
 
 body {
   background-color: #EBE9E3;
-  font-family: Arial, sans-serif;
+  font-family: 'Poppins', sans-serif;
   display: flex;
   flex-direction: column;
   min-height: 100vh; /* Ensures the body takes full height */
@@ -57,12 +59,12 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: 10px;
     color: #7DB3B0;
     position: sticky;
     top: 0;
     z-index: 1000;
-    background-image: url('/static/images/topo-pattern.jpeg'); /* Add topographic pattern */
+    background-image: url('/static/images/placeholdR.jpg'); /* Add topographic pattern */
     background-repeat: no-repeat;
     background-size: cover;
     border-top: 1px solid rgba(0, 0, 0, 1); /* Darker black top border */
@@ -76,30 +78,30 @@ main {
   }
 
   .logo-icon {
-    width: 24px;          /* Default width for the icon */
+    width: 50px;          /* Default width for the icon */
     height: auto;         /* Maintain aspect ratio */
     max-width: 100%;      /* Ensure it never exceeds container size */
-    margin-right: 8px;    /* Space between icon and logo text */
+    margin-right: 10px;    /* Space between icon and logo text */
 }
 
   /* Responsive adjustments */
   @media (max-width: 768px) {
       .logo-icon {
-          width: 20px;     /* Slightly smaller icon on tablet screens */
+          width: 40px;     /* Slightly smaller icon on tablet screens */
           margin-right: 6px;
       }
   }
 
   @media (max-width: 480px) {
       .logo-icon {
-          width: 18px;     /* Even smaller icon on mobile screens */
+          width: 30px;     /* Even smaller icon on mobile screens */
           margin-right: 4px;
       }
   }
 
 
 /* Menus Link Styling */
-nav a, .social a, .right-menu a, .dropdown-toggle {
+nav a, .right-menu a, .dropdown-toggle {
   margin: 0 10px;
   color: #7DB3B0;
   text-decoration: none;
@@ -120,6 +122,24 @@ main{
 /* Sticky Header and Footer */
 header {
   width: 100%;
+}
+
+/* Style social icons with real-life branding colors */
+/* Real-brand colors for social icons */
+.social-icon.instagram i {
+  color: #E1306C !important;
+}
+
+.social-icon.facebook i {
+  color: #1877F2 !important;
+}
+
+.social-icon.instagram:hover i {
+  color: #C13584 !important;
+}
+
+.social-icon.facebook:hover i {
+  color: #145dbf !important;
 }
 
 
@@ -189,36 +209,44 @@ header {
   display: block;
 }
 
+
+
+.menu-items .dropdown-menu {
+    width: max-content !important;
+    min-width: 0 !important;
+}
 /* Additional small spacing for better layout */
 .right-menu {
+  white-space: nowrap;
   display: flex;
   align-items: center;
 }
 
 .right-menu .dropdown {
-  margin-right: 10px; /* Add spacing between dropdowns */
+  margin-right: 1px; /* Add spacing between dropdowns */
 }
 
 
 /* Styles for homepage */
 
 
-.homepage{
-  background-color: #EBE9E3;
-  padding: 5px;
+.centered-wrapper {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  text-align: center;
 }
 
 .homepage h2 {
-  font-size: 2.5rem;
-  color: #7DB3B0; /* Brand color */
-  text-align: center;
-  font-weight: bold;
+  font-size: 2.8rem;
+  color: #7DB3B0;
+  margin-bottom: 0.5rem;
 }
 
 .homepage p {
-  font-size: 1.2rem;
-  color: #333;
-  background-color: #EBE9E3;
+  font-size: 1.4rem;
+  color: #444;
+  margin-bottom: 2.5rem;
 }
 
 /* Card container style */
@@ -238,7 +266,12 @@ header {
   height: 18rem; /* Use rem for consistent height */
   display: block;
   overflow: hidden;
-  border-radius: 1rem; /* Optional: round the corners with rem */
+  border: 2px solid rgba(125, 179, 176, 0.3);  /* soft teal border */
+  padding: 4px; /* spacing inside the frame */
+  background-color: #fff;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
 }
 
 /* Card link styling */
@@ -267,6 +300,7 @@ header {
   padding: 0.8rem;
   background: white;
   border-radius: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .card h3 {
@@ -292,6 +326,8 @@ header {
 .card:hover .card-overlay {
   display: block;
   opacity: 1;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.25);
 }
 
 .overlay-button {
@@ -334,53 +370,129 @@ header {
 
 
 /* About Section Layout */
-.about-section {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  background-color: #EBE9E3;
-  padding: 40px 20px;
+/* --- New About Us Page Layout --- */
+.about-page-container {
+    width: 100%;
+    padding: 40px 20px;
+    background-color: #EBE9E3;
 }
 
-.about-container {
-  display: flex;
-  max-width: 1200px;
-  width: 100%;
+.about-text-content {
+    max-width: 800px;
+    margin: 0 auto 40px auto; /* Center the text block and add space below it */
+    text-align: center;
+    color: #333;
 }
 
-.about-logo {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.about-text-content h1 {
+    margin-bottom: 1rem;
+    font-size: 2.5rem;
 }
 
-.about-logo img {
-  height: auto;
-  width: 100%; /* Adjust as necessary for the desired logo size */
+.about-text-content p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
 }
 
-.about-content {
-  flex: 2;
-  padding-left: 20px;
-  font-size: 1.1em;
+.about-text-content blockquote {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-left: 5px solid #7DB3B0;
+    font-style: italic;
 }
 
-/* Responsive Design for Smaller Screens */
-@media (max-width: 768px) {
-  .about-container {
-      flex-direction: column;
-      align-items: center;
-  }
+.about-text-content .event-link {
+    font-weight: bold;
+    color: #7DB3B0;
+}
 
-  .about-content {
-      padding-left: 0;
-      text-align: center;
-  }
+/* Slideshow container */
+.slideshow-container {
+  max-width: 900px; /* Increased max-width for a larger carousel */
+  position: relative;
+  margin: auto;
+  border: 4px solid #fff;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
 
-  .about-logo img {
-      width: 100%; /* Adjust for smaller screens if necessary */
-  }
+
+.mySlides img {
+    vertical-align: middle;
+}
+
+/* Next & previous buttons */
+.prev, .next {
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  width: auto;
+  margin-top: -22px;
+  padding: 16px;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+  transition: 0.6s ease;
+  border-radius: 0 3px 3px 0;
+  user-select: none;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.next {
+  right: 0;
+  border-radius: 3px 0 0 3px;
+}
+
+.prev:hover, .next:hover {
+  background-color: rgba(0,0,0,0.8);
+}
+
+/* The dots/bullets/indicators */
+.dot {
+  cursor: pointer;
+  height: 15px;
+  width: 15px;
+  margin: 0 2px;
+  background-color: #bbb;
+  border-radius: 50%;
+  display: inline-block;
+  transition: background-color 0.6s ease;
+}
+
+/* .active, .dot:hover {
+  background-color: #717171;
+} */
+
+/* Set a consistent aspect ratio to prevent layout shifts */
+.slideshow-container {
+    aspect-ratio: 16 / 9; /* Adjust if your images are a different shape (e.g., 4 / 3) */
+}
+
+/* Base style for all slides */
+.mySlides {
+    position: absolute; /* Layer all slides in the same spot */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0; /* Make slides invisible by default */
+    visibility: hidden; /* Hide them from screen readers and interactions */
+    transition: opacity 1s ease-in-out; /* This creates the smooth 1-second fade */
+}
+
+/* Style for the currently visible slide */
+.mySlides.active-slide {
+    opacity: 1; /* Make the active slide visible */
+    visibility: visible;
+}
+
+/* Ensure images inside the slides fill the container */
+.mySlides img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* This prevents images from being stretched or distorted */
+    vertical-align: middle;
 }
 
 
@@ -388,95 +500,103 @@ header {
 /* Hosting Section Layout */
 
 .hosting-section {
-  width: 100%;
-  background-color: #EBE9E3; /* Background for extra spacing */
-  padding: 0;
+    width: 100%;
+    background-color: #EBE9E3;
+    padding: 0;
 }
 
 .hosting-container {
-  max-width: 100%;
-  margin: 0 auto;
-  position: relative;
+    max-width: 100%;
+    margin: 0 auto;
 }
 
 .hosting-image-container {
-  position: relative;
-  width: 100%;
+    position: relative; /* This is the positioning context for the text bubble */
+    width: 100%;
+    display: flex; /* Use flexbox to align the text bubble */
+    justify-content: flex-start; /* Align content to the left */
+    align-items: flex-end; /* Align content to the bottom */
 }
 
 .hosting-image {
-  width: 100%;
-  height: auto;
-  object-fit: cover;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
 }
 
 .hosting-text-bubble {
-  position: absolute;
-  font-weight: bold;
-  bottom: 20px; /* Position near the bottom */
-  left: 20px; /* Position near the left */
-  background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
-  border: 2px solid #7DB3B0; /* Teal border */
-  border-radius: 12px;
-  padding: 15px;
-  max-width: 100%; /* Restrict width for readability */
-  text-align: left;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    /* The text bubble is now a flex item, not absolutely positioned */
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid #7DB3B0;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 400px;
+    margin: 20px; /* Adds space from the edges of the container */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: absolute; /* Positioned relative to the container */
+    bottom: 10px; /* Distance from the bottom */
+    left: 10px; /* Distance from the left */
 }
 
 .hosting-text-bubble h1 {
-  font-size: 1.5rem;
-  color: #333;
-  margin-bottom: 10px;
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 10px;
 }
 
 .hosting-text-bubble p {
-  font-size: 1rem;
-  margin-bottom: 10px;
-  color: #555;
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #555;
+    font-weight: bold;
 }
 
 .hosting-application-link {
-  display: inline-block;
-  font-size: 1rem;
-  font-weight: bold;
-  color: #7DB3B0; /* Teal link */
-  text-decoration: none;
-  border-bottom: 2px solid #7DB3B0;
-  margin-top: 10px;
+    display: inline-block;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #7DB3B0;
+    text-decoration: none;
+    border-bottom: 2px solid #7DB3B0;
+    margin-top: 10px;
 }
 
 .hosting-application-link:hover {
-  color: #6aa8a1; /* Darker teal on hover */
-  border-bottom-color: #6aa8a1;
+    color: #6aa8a1;
+    border-bottom-color: #6aa8a1;
 }
 
-/* Mobile Responsiveness */
+/* --- Mobile Responsiveness for Hosting Section --- */
 @media (max-width: 768px) {
-  .hosting-image {
-    height: 100vh; /* Make the image full height on mobile */
-  }
+    .hosting-image-container {
+        flex-direction: column; /* Stack image and text bubble vertically */
+        align-items: center; /* Center items horizontally */
+    }
 
-  .hosting-text-bubble {
-    bottom: 19px; /* Adjust for smaller screens */
-    left: 6px;
-    width: 74%; /* Use most of the screen width */
-    padding: 8px;
-  }
+    .hosting-image {
+        height: auto; /* Let the image determine its height */
+    }
+    
+    .hosting-text-bubble {
+        position: static; /* Remove absolute positioning on mobile */
+        width: 90%;
+        max-width: none;
+        margin: 20px auto; /* Center the bubble with some margin */
+        text-align: center;
+    }
 
-  .hosting-text-bubble h1 {
-    font-size: 1.25rem;
-  }
+    .hosting-text-bubble h1 {
+        font-size: 1.25rem;
+    }
 
-  .hosting-text-bubble p {
-    font-size: 0.9rem;
-  }
+    .hosting-text-bubble p {
+        font-size: 0.9rem;
+    }
 
-  .hosting-application-link {
-    font-size: 0.95rem;
-  }
+    .hosting-application-link {
+        font-size: 0.95rem;
+    }
 }
-
 
 
 
@@ -494,6 +614,7 @@ header {
   max-width: 800px;
   margin: 0 auto;
   border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Added shadow for consistency */
 }
 
 .faq h1 {
@@ -561,6 +682,7 @@ header {
   max-width: 1000px;
   margin: 0 auto;
   border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Added shadow for consistency */
 }
 
 .subscriptions h1 {
@@ -972,10 +1094,8 @@ html {
   border: none;
   cursor: pointer;
   text-align: left;
-  width: 100%;
   cursor: pointer;
   text-align: left;
-  width: 100%;
 }
 
 .dropdown-menu a:hover,
@@ -1028,42 +1148,92 @@ html {
 }
 
 /* Event Card */
-.event-card {
-    display: flex;
-    flex-direction: column; /* Stack children vertically */
-    justify-content: space-between; /* Push content apart */
-    position: relative;
-    flex: 1 1 100%;
-    max-width: 100%;
-    background-color: #fff;
-    border: 1px solid #4CAF50;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    text-align: left;
-    overflow-wrap: break-word;
+/* --- Updated Event Card Styles --- */
 
+/* 1. Use CSS Grid for the main container */
+.events-container {
+  display: grid;
+  /* Create responsive columns: they will be at least 350px wide, 
+     but can grow to fill the space. The number of columns adjusts automatically. */
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px; /* The space between your cards */
+  padding: 20px;
+}
+
+/* 2. Make each card a flex container to control its internal layout */
+.event-card {
+  display: flex;
+  flex-direction: column; /* Stack children (header, body) vertically */
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden; /* Ensures content respects the border-radius */
 }
 
 .event-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.event-card h2 {
-  font-size: 1rem;
-  margin-bottom: 5px;
+.event-header {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  position: relative; /* Needed for the admin menu positioning */
+}
+
+/* 3. Make the card's body grow to fill available space */
+.event-body {
+  display: flex;
+  flex-direction: column; /* Stack content inside the body vertically */
+  flex-grow: 1; /* This is the key! It makes the body take up all free space */
+  padding: 15px;
+}
+
+.event-body img {
+  width: 100%;
+  height: 200px; /* Give images a consistent height */
+  object-fit: cover; /* Prevents images from stretching */
+  margin-bottom: 15px;
+  border-radius: 4px;
+  transition: transform 0.3s ease-in-out; /* Smooths the animation */
+}
+
+/* This targets the image when you hover over the ENTIRE card */
+.event-card:hover .event-body img {
+  transform: scale(1.05); /* Gently zooms the image */
+}
+
+.event-description {
+  /* Let the description take up available space before the button */
+  flex-grow: 1;
+}
+
+/* 4. Push action buttons to the bottom using an auto margin */
+.event-body .custom-attend-button,
+.event-body .rsvp-box,
+.event-body .btn-secondary[disabled] {
+  margin-top: auto; /* Pushes the button to the bottom of the flex container */
+  align-self: flex-start; /* Aligns button to the left; use flex-end for right */
+}
+
+/* Minor tweaks for cleaner text styling */
+.event-card h2.event-title {
+  font-size: 1.25rem;
   color: #333;
-  border-bottom: 2px solid #4CAF50;
-  padding-bottom: 5px;
+  margin: 0 0 10px 0;
+  border-bottom: none; /* remove old border */
 }
 
 .event-card p {
-  font-size: 0.8rem;
-  margin-bottom: 5px;
+  font-size: 1.1rem;
   color: #555;
+  margin-bottom: 8px;
 }
+
+
+
 
 
 /* Calendar Adjustments */
@@ -1089,11 +1259,11 @@ html {
   }
 
   .event-card h2 {
-      font-size: 0.9rem; /* Slightly smaller title */
+      font-size: 1rem; /* Slightly smaller title */
   }
 
   .event-card p {
-      font-size: 0.7rem; /* Smaller text */
+      font-size: 0.8rem; /* Smaller text */
   }
 
   #calendar {
@@ -1108,11 +1278,11 @@ html {
   }
 
   .event-card h2 {
-      font-size: 0.8rem; /* Smaller title font */
+      font-size: 0.9rem; /* Smaller title font */
   }
 
   .event-card p {
-      font-size: 0.6rem; /* Smaller paragraph font */
+      font-size: 0.8rem; /* Smaller paragraph font */
   }
 
   .fc-toolbar {
@@ -1238,10 +1408,17 @@ html, body {
   font-size:1 rem;
 }
 
-.event-details{
-  padding: 3px;
-  margin:2px;
+.event-details-container {
+  background-color: #EBE9E3;
+  padding: 30px 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  font-family: 'Arial', sans-serif;
 }
+
+
 
 .paypal-loading {
   padding: 1rem;
@@ -1257,7 +1434,7 @@ html, body {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex; justify-content: center; align-items: center;
 }
 .modal-content {
@@ -1289,6 +1466,7 @@ html, body {
   gap: 10px;
   margin: 10px 0;
   font-size: 1.25rem;
+  justify-content: center; /* Center the guest counter elements */
 }
 
 .guest-counter button {
@@ -1311,4 +1489,155 @@ html, body {
   text-align: center;
   font-weight: bold;
   font-size: 1.4rem;
+}
+
+/* New/Updated styles for RSVP Box and Modal Content */
+.rsvp-box {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid teal;
+    border-radius: 8px;
+    background-color: #e0f2f1; /* Light teal background */
+    text-align: center;
+}
+
+.rsvp-box p {
+    font-weight: bold;
+    color: teal;
+    margin: 0;
+}
+
+.rsvp-box a {
+    color: teal;
+    text-decoration: underline;
+}
+
+.rsvp-box a:hover {
+    text-decoration: none;
+}
+
+.modal-content #rsvpTitle {
+    color: #333; /* Darker color for modal title */
+    margin-bottom: 10px;
+}
+
+.modal-content #rsvpEventInfo {
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.modal-content #editGuestPrompt {
+    color: #333;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.modal-content #totalPrice {
+    font-size: 1.2rem;
+    color: #333;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.modal-content #totalPrice strong {
+    color: #4CAF50; /* Green for total price */
+}
+
+.modal-content #paypal-container {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee; /* Separator for PayPal buttons */
+}
+
+.modal-content .btn-grey {
+    background-color: #6c757d;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 20px;
+    display: block; /* Make it a block element to center */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.modal-content .btn-grey:hover {
+    background-color: #5a6268;
+}
+
+/* Confirmation Message Box */
+.confirmation-message {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #4CAF50; /* Green for success */
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1001; /* Above modals */
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.confirmation-message.error {
+    background-color: #f44336; /* Red for error */
+}
+
+.confirmation-message button {
+    background-color: white;
+    color: #4CAF50;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+.confirmation-message.error button {
+    color: #f44336;
+}
+
+.confirmation-message button:hover {
+    opacity: 0.8;
+}
+
+
+/* Event Page Tabs Styles */
+
+.nav-tabs {
+    display: flex;
+    list-style: none;
+    padding-left: 0;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 1rem;
+}
+.nav-tabs .nav-link {
+    display: block;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    color: #0d6efd;
+    border: 1px solid transparent;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+}
+.nav-tabs .nav-link.active {
+    color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+    border-bottom: 3px solid #fff;
+    margin-bottom: -1px;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
 }

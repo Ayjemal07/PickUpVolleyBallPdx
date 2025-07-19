@@ -24,25 +24,25 @@
     <p>
         <i class="bi bi-geo-alt"></i> <strong>Location:</strong> {{ event.location }}
     </p>
-    
+        
+    {% if attendees %}
     <p>
-        {% if attendees %}
         <i class="bi bi-people"></i> <strong>Who's Going:</strong> {{ event.rsvp_count or 0 }} people
-        <ul class="attendees-list">
-        {% for person in attendees %}
-            <li style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <img src="{{ url_for('static', filename='profile_images/' + (person.user.profile_image or 'default.png')) }}"
-                    alt="User Image"
-                    style="width: 40px; height: 40px; border-radius: 50%;">
-                {{ person.user.first_name }} {{ person.user.last_name }}
-                {% if person.guest_count > 0 %}
-                    <span style="color: gray;">(+{{ person.guest_count }} guest{{ 's' if person.guest_count > 1 else '' }})</span>
-                {% endif %}
-            </li>
-        {% endfor %}
-        </ul>
-        {% endif %}
     </p>
+    <ul class="attendees-list">
+    {% for person in attendees %}
+        <li style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <img src="{{ url_for('static', filename='profile_images/' + (person.user.profile_image or 'default.png')) }}"
+                alt="User Image"
+                style="width: 40px; height: 40px; border-radius: 50%;">
+            {{ person.user.first_name }} {{ person.user.last_name }}
+            {% if person.guest_count > 0 %}
+                <span style="color: gray;">(+{{ person.guest_count }} guest{{ 's' if person.guest_count > 1 else '' }})</span>
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+    {% endif %}
     <p><strong>Description:</strong></p>
     <div>{{ event.description | safe }}</div>
 
@@ -53,10 +53,10 @@
         {% if event.rsvp_count >= event.max_capacity %}
             <button class="btn btn-secondary" disabled>Event Full</button>
         {% elif is_attending %}
-            <div class="rsvp-box event-rsvp-area">
-                <p style="font-weight: bold;">You're going!</p>
-                <a href="#" style="color: teal; text-decoration: underline;">Edit RSVP</a>
-            </div>
+        <div class="rsvp-box event-rsvp-area">
+            <p style="font-weight: bold;">You're going!</p>
+            <a href="#" class="edit-rsvp" data-event-id="{{ event.id }}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
+        </div>
         {% else %}
             <button 
                 class="btn btn-success custom-attend-button"
@@ -80,38 +80,30 @@
 
 <!-- RSVP Modal -->
 <div id="rsvpModal" class="modal">
-  <div class="modal-content">
-    <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 id="rsvpTitle" style="margin: 0;">You're booking:</h2>
-        <button type="button" id="closeRsvpX" class="close-button" aria-label="Close" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">&times;</button>
-    </div>          
-    <p id="rsvpEventInfo"></p>
-
-    <label>Are you bringing a guest?</label>
-    <div class="guest-counter">
-      <button type="button" id="guestDecrement">-</button>
-      <span id="guestCount">0</span>
-      <button type="button" id="guestIncrement">+</button>
+    <div class="modal-content">
+        <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 id="rsvpTitle" style="margin: 0;"></h2>
+            <button type="button" id="closeRsvpX" class="close-button" aria-label="Close" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>          
+      <p id="rsvpEventInfo"></p>
+      <p id="editGuestPrompt" style="margin: 4px 0 10px; font-weight: bold;"></p>
+        <div class="guest-counter">
+        <button type="button" id="guestDecrement">-</button>
+        <span id="guestCount">0</span>
+        <button type="button" id="guestIncrement">+</button>
+      </div>
+  
+      <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
+  
+      <div id="paypal-container" style="margin-top: 15px;"></div>
+  
+      <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
     </div>
-
-    <p>Total Price: <strong id="totalPrice">$10</strong></p>
-
-    <!-- PayPal buttons will render here -->
-    <div id="paypal-container" style="margin-top: 15px;"></div>
-
-    <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
-  </div>
 </div>
 
 <script>
     const eventsData = [{{ event_data|tojson|safe }}];
 </script>
 
-<script src="{{ url_for('static', filename='events.js') }}"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        setupCustomAttendButtons();  // re-initialize button listeners
-    });
-</script>
-<script src="https://www.paypal.com/sdk/js?client-id=AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx&currency=USD"></script>
+
 {% endblock %}
