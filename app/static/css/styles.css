@@ -1167,6 +1167,7 @@ html {
   background-color: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
+  border-color:black;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden; /* Ensures content respects the border-radius */
@@ -1404,8 +1405,23 @@ html, body {
 }
 
 
-.see-more-button{
-  font-size:1 rem;
+.see-more-button {
+  display: inline-block;
+  background-color: white;
+  color: black;
+  border: 1px solid black;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  vertical-align: middle;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.see-more-button:hover {
+  background-color: #f5f5f5;
+  border-color: #555;
 }
 
 .event-details-container {
@@ -1621,7 +1637,9 @@ html, body {
     display: block;
     padding: 0.5rem 1rem;
     text-decoration: none;
-    color: #0d6efd;
+    color: #66a8a6;
+    font-weight: bold;
+    font-size: 0.9rem;
     border: 1px solid transparent;
     border-top-left-radius: 0.25rem;
     border-top-right-radius: 0.25rem;
@@ -1640,4 +1658,10 @@ html, body {
 
 .tab-pane.active {
     display: block;
+}
+
+.page-container {
+  max-width: 1200px;  /* Sets a maximum width for the content on large screens */
+  margin: 0 auto;     /* This is the magic that centers the container */
+  padding: 0 1rem;    /* Adds space on the left and right for mobile screens */
 }

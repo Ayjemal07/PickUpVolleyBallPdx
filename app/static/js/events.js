@@ -417,12 +417,10 @@ function renderEventCards(sortedEvents, flashMessage, flashEventId) { // Added m
                         style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
                     ` : ''}
                     <p class="event-location"><strong>Where:</strong> ${event.location}</p>
-                    <p class="event-description"><strong>Description:</strong> ${descriptionPreview}</p>
-                    <button class="see-more-button" data-event-id="${event.id}">See More</button>
-                    <div class="full-description" id="desc-${event.id}" style="display: none;">
-                        <p>${event.description}</p>
-                        <a href="/events/${event.id}" class="btn btn-info">View Details</a>
-                    </div>
+                    <p class="event-description">
+                        <strong>Description:</strong> ${descriptionPreview}
+                        <a href="/events/${event.id}" class="see-more-button">See More</a>
+                    </p>
                     <p class="event-going"><strong>Who's Going:</strong> ${event.rsvp_count || 0} going</p>
 
                     ${event.rsvp_count >= event.max_capacity ? `
@@ -460,20 +458,6 @@ function renderEventCards(sortedEvents, flashMessage, flashEventId) { // Added m
 
     // Central function to attach all event listeners
     function attachAllEventListeners() {
-        // "See More" button logic
-        document.querySelectorAll('.see-more-button').forEach(button => {
-            button.addEventListener('click', function () {
-                const eventId = this.getAttribute('data-event-id');
-                const fullDescription = document.getElementById(`desc-${eventId}`);
-                if (fullDescription.style.display === 'none') {
-                    fullDescription.style.display = 'block';
-                    this.textContent = 'See Less';
-                } else {
-                    fullDescription.style.display = 'none';
-                    this.textContent = 'See More';
-                }
-            });
-        });
 
         // Admin Edit/Delete/Cancel buttons (only if user is admin)
         if (userRole === 'admin') {
