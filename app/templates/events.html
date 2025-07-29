@@ -3,23 +3,18 @@
 {% block title %}Events{% endblock %}
 
 {% block content %}
-<div class="page-container">  <h1>Welcome to Sign up Page for Volleyball Events 🎉 </h1>
+<div class="page-container">
+    <h1>Welcome to Sign up Page for Volleyball Events 🎉 </h1>
     <script>
-        let userRole = "{{ session.get('role', 'user') }}";  // Default to "user"
-        console.log("User Role after signout:", userRole);
+        let userRole = "{{ user_role|default('user') }}";
+        
+        // Pass separate data for upcoming, past, and calendar events to JavaScript
+        const upcomingEventsData = JSON.parse(`{{ upcoming_events_data|tojson|safe }}`);
+        const pastEventsData = JSON.parse(`{{ past_events_data|tojson|safe }}`);
+        const calendarEventsData = JSON.parse(`{{ all_events_for_calendar|tojson|safe }}`);
 
-        const eventsData = JSON.parse(`{{ events_data|tojson|safe }}`.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\r/g, "\\r"));
-        console.log("Parsed eventsData:", eventsData);
-
-        // This block is no longer needed as event listeners are attached in events.js
-        // document.addEventListener("DOMContentLoaded", function () {
-        //     document.querySelectorAll(".see-more-button").forEach(button => {
-        //         button.addEventListener("click", function () {
-        //             const eventId = this.getAttribute("data-event-id");
-        //             window.location.href = `/events/${eventId}`;
-        //         });
-        //     });
-        // });
+        console.log("Upcoming Events:", upcomingEventsData);
+        console.log("Past Events:", pastEventsData);
     </script>
 
     <ul class="nav-tabs">
@@ -36,9 +31,14 @@
 
     <div class="tab-content">
         <div id="upcoming" class="tab-pane active">
-            <h1>Upcoming Events</h1>
+            <div class="tab-header">
+                <h1>Upcoming Events</h1>
+                {% if user_role == 'admin' %}
+                    <button id="addEventButton" class="btn btn-green">Add Event</button>
+                {% endif %}
+            </div>
             <div class="events-container">
-                </div>
+            </div>
         </div>
 
         <div id="calendar-view" class="tab-pane">
@@ -51,13 +51,14 @@
 
         <div id="past" class="tab-pane">
             <h1>Past Events</h1>
-            <p>Past events will be shown here in a future update.</p>
+            <p>A look at the two most recent past events from the last two months.</p>
+            <div class="past-events-container">
+                </div>
         </div>
     </div>
 </div>
 
 {% if user_role == 'admin' %}
-<!-- Modal for Creating Events -->
 <div id="createEventModal" class="modal">
     <div class="modal-content" style="max-width: 800px;">
         <div class="form-header">
@@ -118,8 +119,12 @@
             </div>
 
             <div style="margin-top: 10px;">
-                <label for="location">Location</label>
-                <input type="text" id="location" name="location" required style="width: 100%; padding: 8px; border-radius: 6px;">
+                <label for="location">Location Name</label> <input type="text" id="location" name="location" required style="width: 100%; ...">
+            </div>
+
+            <div style="margin-top: 10px;">
+                <label for="fullAddress">Full Address (for Google Maps)</label>
+                <input type="text" id="fullAddress" name="full_address" placeholder="e.g., 123 Main St, Hillsboro, OR 97123" style="width: 100%; padding: 8px; border-radius: 6px;">
             </div>
 
             <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
@@ -144,7 +149,6 @@
                 </div>
             </div>
 
-            <!-- Submit Button -->
             <div style="margin-top: 20px;">
                 <button type="submit" class="btn btn-green">Add Event</button>
             </div>
@@ -152,9 +156,6 @@
     </div>
 </div>
 
-<button id="addEventButton" class="btn" style="background-color: green; color: white;">Add Event</button>
-
-<!-- Modal for Event Editing -->
 <div id="editEventModal" class="modal">
     <div class="modal-content">
         <div class="form-header">
@@ -162,58 +163,89 @@
         </div>
 
         <h2>Edit Event</h2>
-        <form id="editEventForm">
-            <input type="hidden" id="editEventId">
+        <form id="editEventForm" method="POST" enctype="multipart/form-data">
+            <input type="hidden" id="editEventId" name="event_id">
 
-            <label for="editTitle">Title</label>
-            <input type="text" id="editTitle" name="title" required>
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label for="editTitle">Title</label>
+                    <input type="text" id="editTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="editDate">Date</label>
+                    <input type="date" id="editDate" name="date" required>
+                </div>
+            </div>
 
-            <label for="editDescription">Description</label>
-            <textarea id="editDescription" name="description" required></textarea>
+            <div class="form-group">
+                <label>Description</label>
+                <div id="editDescriptionEditor" style="background-color: white;"></div>
+                <input type="hidden" id="editDescriptionInput" name="description">
+            </div>
 
-            <label for="editDate">Date</label>
-            <input type="date" id="editDate" name="date" required>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editStartTime">Start Time</label>
+                    <input type="time" id="editStartTime" name="start_time" required>
+                </div>
+                <div class="form-group">
+                    <label for="editEndTime">End Time</label>
+                    <input type="time" id="editEndTime" name="end_time" required>
+                </div>
+                <div class="form-group" style="flex: 2;">
+                    <label for="editLocation">Location Name</label> <input type="text" id="editLocation" name="location" required>
+                </div>
 
-            <label for="editStartTime">Start Time</label>
-            <input type="time" id="editStartTime" name="start_time" required>
+                <div class="form-group" style="flex: 2;">
+                    <label for="editFullAddress">Full Address (for Google Maps)</label>
+                    <input type="text" id="editFullAddress" name="full_address">
+                </div>
+            </div>
 
-            <label for="editEndTime">End Time</label>
-            <input type="time" id="editEndTime" name="end_time" required>
+            <div class="form-row">
+                <div class="form-group form-group-checkbox">
+                    <input type="checkbox" id="editAllowGuests" name="allow_guests" style="width: auto;">
+                    <label for="editAllowGuests">Guests Allowed?</label>
+                </div>
+                <div class="form-group">
+                    <label for="editGuestLimit">Guest Limit</label>
+                    <input type="number" id="editGuestLimit" name="guest_limit" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editTicketPrice">Ticket Price ($)</label>
+                    <input type="number" step="0.01" id="editTicketPrice" name="ticket_price">
+                </div>
+                <div class="form-group">
+                    <label for="editMaxCapacity">Max Capacity</label>
+                    <input type="number" id="editMaxCapacity" name="max_capacity" min="1">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editEventImage">Upload New Image</label>
+                    <input type="file" id="editEventImage" name="eventImage" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label for="editExistingImage">Or Select Existing Image</label>
+                    <select id="editExistingImage" name="existingImage">
+                        <option value="" selected disabled>Select an image</option>
+                        {% for image in image_files %}
+                        <option value="{{ image }}">{{ image }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
 
-            <label for="editLocation">Location</label>
-            <input type="text" id="editLocation" name="location" required>
+            <img id="editPreviewImage" src="" alt="Image Preview" style="max-width: 200px; margin-top: 10px; display: none; border-radius: 8px;">
 
-            <label for="editAllowGuests">Guests Allowed?</label>
-            <input type="checkbox" id="editAllowGuests" name="allow_guests">
-
-            <label for="editGuestLimit">Guest Limit</label>
-            <input type="number" id="editGuestLimit" name="guest_limit" min="0">
-
-            <label for="editTicketPrice">Ticket Price ($)</label>
-            <input type="number" step="0.01" id="editTicketPrice" name="ticket_price">
-
-            <label for="editMaxCapacity">Max Capacity</label>
-            <input type="number" id="editMaxCapacity" name="max_capacity" min="1">
-
-            <label for="editEventImage">Upload New Image</label>
-            <input type="file" id="editEventImage" name="eventImage" accept="image/*">
-
-            <label for="editExistingImage">Select Existing Image</label>
-            <select id="editExistingImage" name="existingImage">
-                <option value="" selected disabled>Select an image</option>
-                {% for image in image_files %}
-                <option value="{{ image }}">{{ image }}</option>
-                {% endfor %}
-            </select>
-
-            <img id="editPreviewImage" src="" alt="Image Preview" style="max-width: 100%; margin-top: 10px; display: none;">
-
-            <button type="submit" class="btn btn-green">Save Changes</button>
+            <div style="margin-top: 20px;">
+                <button type="submit" class="btn btn-green">Save Changes</button>
+            </div>
         </form>
     </div>
 </div>
 
-<!-- Modal for Event Cancellation -->
 <div id="cancelEventModal" class="modal">
     <div class="modal-content">
         <h2>Cancel Event</h2>
@@ -229,7 +261,6 @@
 {% endif %}
 
 
-<!-- RSVP Modal -->
 <div id="rsvpModal" class="modal">
     <div class="modal-content">
         <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -246,81 +277,10 @@
   
       <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
   
-      <!-- PayPal buttons will render here -->
       <div id="paypal-container" style="margin-top: 15px;"></div>
   
       <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
     </div>
 </div>
-<!-- Event Cards -->
-<!-- <div class="events-container">
-    {% for event in events %}
-    <div class="event-card {{ 'canceled' if event.status == 'canceled' else '' }}">
-        <div class="event-header">
-            <p class="event-date">
-                {% if event.status == 'canceled' %}
-                    <strong style="color: red;">{{ event.formatted_date }} - Cancelled: {{ event.cancellation_reason }}</strong>
-                {% else %}
-                    {{ event.formatted_date }}
-                {% endif %}
-            </p>
-            <h2 class="event-title">{{ event.title }}</h2>
-            <p class="event-times">
-                <strong>When:</strong> 
-                {{ event.start_time.strftime('%I:%M %p') }} - {{ event.end_time.strftime('%I:%M %p') }}
-            </p>
-
-            {% if user_role == 'admin' %}
-            <div class="event-menu">
-                <button class="event-menu-button">⋮</button>
-                <div class="event-menu-options hidden">
-                    <button class="edit-event" data-event-id="{{ event.id }}">Edit</button>
-                    <button class="delete-event" data-event-id="{{ event.id }}">Delete</button>
-                    <button class="cancel-event" data-event-id="{{ event.id }}">Cancel</button>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        
-        <div class="event-body">
-             {% if event.image_filename %}
-                    <img src="{{ url_for('static', filename='images/' + event.image_filename) }}"
-                    alt="Event Image"
-                    style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 10px;">
-            {% endif %}
-            <p class="event-location"><strong>Where:</strong> {{ event.location }}</p>
-            <p class="event-description"><strong>Description:</strong> {{ event.description[:100] }}...</p>
-            <button class="see-more-button" data-event-id="{{ event.id }}">See More</button>
-            <div class="full-description" id="desc-{{ event.id }}" style="display: none;">
-                <p>{{ event.description }}</p>
-                <a href="/events/{{ event.id }}" class="btn btn-info">View Details</a>
-            </div>
-
-            <p class="event-going"><strong>Who's Going:</strong> {{ event.rsvp_count or 0 }} going</p>
-            {% if event.rsvp_count >= event.max_capacity %}
-                <button class="btn btn-secondary" disabled>Event Full</button>
-            {% elif event.is_attending %}
-                <div class="rsvp-box" style="margin-top: 10px;">
-                    <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
-                    <a href="#" class="edit-rsvp" data-event-id="{{ event.id }}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
-                </div>
-            {% else %}
-                <button 
-                    class="btn btn-success custom-attend-button" 
-                    data-event-id="{{ event.id }}"
-                    data-title="{{ event.title }}"
-                    data-time="{{ event.formatted_date }} {{ event.start_time.strftime('%I:%M %p') }}"
-                    data-ticket-price="{{ event.ticket_price | float }}"
-                    data-guest-limit="{{ event.guest_limit | int }}"
-                    data-location="{{ event.location }}" 
-                    {% if event.status == 'canceled' or event.rsvp_count >= event.max_capacity %}disabled{% endif %}>
-                    Attend
-                </button>
-            {% endif %}
-        </div>
-    </div> 
-    {% endfor %}
-</div> -->
-
 
 {% endblock %}

@@ -24,15 +24,16 @@
             <a href="{{ url_for('main.home') }}" class="logo">
                 <img src="{{ url_for('static', filename='images/voll-logo.png') }}" alt="Logo Icon" class="logo-icon">
             </a>
-            <nav class="social">
-                <a href="https://www.instagram.com/pickupvolleyballpdx/" target="_blank" class="social-icon instagram">
-                    <i class="fab fa-instagram" style="font-size: 1.5rem;"></i>
-                </a>
-                <a href="https://www.facebook.com/groups/623654829419818" target="_blank" class="social-icon facebook">
-                    <i class="fab fa-facebook-f" style="font-size: 1.5rem;"></i>
-                </a>
-            </nav>
+
             <div class="right-menu">
+                <nav class="social">
+                    <a href="https://www.instagram.com/pickupvolleyballpdx/" target="_blank" class="social-icon instagram">
+                        <i class="fab fa-instagram" style="font-size: 1.5rem;"></i>
+                    </a>
+                    <a href="https://www.facebook.com/groups/623654829419818" target="_blank" class="social-icon facebook">
+                        <i class="fab fa-facebook-f" style="font-size: 1.5rem;"></i>
+                    </a>
+                </nav>
                 <!-- Authentication-based Navigation -->
                 {% if current_user.is_authenticated %}
                     <div class="dropdown account-menu">

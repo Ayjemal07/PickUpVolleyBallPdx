@@ -1,11 +1,12 @@
 # This file handles the routes
 
 from flask import Blueprint, render_template, redirect, url_for, flash, session 
+import urllib.parse
 
 from .models import Event, User, db
 import traceback
 from flask import request, jsonify # Import jsonify
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import os
 from flask import current_app
@@ -30,26 +31,40 @@ def about():
 @main.route('/events', methods=['GET', 'POST'])
 def events():
     user_role = session.get('role', 'user')  # Default to 'user'
-    user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
-    print("User ID in session:", user_id)
-        
+    
     # Get list of image filenames
     image_folder = os.path.join(current_app.root_path, 'static', 'images')
     image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
 
-    
     # For admin: Handle event creation if the form is submitted
     if request.method == 'POST' and user_role == 'admin':
+        # This section remains unchanged...
         title = request.form.get('title')
         description = request.form.get('description')
         date = request.form.get('date')
         start_time = request.form.get('start_time')
         end_time = request.form.get('end_time')
         location = request.form.get('location')
+        full_address = request.form.get('full_address') # Get the new field
         allow_guests = request.form.get('allow_guests') == 'on'
         guest_limit = int(request.form.get('guest_limit') or 0)
         ticket_price = float(request.form.get('ticket_price') or 0.0)
         max_capacity = int(request.form.get('max_capacity') or 28)
+
+
+        # --- CORRECTED IMAGE HANDLING LOGIC ---
+        image_filename = None
+        # Priority 1: A new file was uploaded.
+        image_file = request.files.get('eventImage')
+        if image_file and image_file.filename != '':
+            filename = secure_filename(image_file.filename)
+            unique_filename = str(uuid.uuid4()) + "_" + filename
+            save_path = os.path.join(current_app.root_path, 'static/images', unique_filename)
+            image_file.save(save_path)
+            image_filename = unique_filename
+        # Priority 2: No new file, but an existing image was selected.
+        elif request.form.get('existingImage'):
+            image_filename = request.form.get('existingImage')
 
         # Create datetime objects for start and end times
         try:
@@ -70,57 +85,95 @@ def events():
             start_time=start_datetime.time(), # Store only time
             end_time=end_datetime.time(),     # Store only time
             location=location,
+            full_address = full_address,
             status='active',
             allow_guests=allow_guests,
             guest_limit=guest_limit,
             ticket_price=ticket_price,
             max_capacity=max_capacity,
-            date=datetime.strptime(date, "%Y-%m-%d").date()
+            date=datetime.strptime(date, "%Y-%m-%d").date(),
+            image_filename=image_filename
         )
         db.session.add(new_event)
         db.session.commit()
-
-        flash('Event added successfully!', 'success')  # Flash success message
-
+        flash('Event added successfully!', 'success')
         return redirect(url_for('main.events'))
     
-    # Fetch all events sorted by date
-    events = Event.query.order_by(Event.date.asc()).all()
+    # --- NEW LOGIC for sorting, auto-deleting, and preparing events ---
+    today = datetime.utcnow().date()
+    two_months_ago = today - timedelta(days=60)
 
-    for event in events:
-        event.formatted_date = event.date.strftime('%b %d, %Y')
-        attendees = EventAttendee.query.filter_by(event_id=event.id).all()
-        event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
-        event.is_attending = any(a.user_id == user_id for a in attendees)
-        print(f"User {user_id} attending event {event.id}? {event.is_attending}")
+    # 1. Automatically delete events older than two months
+    events_to_delete = Event.query.filter(Event.date < two_months_ago).all()
+    for event in events_to_delete:
+        EventAttendee.query.filter_by(event_id=event.id).delete() # Clean up RSVPs
+        db.session.delete(event)
+    if events_to_delete:
+        db.session.commit()
 
+    # 2. Fetch all events that are not yet deleted
+    displayable_events = Event.query.filter(Event.date >= two_months_ago).order_by(Event.date.asc()).all()
 
-    events_data = [
-        {
-        "id": event.id,   
-        "title": event.title,
-        "start": f"{event.date.strftime('%Y-%m-%d')}T{event.start_time.strftime('%H:%M')}",  # No seconds
-        "end": f"{event.date.strftime('%Y-%m-%d')}T{event.end_time.strftime('%H:%M')}",  # No seconds
-        "location": event.location,
-        "description": event.description,
-        "formatted_date": event.formatted_date,
-        "status": event.status,
-        "cancellation_reason": event.cancellation_reason,
-        "allow_guests": event.allow_guests,
-        "guest_limit": event.guest_limit,
-        "ticket_price": event.ticket_price,
-        "max_capacity": event.max_capacity,
-        "rsvp_count": event.rsvp_count,
-        "is_attending": event.is_attending,
-        'image_filename': event.image_filename
+    upcoming_events = []
+    past_events = []
 
+    for event in displayable_events:
+        if event.date >= today:
+            upcoming_events.append(event)
+        else:
+            past_events.append(event)
+            
+    # 3. Sort past events descending to get the most recent, and limit to 2
+    past_events.sort(key=lambda x: x.date, reverse=True)
+    past_events_display = past_events[:2]
+
+    # 4. Process event data for the template
+    user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
+
+    def process_event_list(event_list):
+        for event in event_list:
+            event.formatted_date = event.date.strftime('%b %d, %Y')
+            attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+            event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
+            event.is_attending = any(a.user_id == user_id for a in attendees)
+    
+    process_event_list(upcoming_events)
+    process_event_list(past_events_display)
+
+    def create_event_dict(event, is_past=False):
+        return {
+            "id": event.id,   
+            "title": event.title,
+            "start": f"{event.date.strftime('%Y-%m-%d')}T{event.start_time.strftime('%H:%M')}",
+            "end": f"{event.date.strftime('%Y-%m-%d')}T{event.end_time.strftime('%H:%M')}",
+            "location": event.location,
+            "description": event.description,
+            "formatted_date": event.formatted_date,
+            "status": event.status,
+            "cancellation_reason": event.cancellation_reason,
+            "allow_guests": event.allow_guests,
+            "guest_limit": event.guest_limit,
+            "ticket_price": event.ticket_price,
+            "max_capacity": event.max_capacity,
+            "rsvp_count": event.rsvp_count,
+            "is_attending": event.is_attending,
+            'image_filename': event.image_filename,
+            'is_past': is_past
         }
-        for event in events
-    ]
-    for event in events:
-        print(f"ID: {event.id}, Title: {event.title}, Formatted Date: {event.formatted_date if hasattr(event, 'formatted_date') else 'MISSING'}")
 
-    return render_template('events.html', events=events, events_data=events_data, user_role=user_role,image_files=image_files)
+    upcoming_events_data = [create_event_dict(e, is_past=False) for e in upcoming_events]
+    past_events_data = [create_event_dict(e, is_past=True) for e in past_events_display]
+    
+    # Combine data for the FullCalendar view
+    all_events_for_calendar = upcoming_events_data + past_events_data
+
+    return render_template('events.html', 
+                           upcoming_events_data=upcoming_events_data,
+                           past_events_data=past_events_data,
+                           all_events_for_calendar=all_events_for_calendar,
+                           user_role=user_role,
+                           image_files=image_files)
+
 
 #Route to add an event
 @main.route('/events/add', methods=['POST'])
@@ -169,42 +222,51 @@ def add_event():
 @main.route('/events/edit/<int:event_id>', methods=['POST'])
 def edit_event(event_id):
     event = Event.query.get_or_404(event_id)
-    data = request.get_json() # Use get_json() for data sent via fetch with JSON.stringify
 
     try:
-        # Handle basic text inputs
-        event.title = data.get('title', event.title)
-        event.description = data.get('description', event.description)
-        event.location = data.get('location', event.location)
+        # Update event fields from form data
+        event.title = request.form.get('title', event.title)
+        event.description = request.form.get('description', event.description)
+        event.location = request.form.get('location', event.location)
+        event.full_address = request.form.get('full_address', event.full_address) # Add this line
+
         
-        date_str = data.get('date')
+        date_str = request.form.get('date')
         if date_str:
             event.date = datetime.strptime(date_str, "%Y-%m-%d").date()
         
-        start_time_str = data.get('start_time')
+        start_time_str = request.form.get('start_time')
         if start_time_str:
             event.start_time = datetime.strptime(start_time_str, "%H:%M").time()
         
-        end_time_str = data.get('end_time')
+        end_time_str = request.form.get('end_time')
         if end_time_str:
             event.end_time = datetime.strptime(end_time_str, "%H:%M").time()
 
-        # Optional fields (assuming these are sent via JSON for edit)
-        event.allow_guests = data.get('allow_guests', event.allow_guests)
-        event.guest_limit = int(data.get('guest_limit', event.guest_limit))
-        event.ticket_price = float(data.get('ticket_price', event.ticket_price))
-        event.max_capacity = int(data.get('max_capacity', event.max_capacity))
-
-        # Image handling logic needs to be adapted if it's sent via JSON or separate endpoint
-        # For now, assuming image updates are not part of this JSON edit endpoint
-        # if 'eventImage' in request.files: ...
-        # elif request.form.get('existingImage'): ...
+        event.allow_guests = request.form.get('allow_guests') == 'on'
+        event.guest_limit = int(request.form.get('guest_limit', event.guest_limit))
+        event.ticket_price = float(request.form.get('ticket_price', event.ticket_price))
+        event.max_capacity = int(request.form.get('max_capacity', event.max_capacity))
+        
+        # Handle image update
+        image_file = request.files.get('eventImage')
+        if image_file and image_file.filename != '':
+                filename = secure_filename(image_file.filename)
+                unique_filename = str(uuid.uuid4()) + "_" + filename
+                save_path = os.path.join(current_app.root_path, 'static/images', unique_filename)
+                image_file.save(save_path)
+                event.image_filename = unique_filename
+        elif request.form.get('existingImage'):
+             event.image_filename = request.form.get('existingImage')
 
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Event updated successfully'}), 200
+        flash('Event updated successfully!', 'success')
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
+        db.session.rollback()
+        flash(f'Error updating event: {e}', 'error')
+
+    return redirect(url_for('main.events'))
 
 @main.route('/events/delete/<int:event_id>', methods=['POST'])
 def delete_event(event_id):
@@ -236,6 +298,12 @@ def event_details(event_id):
     user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
     is_attending = any(a.user_id == user_id for a in attendees)
 
+
+    # Generate Google Maps link
+    maps_link = None
+    if event.full_address:
+        maps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(event.full_address)}"
+
     event_dict = {
         "id": event.id,
         "title": event.title,
@@ -253,8 +321,7 @@ def event_details(event_id):
         "rsvp_count": event.rsvp_count
     }
 
-
-    return render_template('event_details.html', event=event, event_data=event_dict, attendees=attendees,is_attending=is_attending)
+    return render_template('event_details.html', event=event, event_data=event_dict, attendees=attendees,is_attending=is_attending,maps_link=maps_link)
 
 
 # New endpoint to fetch user's RSVP for an event

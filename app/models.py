@@ -75,6 +75,7 @@ class Event(db.Model):
     description = db.Column(Text, nullable=False)
     image_filename = db.Column(db.String(255))
     location = db.Column(db.String(100), nullable=False)
+    full_address = db.Column(db.String(255), nullable=True)
     date = db.Column(db.Date, nullable=False) 
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)

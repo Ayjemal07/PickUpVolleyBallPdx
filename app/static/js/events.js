@@ -4,6 +4,12 @@ function sortEventsByDate(events) {
     return events.sort((a, b) => new Date(a.start) - new Date(b.start));
 }
 
+// Add this new function to the top of events.js
+function stripHtml(html) {
+   let doc = new DOMParser().parseFromString(html, 'text/html');
+   return doc.body.textContent || "";
+}
+
 // Helper functions for date/time formatting
 function formatEventDate(dateString) {
     const eventDate = new Date(dateString);
@@ -43,89 +49,102 @@ function formatEventTime(dateString) {
 }
 
 
+// Helper to generate the correct action button based on event status
+function getActionButtonHTML(event) {
+    if (event.is_past) {
+        return `<button class="btn btn-secondary" disabled>Event has passed</button>`;
+    }
+    if (event.status === 'canceled') {
+        return `<button class="btn btn-secondary" disabled>Event Canceled</button>`;
+    }
+    if (event.rsvp_count >= event.max_capacity) {
+        return `<button class="btn btn-secondary" disabled>Event Full</button>`;
+    }
+    if (event.is_attending) {
+        return `
+            <div class="rsvp-box" style="margin-top: 10px;">
+                <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
+                <a href="#" class="edit-rsvp" data-event-id="${event.id}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
+            </div>`;
+    }
+    // Default case: available to attend
+    return `
+        <button
+            class="btn btn-success custom-attend-button"
+            data-event-id="${event.id}"
+            data-title="${event.title}"
+            data-time="${event.formatted_date} ${formatEventTime(event.start)}"
+            data-ticket-price="${event.ticket_price || 0}"
+            data-guest-limit="${event.allow_guests ? (event.guest_limit || 0) : 0}"
+            data-location="${event.location}">
+            Attend
+        </button>`;
+}
+
+
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Check for a flash message and event ID from sessionStorage
-    // Get flash data from session storage
     const flashMessage = sessionStorage.getItem('flashMessage');
     const flashEventId = sessionStorage.getItem('flashEventId');
 
-    // Initial render of event cards, passing any flash message data
-    const sortedEvents = sortEventsByDate(eventsData);
-    renderEventCards(sortedEvents, flashMessage, flashEventId);
+    // Assumes `upcomingEventsData` and `pastEventsData` are available from events.html
+    const sortedUpcomingEvents = sortEventsByDate(upcomingEventsData);
+    const sortedPastEvents = pastEventsData; // Already sorted on server
 
-    // Clear the flash data after it has been rendered
+    // Initial render for both containers
+    renderEventCards(sortedUpcomingEvents, 'upcoming', flashMessage, flashEventId);
+    renderEventCards(sortedPastEvents, 'past');
+
     if (flashMessage && flashEventId) {
         sessionStorage.removeItem('flashMessage');
         sessionStorage.removeItem('flashEventId');
     }
 
-
     const tabs = document.querySelectorAll('.nav-tabs .nav-link');
     const tabPanes = document.querySelectorAll('.tab-pane');
     let calendarInitialized = false;
-    let calendar; // Declare calendar variable in a broader scope
+    let calendar;
 
     tabs.forEach(tab => {
         tab.addEventListener('click', function (e) {
             e.preventDefault();
-
-            // Deactivate all tabs and panes
             tabs.forEach(t => t.classList.remove('active'));
             tabPanes.forEach(p => p.classList.remove('active', 'show'));
-
-            // Activate clicked tab and its corresponding pane
             this.classList.add('active');
             const activePaneId = this.getAttribute('href').substring(1);
             const activePane = document.getElementById(activePaneId);
             activePane.classList.add('active');
-            // A short delay to allow the 'display: block' to take effect before adding the fade-in class
             setTimeout(() => activePane.classList.add('show'), 10);
 
-
-            // Initialize or update calendar on tab view
             if (activePaneId === 'calendar-view') {
                 if (!calendarInitialized) {
                     initializeCalendar();
                     calendar.render();
                     calendarInitialized = true;
                 } else {
-                    calendar.updateSize(); // Adjust calendar size if tab is revisited
+                    calendar.updateSize();
                 }
             }
         });
     });
 
-    // Set default tab
     const defaultTab = document.querySelector('.nav-tabs .nav-link.active');
     if (defaultTab) {
         const defaultPaneId = defaultTab.getAttribute('href').substring(1);
         document.getElementById(defaultPaneId).classList.add('active', 'show');
     }
-    // --- END TAB LOGIC ---
 
     function initializeCalendar() {
         const calendarEl = document.getElementById('calendar');
-
-        if (!calendarEl) {
-            console.error("Calendar element not found.");
-            return;
-        }
-
+        if (!calendarEl) return;
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            events: eventsData,
+            events: calendarEventsData, // Use combined data for calendar
             selectable: userRole === 'admin',
             dateClick: function (info) {
-                if (userRole === 'admin') {
-                    openCreateEventModal(info.dateStr); // Open the modal with the clicked date
-                }
+                if (userRole === 'admin') openCreateEventModal(info.dateStr);
             },
-            headerToolbar: {
-                left: 'prev,next',
-                center: 'title',
-                right: '',
-            },
+            headerToolbar: { left: 'prev,next', center: 'title', right: '' },
         });
     }
 
@@ -135,6 +154,26 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addEventButton) {
             addEventButton.addEventListener('click', function () {
                 openCreateEventModal(); // Open modal for a new event
+            });
+        }
+
+        let quill, quillEdit;
+
+        // Initialize Quill for the "Add Event" Modal
+        const quillEditor = document.getElementById('quillEditor');
+        if (quillEditor) {
+            quill = new Quill('#quillEditor', {
+                theme: 'snow',
+                placeholder: 'Enter the event description here...',
+            });
+        }
+
+        // Initialize Quill for the "Edit Event" Modal
+        const editDescriptionEditor = document.getElementById('editDescriptionEditor');
+        if (editDescriptionEditor) {
+            quillEdit = new Quill('#editDescriptionEditor', {
+                theme: 'snow',
+                placeholder: 'Enter the event description...',
             });
         }
 
@@ -173,71 +212,63 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Handle event form submission for creating events (Admin functionality)
+
+
+        // Handle the 'Add Event' form submission
         const createEventForm = document.getElementById('createEventForm');
-        if (createEventForm) { // Ensure form exists before adding listener
-            createEventForm.addEventListener('submit', function (e) {
-                e.preventDefault();
+        if (createEventForm && quill) {
+            createEventForm.addEventListener('submit', function() {
+                // Before the form submits, copy the HTML content from the Quill editor 
+                // into the hidden 'descriptionInput' field.
+                document.getElementById('descriptionInput').value = quill.root.innerHTML;
+            });
+        }
 
-                const eventData = {
-                    title: document.getElementById('title').value,
-                    description: document.getElementById('description').value,
-                    location: document.getElementById('location').value,
-                    startTime: document.getElementById('startTime').value,
-                    endTime: document.getElementById('endTime').value,
-                    date: document.getElementById('date').value,
-                    start: `${document.getElementById('date').value}T${document.getElementById('startTime').value}`,
-                    end: `${document.getElementById('date').value}T${document.getElementById('endTime').value}`,
-                };
-
-                fetch('/events/add', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(eventData),
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Error adding event');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        alert(data.message);
-                        document.getElementById('createEventModal').style.display = 'none';
-                        location.reload();
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        alert('Failed to add event');
-                    });
+        // Handle the "Edit Event" form submission
+        const editEventForm = document.getElementById('editEventForm');
+        if (editEventForm && quillEdit) {
+            editEventForm.addEventListener('submit', function() {
+                document.getElementById('editDescriptionInput').value = quillEdit.root.innerHTML;
             });
         }
 
 
-        // Open the modal for editing an event (Admin functionality)
         function openEditEventModal(event) {
             const modal = document.getElementById("editEventModal");
 
-            document.getElementById("editEventId").value = event.id;
+            // Dynamically set the form's action URL to the correct endpoint
+            const form = document.getElementById("editEventForm");
+            form.action = `/events/edit/${event.id}`;
+
+            // Populate all form fields with the event's current data
             document.getElementById("editTitle").value = event.title;
-            document.getElementById("editDescription").value = event.description;
+            // Populate the Quill editor with the event's description
+            if (quillEdit) {
+                quillEdit.root.innerHTML = event.description;
+            }
+
             document.getElementById("editDate").value = event.start.split("T")[0];
 
-            const startTime = new Date(event.start).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false
-            });
-            const endTime = new Date(event.end).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false
-            });
+            const startTime = new Date(event.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+            const endTime = new Date(event.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 
             document.getElementById("editStartTime").value = startTime;
             document.getElementById("editEndTime").value = endTime;
             document.getElementById("editLocation").value = event.location;
+            document.getElementById("editFullAddress").value = event.full_address || '';
+            document.getElementById("editAllowGuests").checked = event.allow_guests;
+            document.getElementById("editGuestLimit").value = event.guest_limit;
+            document.getElementById("editTicketPrice").value = event.ticket_price;
+            document.getElementById("editMaxCapacity").value = event.max_capacity;
+
+            // Show a preview of the current image
+            const previewImage = document.getElementById("editPreviewImage");
+            if (event.image_filename) {
+                previewImage.src = `/static/images/${event.image_filename}`;
+                previewImage.style.display = "block";
+            } else {
+                previewImage.style.display = "none";
+            }
 
             modal.style.display = "block";
         }
@@ -251,44 +282,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
 
-        // Handle event form submission for editing events (Admin functionality)
-        const editEventForm = document.getElementById("editEventForm");
-        if (editEventForm) { // Ensure form exists
-            editEventForm.addEventListener("submit", function (e) {
-                e.preventDefault();
-
-                const eventId = document.getElementById("editEventId").value;
-                const updatedEvent = {
-                    title: document.getElementById("editTitle").value,
-                    description: document.getElementById("editDescription").value,
-                    date: document.getElementById("editDate").value,
-                    start_time: `${document.getElementById("editStartTime").value}`,
-                    end_time: `${document.getElementById("editEndTime").value}`,
-                    location: document.getElementById("editLocation").value,
-                };
-
-                console.log("Submitting updated event:", updatedEvent);
-
-                fetch(`/events/edit/${eventId}`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify(updatedEvent),
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        alert("Event updated successfully!");
-                        location.reload();
-                    })
-                    .catch(err => {
-                        console.error("Error updating event:", err);
-                        alert(`Error updating event: ${err.message}`);
-                    });
-
-                document.getElementById("editEventModal").style.display = "none";
+        document.querySelectorAll('.edit-event').forEach(button => {
+            button.addEventListener('click', function () {
+                const eventId = this.getAttribute('data-event-id');
+                // Combine upcoming and past events to find the one being edited
+                const allEvents = upcomingEventsData.concat(pastEventsData);
+                const selectedEvent = allEvents.find(e => e.id == Number(eventId));
+                
+                if (selectedEvent) {
+                    openEditEventModal(selectedEvent);
+                } else {
+                    console.error("Event not found for ID:", eventId);
+                }
             });
-        }
+        });
+
 
         // Confirm cancellation with reason (Admin functionality)
         const confirmCancelEventButton = document.getElementById('confirmCancelEvent');
@@ -358,47 +366,68 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-function renderEventCards(sortedEvents, flashMessage, flashEventId) { // Added missing parameters
-    // Select ALL containers with the class, not just the first one
-    const eventsContainers = document.querySelectorAll('.events-container');
+// Renders event cards into the appropriate container
+function renderEventCards(eventsToRender, containerType, flashMessage, flashEventId) {
+    const containerSelector = containerType === 'past' ? '.past-events-container' : '.events-container';
+    const eventsContainers = document.querySelectorAll(containerSelector);
 
-    // Loop through each container (one on Upcoming tab, one on Calendar tab)
+    if (eventsContainers.length === 0) {
+        console.error(`Container not found for type: ${containerType}`);
+        return;
+    }
+
     eventsContainers.forEach(eventsContainer => {
-        eventsContainer.innerHTML = ''; // Clear existing content for this container
+        // Clear the container only on the first render to avoid duplication
+        if (!eventsContainer.dataset.rendered) {
+            eventsContainer.innerHTML = '';
+            eventsContainer.dataset.rendered = 'true';
+        }
 
-        sortedEvents.forEach(event => {
-            const formattedDate = event.formatted_date ? event.formatted_date : 'Date Missing';
+        if (eventsToRender.length === 0) {
+            const message = containerType === 'past' ? 'No recent past events to show.' : 'No upcoming events. Check back soon!';
+            eventsContainer.innerHTML = `<p>${message}</p>`;
+            return;
+        }
+
+        eventsToRender.forEach(event => {
             const isCanceled = event.status === 'canceled';
-            const cancellationReason = event.cancellation_reason ? event.cancellation_reason : 'No reason provided';
-            const descriptionPreview = event.description ? event.description.split(' ').slice(0, 20).join(' ') + '...' : 'No description available';
+            const cancellationReason = event.cancellation_reason || 'No reason provided';
+            let descriptionPreview = 'No description available.';
+            if (event.description) {
+                const plainText = stripHtml(event.description); // Strip HTML tags first
+                if (plainText.length > 12) {
+                    descriptionPreview = plainText.substring(0, 12) + '...'; // Truncate to 120 characters
+                } else {
+                    descriptionPreview = plainText;
+                }
+            }
 
-            // Check if this is the card that needs the flash message
             let flashMessageHTML = '';
             if (flashMessage && flashEventId && event.id == flashEventId) {
                 flashMessageHTML = `
                     <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 15px;">
                         ${flashMessage}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                `;
+                    </div>`;
             }
 
-            // The rest of your card HTML is perfect. This part generates the card.
-            let eventCardHTML = `
+            const actionButtonHTML = getActionButtonHTML(event);
+
+            const eventCardHTML = `
             <div class="event-card ${isCanceled ? 'canceled' : ''}">
-                ${flashMessageHTML} <div class="event-header">
+                ${flashMessageHTML}
+                <div class="event-header">
                     <p class="event-date">
                         ${isCanceled
-                            ? `<strong style="color: red;">${formattedDate} - Cancelled: ${cancellationReason}</strong>`
-                            : formattedDate}
+                            ? `<strong style="color: red;">${event.formatted_date} - Cancelled: ${cancellationReason}</strong>`
+                            : event.formatted_date}
                     </p>
                     <h2 class="event-title">${event.title}</h2>
                     <p class="event-times">
                         <strong>Time:</strong>
                         ${formatEventTime(event.start)} - ${formatEventTime(event.end)}
                     </p>
-
-                    ${userRole === 'admin' ? `
+                    ${userRole === 'admin' && !event.is_past ? `
                         <div class="event-menu">
                             <button class="event-menu-button">⋮</button>
                             <div class="event-menu-options hidden">
@@ -409,7 +438,6 @@ function renderEventCards(sortedEvents, flashMessage, flashEventId) { // Added m
                         </div>
                     ` : ''}
                 </div>
-
                 <div class="event-body">
                     ${event.image_filename ? `
                         <img src="/static/images/${event.image_filename}"
@@ -422,38 +450,13 @@ function renderEventCards(sortedEvents, flashMessage, flashEventId) { // Added m
                         <a href="/events/${event.id}" class="see-more-button">See More</a>
                     </p>
                     <p class="event-going"><strong>Who's Going:</strong> ${event.rsvp_count || 0} going</p>
-
-                    ${event.rsvp_count >= event.max_capacity ? `
-                        <button class="btn btn-secondary" disabled>Event Full</button>
-                    ` : event.is_attending ? `
-                        <div class="rsvp-box" style="margin-top: 10px;">
-                            <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
-                            <a href="#" class="edit-rsvp" data-event-id="${event.id}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
-                        </div>
-                    ` : `
-                        <button
-                            class="btn btn-success custom-attend-button"
-                            data-event-id="${event.id}"
-                            data-title="${event.title}"
-                            data-time="${event.formatted_date} ${formatEventTime(event.start)}"
-                            data-ticket-price="${event.ticket_price || 0}"
-                            data-guest-limit="${event.allow_guests ? (event.guest_limit || 0) : 0}"
-                            data-location="${event.location}" 
-                            ${isCanceled || event.rsvp_count >= event.max_capacity ? 'disabled' : ''}>
-                            Attend
-                        </button>
-                    `}
+                    ${actionButtonHTML}
                 </div>
-            </div>
-        `;
-        
-            // Use insertAdjacentHTML for better performance than the old method
+            </div>`;
+            
             eventsContainer.insertAdjacentHTML('beforeend', eventCardHTML);
         });
     });
-
-    // This must be called after the cards are rendered to make the buttons work
-    attachAllEventListeners();
 }
 
     // Central function to attach all event listeners
@@ -726,4 +729,6 @@ function renderEventCards(sortedEvents, flashMessage, flashEventId) { // Added m
         userRole = 'user';
     }
     console.log("Updated User Role:", userRole);
+
+    attachAllEventListeners(); 
 });

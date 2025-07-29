@@ -24,6 +24,16 @@
     <p>
         <i class="bi bi-geo-alt"></i> <strong>Location:</strong> {{ event.location }}
     </p>
+    {% if event.full_address %}
+    <div class="address-section" style="margin-bottom: 20px;">
+        <p style="margin-bottom: 10px;">
+            <i class="bi bi-pin-map"></i> <strong>Address:</strong> {{ event.full_address }}
+        </p>
+        <a href="{{ maps_link }}" target="_blank" class="btn btn-secondary">
+            <i class="bi bi-map"></i> Open in Google Maps
+        </a>
+    </div>
+    {% endif %}
         
     {% if attendees %}
     <p>
