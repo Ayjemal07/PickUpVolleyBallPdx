@@ -90,6 +90,8 @@ class Event(db.Model):
     ticket_price = db.Column(db.Float, nullable=False, default=10.0)
     allow_guests = db.Column(db.Boolean, default=False)
     guest_limit = db.Column(db.Integer, nullable=True)
+    attendees = db.relationship('EventAttendee', back_populates='event', cascade="all, delete-orphan")
+
     
     def __repr__(self):
         return f'<Event {self.title}>'
@@ -104,4 +106,4 @@ class EventAttendee(db.Model):
     guest_count = db.Column(db.Integer, nullable=False, default=0)
 
     user = db.relationship('User', backref='attendances')
-    event = db.relationship('Event', backref='attendees')
+    event = db.relationship('Event', back_populates='attendees')

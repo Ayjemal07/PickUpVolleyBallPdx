@@ -501,19 +501,8 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
     // Central function to attach all event listeners
     function attachAllEventListeners() {
 
-        // Admin Edit/Delete/Cancel buttons (only if user is admin)
         if (userRole === 'admin') {
-            document.querySelectorAll('.edit-event').forEach(button => {
-                button.addEventListener('click', function () {
-                    const eventId = this.getAttribute('data-event-id');
-                    const selectedEvent = eventsData.find(e => e.id == Number(eventId));
-                    if (selectedEvent) {
-                        openEditEventModal(selectedEvent);
-                    } else {
-                        console.error("Event not found for ID:", eventId);
-                    }
-                });
-            });
+            // The buggy '.edit-event' listener has been removed.
 
             document.querySelectorAll('.delete-event').forEach(button => {
                 button.addEventListener('click', function () {
