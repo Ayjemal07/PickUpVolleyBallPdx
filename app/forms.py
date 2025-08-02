@@ -22,15 +22,20 @@ class UserLoginForm(FlaskForm):
 
 
 class UserRegistrationForm(FlaskForm):
+    display_name = StringField('Display Name', validators=[DataRequired()])
+
     first_name = StringField('First Name', validators=[DataRequired(), Length(max=150)])
     last_name = StringField('Last Name', validators=[DataRequired(), Length(max=150)])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match.')])
+
     submit_button = SubmitField('Create Account')
 
 
 
 class ProfileUpdateForm(FlaskForm):
+    display_name = StringField('Display Name', validators=[DataRequired()])
     first_name = StringField('First Name', validators=[Optional()])
     last_name = StringField('Last Name', validators=[Optional()])
     profile_image = FileField('Profile Image', validators=[

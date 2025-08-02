@@ -146,75 +146,91 @@ header {
 
 /* Home Page Styling */
 
-/* All Dropdown Styling */
+/* Main dropdown container */
 .dropdown {
   position: relative;
   display: inline-block;
 }
 
-/* General dropdown toggle styling */
+/* The dropdown toggle buttons (person/hamburger icons) */
 .dropdown-toggle {
   background: none;
   border: none;
-  font-size: 1.5rem; /* Adjusted font size for better visibility */
+  padding: 5px 10px;
   cursor: pointer;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: #7DB3B0; /* Ensures icons have a color */
+}
+.dropdown-toggle:hover {
+  color: #5A8E8C;
 }
 
-/* Account Menu specific styling */
+/* Person icon for the account menu */
 .account-menu .dropdown-toggle::before {
-  content: "👤"; /* Person icon for account menu */
-  font-size: 20px; /* Adjust size of the icon */
+  content: "👤";
 }
 
-/* Menu Items specific styling */
+/* Hamburger icon for the main menu */
 .menu-items .dropdown-toggle::before {
-  content: "☰"; /* Hamburger icon for menu */
-  font-size: 24px; /* Adjust size of the hamburger icon */
+  content: "☰";
 }
 
-/* Dropdown Menu Styling */
+/* The dropdown menu box that appears on click/tap */
 .dropdown-menu {
-  display: none;
+  display: none; /* Hidden by default */
   position: absolute;
   top: 100%;
-  right: 0;
-  background-color: #f8f8f8;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 10px;
-  border-radius: 4px;
-  z-index: 1000;
+  right: 0; /* Anchors the menu to the right of the icon */
+  background-color: white;
+  min-width: 160px; /* A good default width */
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 8px 0;
+  z-index: 1001;
 }
 
-/* Display dropdown menu on hover */
-.dropdown:hover .dropdown-menu {
+/* This is the class JavaScript will use to show the menu */
+.dropdown-menu.show {
   display: block;
 }
 
-/* Dropdown menu item styling */
-.dropdown-menu a {
+/* Styling for ALL items (links and buttons) inside the dropdown */
+.dropdown-menu a,
+.dropdown-menu .btn-signout {
   display: block;
-  padding: 5px 10px;
-  text-decoration: none;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  line-height: 1.5; /* This ensures perfect vertical alignment */
   color: #333;
+  text-decoration: none;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
 }
 
-.dropdown-menu a:hover {
-  background-color: #EBE9E3; /* Highlight color */
-  border-radius: 4px;
+/* Remove margin from the Sign Out form wrapper */
+.account-menu .dropdown-menu form {
+    margin: 0;
 }
 
-/* Add styles for hovering behavior */
-.account-menu:hover .dropdown-menu,
-.menu-items:hover .dropdown-menu {
-  display: block;
+/* Hover effect for ALL items */
+.dropdown-menu a:hover,
+.dropdown-menu .btn-signout:hover {
+  background-color: #f1f1f1;
+}
+
+/* --- Mobile Fix for Dropdowns --- */
+@media (max-width: 600px) {
+    .dropdown-menu {
+        min-width: 140px; /* Use a smaller width on mobile to prevent overflow */
+    }
 }
 
 
-
-.menu-items .dropdown-menu {
-    width: max-content !important;
-    min-width: 0 !important;
-}
 /* Additional small spacing for better layout */
 .right-menu {
   white-space: nowrap;
@@ -668,21 +684,18 @@ header {
 
 
 /* Subscriptions Page Styling */
-
-.full-width-background-subscriptions {
-  background-color: #EBE9E3; /* Use the muted brand color */
-  width: 100%;
-}
-
-
-.subscriptions {
-  padding: 40px;
-  background-color: #EBE9E3; /* Light background */
-  max-width: 1000px;
-  margin: 0 auto;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Added shadow for consistency */
-}
+  .full-width-background-subscriptions {
+      display: flex;
+      justify-content: center; /* Center horizontally */
+      align-items: center;     /* Center vertically */
+      min-height: 80vh;        /* Make sure container has height */
+      padding: 2rem;
+  }
+  .subscriptions {
+      text-align: center;      /* Center all text inside the section */
+      max-width: 500px;        /* Optional: constrain max width */
+      width: 100%;
+  }
 
 .subscriptions h1 {
   text-align: center;
@@ -701,7 +714,7 @@ header {
 
 .subscription-plans {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
 }
@@ -1423,16 +1436,6 @@ html, body {
   border-color: #555;
 }
 
-.event-details-container {
-  background-color: #EBE9E3;
-  padding: 30px 20px;
-  max-width: 900px;
-  margin: 0 auto;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  font-family: 'Arial', sans-serif;
-}
-
 
 
 .paypal-loading {
@@ -1782,3 +1785,143 @@ html, body {
 #addEventButton.btn-green:hover {
     background-color: #218838; /* Darker green on hover */
 }
+
+
+/* Login/Register Prompt Modal Buttons --- */
+#authPromptModal .auth-prompt-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+#authPromptModal .auth-prompt-buttons .btn {
+    min-width: 140px;  /* This forces both buttons to be the same width */
+    text-align: center; /* This keeps the text centered inside */
+    padding: 12px 20px;
+    font-weight: bold;
+    font-size: 1rem;
+    text-decoration: none;
+    border: none;
+    border-radius: 8px;
+    color: white !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hover effect */
+#authPromptModal .auth-prompt-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Specific green style for the Login button */
+#authPromptModal .btn-login {
+    background-color: #28a745; /* Green */
+}
+#authPromptModal .btn-login:hover {
+    background-color: #218838; /* Darker Green */
+}
+
+/* Specific teal style for the Register button */
+#authPromptModal .btn-register {
+    background-color: #b83b5e; /* Teal */
+}
+#authPromptModal .btn-register:hover {
+    background-color: #b44867; /* Darker Teal */
+}
+
+/* --- Waiver Checkbox Styling --- */
+
+/* Use flexbox to align the label text and checkbox on one line */
+.waiver-group label {
+    align-items: center; /* Vertically align items */
+    cursor: pointer;     /* Makes the whole area clickable */
+    flex-wrap: wrap;     /* Allows text to wrap on small screens */
+}
+
+/* Style and resize the checkbox */
+.waiver-group input[type="checkbox"] {
+    transform: scale(1.5);   /* Makes the checkbox 50% larger */
+    margin-left: 10px;       /* Adds space between the text and the checkbox */
+}
+
+/* --- Show Password Toggle Styles --- */
+.password-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 15px; /* Adjust spacing from the right edge */
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6c757d; /* A neutral gray color */
+}
+
+/* --- FINAL Dropdown Fixes --- */
+
+/* This uses a class toggled by JavaScript to show the menu */
+.dropdown-menu.show {
+  display: block;
+}
+
+/* This forces consistent styling on all dropdown items to fix alignment and font size */
+.dropdown-menu a,
+.dropdown-menu .btn-signout {
+    display: block;
+    width: 100%;
+    padding: 10px 16px !important;
+    font-size: 0.8rem !important;
+    text-align: left !important;
+    background: none !important;
+    border: none !important;
+    margin: 0 !important;
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* On desktop devices that can hover, this re-enables the hover-to-open feature */
+@media (hover: hover) and (min-width: 992px) {
+  /* Hide the JS-toggled menu if not hovering */
+  .dropdown-menu.show {
+    display: none;
+  }
+  /* Show menu on hover */
+  .dropdown:hover .dropdown-menu {
+    display: block;
+  }
+}
+
+
+
+  .event-details-container {
+    /* MODIFICATION: Removed max-width and auto margin to allow the container to be wider.
+      Added a small margin on the top/bottom for spacing.
+    */
+    margin: 20px; /* Provides spacing from the top/bottom and screen edges */
+    padding: 25px; /* Adds space inside the border */
+    /* background-color: #ffffff; */
+    /* border: 1px solid #ddd; */
+    /* border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05); */
+  }
+
+  .event-image {
+    width: 100%;
+    max-height: 450px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+
+  /* Media query for mobile devices */
+  @media (max-width: 768px) {
+    .event-details-container {
+      padding: 15px;
+      margin: 10px; /* Reduces margin on smaller screens */
+    }
+    .event-image {
+      max-height: 250px;
+    }
+  }

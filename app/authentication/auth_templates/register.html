@@ -3,6 +3,7 @@
 {% block content %}
 <div class="full-width-container">
     <div class="form-background">
+        <p class="free-event-text">Your First Event is Free on us! 🎉 </p>
         <h2>Create an Account</h2>
         <!-- Display Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -16,46 +17,87 @@
         {% endwith %}
 
         <!-- Registration Form -->
-        <form action="/register" method="POST" class="form-style" id="register-form">
+        <form action="{{ url_for('auth.register') }}" method="POST" class="form-style" id="register-form" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
+            
+
+            <div class="form-group">
+                <label for="display_name">Display Name:</label>
+                <small style="display: block; color: #6c757d; margin-bottom: 5px;">This is how your name will appear in Events, using real names are encouraged. First Name space Last Name. Ex: Alex Smith</small>
+                <input type="text" id="display_name" name="display_name" required class="input-field" 
+                    placeholder="Please don't use inappropriate alias" 
+                    value="{{ request.form.get('display_name', '') }}">
+            </div>
             <div class="form-group">
                 <label for="first_name">First Name:</label>
-                <input type="text" id="first_name" name="first_name" required class="input-field" placeholder="If using nicknames, make sure it's appropriate">
+                <input type="text" id="first_name" name="first_name" required class="input-field" placeholder="Your legal first name" value="{{ request.form.get('first_name', '') }}">
             </div>
-
             <div class="form-group">
                 <label for="last_name">Last Name:</label>
-                <input type="text" id="last_name" name="last_name" required class="input-field" placeholder="If using nicknames, make sure it's appropriate">
+                <input type="text" id="last_name" name="last_name" required class="input-field" placeholder="Your legal last name" value="{{ request.form.get('last_name', '') }}">
             </div>
-
             <div class="form-group">
-                <label for="profileImage">Upload Profile Image</label>
+                <label for="profileImage">Upload Profile Image (Optional)</label>
                 <input type="file" id="profileImage" name="profileImage" accept="image/*" class="input-field">
             </div>
-            
             <div class="form-group">
-                <label for="address">Address:</label>
-                <input type="text" id="address" name="address" class="input-field" placeholder="example: SE Portland, Beaverton, etc.">
+                <label for="dob">Date of Birth:</label>
+                <input type="date" id="dob" name="dob" required class="input-field" value="{{ request.form.get('dob', '') }}">
             </div>
 
             <div class="form-group">
                 <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required class="input-field" placeholder="Use a valid email you own, this is required for password reset">
+                <input type="email" id="email" name="email" required class="input-field" placeholder="Required for password resets and communication" value="{{ request.form.get('email', '') }}">
+            </div>
+            <div class="form-group">
+                <label for="address">Mailing Address:</label>
+                <input type="text" id="address" name="address" required class="input-field" placeholder="e.g., 123 Main St, Portland, OR 97201" value="{{ request.form.get('address', '') }}">
+            </div>
+
+            <div class="form-group">
+                <label for="emergency_contact_name">Emergency Contact Name:</label>
+                <input type="text" id="emergency_contact_name" name="emergency_contact_name" required class="input-field" value="{{ request.form.get('emergency_contact_name', '') }}">
+            </div>
+            <div class="form-group">
+                <label for="emergency_contact_phone">Emergency Contact Phone:</label>
+                <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" required class="input-field" value="{{ request.form.get('emergency_contact_phone', '') }}">
             </div>
 
             <div class="form-group">
                 <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required class="input-field"
-                placeholder="Minimum 8 chars, upper/lowercase, number, special character">         
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" required class="input-field" placeholder="8+ characters with symbol & number, upper&lower ">
+                    <i class="bi bi-eye-slash toggle-password"></i>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password:</label>
+                <div class="password-wrapper">
+                    <input type="password" id="confirm_password" name="confirm_password" required class="input-field">
+                    <i class="bi bi-eye-slash toggle-password"></i>
+                </div>
+            </div>
+
+            <div class="form-group waiver-group">
+                <label for="waiver_agree">
+                    <span>
+                        I agree to the 
+                        <a href="{{ url_for('static', filename='waiver.pdf') }}" target="_blank">Waiver, Assumption of Risk, and Release of Liability</a>
+                    </span>
+                    
+                    <input type="checkbox" id="waiver_agree" name="waiver_agree" required {% if request.form.get('waiver_agree') %}checked{% endif %}>
+                </label>
             </div>
 
             <div class="form-group">
-                <input type="checkbox" id="waiver" name="waiver" required>
-                <label for="waiver">
-                    I agree to the 
-                    <a href="{{ url_for('static', filename='waiver.pdf') }}" target="_blank">Waiver, Assumption of Risk, and Release of Liability</a>
-                </label>
+                <label for="signature-pad">Digital Signature:</label>
+                <div class="signature-pad-container" style="border: 1px solid #ccc; border-radius: 5px; position: relative; height: 150px;">
+                    <canvas id="signature-pad" class="signature-pad"></canvas>
+                </div>
+                <button type="button" id="clear-signature" class="btn btn-secondary" style="margin-top: 10px;">Clear</button>
+                <input type="hidden" id="signature_data" name="signature_data">
             </div>
+
             <button type="submit" class="submit-btn" id="register-submit">Create Account</button>
             <div id="spinner" class="spinner" style="display: none;"></div>
         </form>
@@ -74,40 +116,100 @@
 </div>
 
 <script>
-    document.getElementById("register-form").addEventListener("submit", function (e) {
-        const submitButton = document.getElementById("register-submit");
-        const spinner = document.getElementById("spinner");
-
-        // Disable the button and show spinner
-        submitButton.disabled = true;
-        spinner.style.display = "block";
-    });
-
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const firstName = "{{ first_name|default('') }}"; // Handle undefined first_name
+    // This function can be defined here
+    function closePopup() {
         const popup = document.getElementById("welcome-popup");
+        popup.style.display = "none";
+        setTimeout(() => {
+            window.location.href = "{{ url_for('main.home') }}";
+        }, 100);
+    }
 
-        if (firstName.trim()) {
+    // A single listener for when the page is ready
+    document.addEventListener("DOMContentLoaded", function () {
+        
+        // --- Spinner, Popup, and Signature Pad Logic ---
+        const registerForm = document.getElementById("register-form");
+        const popup = document.getElementById("welcome-popup");
+        const canvas = document.getElementById('signature-pad');
+        
+        // Spinner Logic
+        if (registerForm) {
+            registerForm.addEventListener("submit", function (e) {
+                const submitButton = document.getElementById("register-submit");
+                const spinner = document.getElementById("spinner");
+                submitButton.disabled = true;
+                spinner.style.display = "block";
+            });
+        }
+
+        // Welcome Popup Logic
+        const firstName = "{{ first_name|default('') }}";
+        if (popup && firstName.trim()) {
             popup.style.display = "block";
-
-            // Add event listener for outside clicks
             document.addEventListener("click", function (event) {
                 if (!popup.contains(event.target) && popup.style.display === "block") {
                     closePopup();
                 }
             });
         }
+
+        // Signature Pad Logic
+        if (canvas) {
+            const signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)'
+            });
+
+            function resizeCanvas() {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+                signaturePad.clear();
+            }
+            
+            window.addEventListener("resize", resizeCanvas);
+            resizeCanvas();
+
+            const clearButton = document.getElementById('clear-signature');
+            clearButton.addEventListener('click', function () {
+                signaturePad.clear();
+            });
+
+            // This must be the same form as the spinner logic above
+            const formForSignature = document.getElementById('register-form');
+            formForSignature.addEventListener('submit', function (event) {
+                if (signaturePad.isEmpty()) {
+                    alert("Please provide a signature.");
+                    event.preventDefault(); // Stop form submission
+                    // Re-enable the submit button if validation fails
+                    document.getElementById("register-submit").disabled = false;
+                    document.getElementById("spinner").style.display = "none";
+                } else {
+                    const signatureDataInput = document.getElementById('signature_data');
+                    signatureDataInput.value = signaturePad.toDataURL('image/png');
+                }
+            });
+
+            // In register.html, inside the <script> and DOMContentLoaded listener
+
+            // --- Show Password Toggle Logic ---
+            const togglePasswordIcons = document.querySelectorAll('.toggle-password');
+            togglePasswordIcons.forEach(icon => {
+                icon.addEventListener('click', function () {
+                    // Find the password input field right before the icon
+                    const passwordField = this.previousElementSibling;
+                    
+                    // Toggle the input type between "password" and "text"
+                    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordField.setAttribute('type', type);
+                    
+                    // Toggle the icon's appearance between the eye and slashed-eye
+                    this.classList.toggle('bi-eye');
+                    this.classList.toggle('bi-eye-slash');
+                });
+            });
+        }
     });
-
-    function closePopup() {
-        const popup = document.getElementById("welcome-popup");
-        popup.style.display = "none";
-
-        // Only redirect if explicitly closed
-        setTimeout(() => {
-            window.location.href = "{{ url_for('main.home') }}";
-        }, 100);
-    }
 </script>
 {% endblock %}

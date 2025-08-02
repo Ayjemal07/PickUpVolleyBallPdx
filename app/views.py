@@ -12,6 +12,7 @@ import os
 from flask import current_app
 from werkzeug.utils import secure_filename
 import uuid 
+from flask_login import current_user
 
 from .models import EventAttendee
 from flask_login import current_user, login_required # Import login_required
@@ -31,7 +32,8 @@ def about():
 @main.route('/events', methods=['GET', 'POST'])
 def events():
     user_role = session.get('role', 'user')  # Default to 'user'
-    
+    is_authenticated = current_user.is_authenticated # Get the login status
+
     # Get list of image filenames
     image_folder = os.path.join(current_app.root_path, 'static', 'images')
     image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
@@ -172,7 +174,7 @@ def events():
                            past_events_data=past_events_data,
                            all_events_for_calendar=all_events_for_calendar,
                            user_role=user_role,
-                           image_files=image_files)
+                           image_files=image_files,is_authenticated=is_authenticated)
 
 
 #Route to add an event
@@ -321,7 +323,17 @@ def event_details(event_id):
         "rsvp_count": event.rsvp_count
     }
 
-    return render_template('event_details.html', event=event, event_data=event_dict, attendees=attendees,is_attending=is_attending,maps_link=maps_link)
+    return render_template(
+        'event_details.html', 
+        event=event, 
+        event_data=event_dict, 
+        attendees=attendees,
+        is_attending=is_attending,
+        maps_link=maps_link,
+        # Add these two lines to pass the user's status to the template
+        is_authenticated=current_user.is_authenticated,
+        user_role=current_user.role if current_user.is_authenticated else 'user'
+    )
 
 
 # New endpoint to fetch user's RSVP for an event
@@ -333,9 +345,12 @@ def get_user_rsvp(event_id):
     
     if rsvp:
         user = User.query.get(user_id)
+        display_name = user.display_name or f"{user.first_name} {user.last_name}"
+
         return jsonify({
             'rsvp_id': rsvp.id,
             'guest_count': rsvp.guest_count,
+            'display_name': display_name,
             'user_first_name': user.first_name,
             'user_last_name': user.last_name
         }), 200

@@ -48,6 +48,25 @@ function formatEventTime(dateString) {
     });
 }
 
+// Add this new function to events.js
+function displayFlashMessage(container, message) {
+    if (!container || !message) return;
+
+    // Create the alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.style.marginBottom = '15px';
+
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    // Add the alert to the top of the specified container
+    container.prepend(alertDiv);
+}
+
 
 // Helper to generate the correct action button based on event status
 function getActionButtonHTML(event) {
@@ -95,11 +114,25 @@ document.addEventListener('DOMContentLoaded', function () {
     renderEventCards(sortedUpcomingEvents, 'upcoming', flashMessage, flashEventId);
     renderEventCards(sortedPastEvents, 'past');
 
-    if (flashMessage && flashEventId) {
-        sessionStorage.removeItem('flashMessage');
-        sessionStorage.removeItem('flashEventId');
-    }
+    document.querySelectorAll('.dropdown-toggle').forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            let menu = this.nextElementSibling;
+            document.querySelectorAll('.dropdown-menu.show').forEach(openMenu => {
+                if (openMenu !== menu) openMenu.classList.remove('show');
+            });
+            menu.classList.toggle('show');
+        });
+    });
 
+    window.addEventListener('click', function(event) {
+        if (!event.target.matches('.dropdown-toggle')) {
+            document.querySelectorAll('.dropdown-menu.show').forEach(openMenu => {
+                openMenu.classList.remove('show');
+            });
+        }
+    });
     const tabs = document.querySelectorAll('.nav-tabs .nav-link');
     const tabPanes = document.querySelectorAll('.tab-pane');
     let calendarInitialized = false;
@@ -132,6 +165,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (defaultTab) {
         const defaultPaneId = defaultTab.getAttribute('href').substring(1);
         document.getElementById(defaultPaneId).classList.add('active', 'show');
+    }
+
+    const closeAuthPromptButton = document.getElementById('closeAuthPrompt');
+    if (closeAuthPromptButton) {
+        closeAuthPromptButton.addEventListener('click', function() {
+            document.getElementById('authPromptModal').style.display = 'none';
+        });
     }
 
     function initializeCalendar() {
@@ -402,20 +442,11 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 }
             }
 
-            let flashMessageHTML = '';
-            if (flashMessage && flashEventId && event.id == flashEventId) {
-                flashMessageHTML = `
-                    <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin-bottom: 15px;">
-                        ${flashMessage}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>`;
-            }
 
             const actionButtonHTML = getActionButtonHTML(event);
 
             const eventCardHTML = `
-            <div class="event-card ${isCanceled ? 'canceled' : ''}">
-                ${flashMessageHTML}
+            <div class="event-card ${isCanceled ? 'canceled' : ''}" data-event-id="${event.id}">
                 <div class="event-header">
                     <p class="event-date">
                         ${isCanceled
@@ -457,6 +488,14 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             eventsContainer.insertAdjacentHTML('beforeend', eventCardHTML);
         });
     });
+    if (flashMessage && flashEventId) {
+    const cardToShowMessageOn = document.querySelector(`.event-card[data-event-id="${flashEventId}"]`);
+    if (cardToShowMessageOn) {
+        displayFlashMessage(cardToShowMessageOn, flashMessage);
+        sessionStorage.removeItem('flashMessage');
+        sessionStorage.removeItem('flashEventId');
+    }
+}
 }
 
     // Central function to attach all event listeners
@@ -619,6 +658,11 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         // Logic for "Attend" Button (Initial RSVP)
         document.querySelectorAll(".custom-attend-button").forEach(button => {
             button.addEventListener("click", function () {
+
+                if (!isUserAuthenticated) {
+                    document.getElementById('authPromptModal').style.display = 'block';
+                    return; // Stop the function here if the user is not logged in
+                }
                 currentEventId = this.getAttribute("data-event-id");
                 const eventTitle = this.getAttribute("data-title");
                 const eventTime = this.getAttribute("data-time");
@@ -663,7 +707,9 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                         currentRsvpId = rsvpData.rsvp_id;
                         initialGuestCount = rsvpData.guest_count || 0; // Store initial guest count
 
-                        const event = eventsData.find(e => e.id == currentEventId);
+                        const allEvents = upcomingEventsData.concat(pastEventsData);
+                        const event = allEvents.find(e => e.id == currentEventId);
+
                         if (!event) {
                             console.error("Event data not found for ID:", currentEventId);
                             alert("Event details not available for editing.");
@@ -675,7 +721,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
 
                         rsvpTitle.textContent = `Edit RSVP for: ${event.title}`;
                         // Display current user's name and guests
-                        rsvpEventInfo.innerHTML = `You (${rsvpData.user_first_name} ${rsvpData.user_last_name}) are already going with <span id="currentGuestsDisplay">${initialGuestCount}</span> guests.`;
+                        rsvpEventInfo.innerHTML = `You (${rsvpData.display_name}) are already going with <span id="currentGuestsDisplay">${initialGuestCount}</span> guests.`;
                         editGuestPrompt.textContent = `Change number of guests (Max: ${currentGuestLimit}):`;
 
                         guestCountSpan.textContent = initialGuestCount;

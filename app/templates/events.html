@@ -6,6 +6,7 @@
 <div class="page-container">
     <h1>Welcome to Sign up Page for Volleyball Events 🎉 </h1>
     <script>
+        let isUserAuthenticated = {{ is_authenticated|tojson }};
         let userRole = "{{ user_role|default('user') }}";
         
         // Pass separate data for upcoming, past, and calendar events to JavaScript
@@ -260,6 +261,18 @@
 </div>
 {% endif %}
 
+
+<div id="authPromptModal" class="modal">
+    <div class="modal-content" style="max-width: 450px; text-align: center;">
+        <button type="button" id="closeAuthPrompt" class="close-button" aria-label="Close">&times;</button>
+        <h2>Please Login or Register</h2>
+        <p>You need an account to sign up for events.</p>
+        <div class="auth-prompt-buttons">
+            <a href="{{ url_for('auth.signin') }}" class="btn btn-login">Login</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-register">Register</a>
+        </div>
+    </div>
+</div>
 
 <div id="rsvpModal" class="modal">
     <div class="modal-content">

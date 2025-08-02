@@ -3,15 +3,16 @@
 {% block title %}Event Details{% endblock %}
 
 {% block content %}
+<div class="event-details-container">
 <div class="event-details">
+
+    <h1>{{ event.title }}</h1>
 
     {% if event.image_filename %}
         <img src="{{ url_for('static', filename='images/' + event.image_filename) }}" 
-            alt="Event Image" 
-            style="max-width: 100%; border-radius: 12px; margin-bottom: 15px;">
+            alt="Event Image"
+            class="event-image">
     {% endif %}
-
-    <h1>{{ event.title }}</h1>
 
     <p>
         <i class="bi bi-calendar-event"></i> <strong>Date:</strong> {{ event.formatted_date }}
@@ -45,7 +46,11 @@
             <img src="{{ url_for('static', filename='profile_images/' + (person.user.profile_image or 'default.png')) }}"
                 alt="User Image"
                 style="width: 40px; height: 40px; border-radius: 50%;">
-            {{ person.user.first_name }} {{ person.user.last_name }}
+            {% if person.user.display_name %}
+                {{ person.user.display_name }}
+            {% else %}
+                {{ person.user.first_name }} {{ person.user.last_name }}
+            {% endif %}
             {% if person.guest_count > 0 %}
                 <span style="color: gray;">(+{{ person.guest_count }} guest{{ 's' if person.guest_count > 1 else '' }})</span>
             {% endif %}
@@ -86,9 +91,9 @@
 
     {% endif %}
 </div>
+</div>
 
 
-<!-- RSVP Modal -->
 <div id="rsvpModal" class="modal">
     <div class="modal-content">
         <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -112,8 +117,31 @@
 </div>
 
 <script>
-    const eventsData = [{{ event_data|tojson|safe }}];
+    // Define the variables that events.js needs to function correctly
+    let isUserAuthenticated = {{ is_authenticated|tojson }};
+    let userRole = "{{ user_role|default('user') }}";
+    
+    // The script expects lists of events, so we provide the data for this single event inside an array.
+    const upcomingEventsData = [{{ event_data|tojson|safe }}];
+    const pastEventsData = []; // Can be empty
+    const calendarEventsData = []; // Not needed, but defined to prevent errors
+
+    document.addEventListener('DOMContentLoaded', function() {
+    const flashMessage = sessionStorage.getItem('flashMessage');
+    const flashEventId = sessionStorage.getItem('flashEventId');
+    const thisPageEventData = upcomingEventsData[0];
+
+    // If a message for this event exists, use our new function to show it
+    if (flashMessage && flashEventId && thisPageEventData && flashEventId == thisPageEventData.id) {
+        const container = document.querySelector('.event-details');
+        displayFlashMessage(container, flashMessage); // <-- Cleaner call
+
+        sessionStorage.removeItem('flashMessage');
+        sessionStorage.removeItem('flashEventId');
+    }
+});
+
 </script>
 
-
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
 {% endblock %}

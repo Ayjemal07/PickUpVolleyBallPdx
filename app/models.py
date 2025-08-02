@@ -30,7 +30,8 @@ def load_user(user_id):
     return User.query.get(user_id)
 
 class User(UserMixin, db.Model):
-    id = db.Column(db.String(36), primary_key=True)  # UUID is 36 characters long
+    id = db.Column(db.String(36), primary_key=True) 
+    display_name = db.Column(db.String(100), nullable=True)
     first_name=db.Column(db.String(150), nullable=False)
     last_name=db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -39,6 +40,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255))  # Increase to 255 characters
     token = db.Column(db.String(50))
     g_auth_verify = db.Column(db.Boolean, default=False, nullable=False)
+    address = db.Column(db.String(255), nullable=True)
+
 
 
     def __init__(self, email, first_name, last_name, role, password='', token='', g_auth_verify=False):
