@@ -1846,6 +1846,25 @@ html, body {
     margin-left: 10px;       /* Adds space between the text and the checkbox */
 }
 
+
+/* --- Digital Signature Pad Responsive Styles --- */
+.signature-pad-container {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    position: relative;
+    width: 100%; /* Ensure container takes full width of its parent */
+    aspect-ratio: 3 / 1; /* Maintain a 3:1 width-to-height ratio, making it responsive */
+    touch-action: none; /* Prevents page scroll while drawing on touch devices */
+}
+
+.signature-pad {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
 /* --- Show Password Toggle Styles --- */
 .password-wrapper {
     position: relative;
