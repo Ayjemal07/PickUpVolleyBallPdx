@@ -31,16 +31,19 @@ def load_user(user_id):
 
 class User(UserMixin, db.Model):
     id = db.Column(db.String(36), primary_key=True) 
-    display_name = db.Column(db.String(100), nullable=True)
     first_name=db.Column(db.String(150), nullable=False)
     last_name=db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     profile_image = db.Column(db.String(255), nullable=True)  
     role=db.Column(db.String(10), nullable=False, default='user')
-    password_hash = db.Column(db.String(255))  # Increase to 255 characters
+    password_hash = db.Column(db.String(255))
     token = db.Column(db.String(50))
     g_auth_verify = db.Column(db.Boolean, default=False, nullable=False)
     address = db.Column(db.String(255), nullable=True)
+
+    has_used_free_event = db.Column(db.Boolean, default=False, nullable=False)
+    event_credits = db.Column(db.Integer, default=0, nullable=False)
+    subscription_expiry_date = db.Column(db.Date, nullable=True)
 
 
 
@@ -50,9 +53,12 @@ class User(UserMixin, db.Model):
         self.set_password(password)
         self.first_name = first_name
         self.last_name = last_name
-        self.role=role
-
+        self.role = role
         self.token = self.set_token(24)
+        # New users start with eligibility for one free event
+        self.has_used_free_event = False
+        self.event_credits = 0
+        self.subscription_expiry_date = None
 
     def set_token(self, length):
         return secrets.token_hex(length)

@@ -8,10 +8,27 @@ submit the right kinds of data when they're logging in.
 user only uses string, PasswordField prevents showing it on the screen etc.
 """
 from flask_wtf import FlaskForm 
-from wtforms import StringField, PasswordField, SubmitField, IntegerField,FileField
+from wtforms import BooleanField, StringField, PasswordField, SubmitField, IntegerField,FileField
 from wtforms.validators import DataRequired, Email, Length
 from wtforms.validators import DataRequired, Optional, EqualTo
 from flask_wtf.file import FileAllowed
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+import re
+
+# Password complexity check
+def is_strong_password(password):
+    return (
+        len(password) >= 8 and
+        re.search(r'[A-Z]', password) and
+        re.search(r'[a-z]', password) and
+        re.search(r'\d', password) and
+        re.search(r'[!@#$%^&*(),.?":{}|<>]', password)
+    )
+
+def password_strength_check(form, field):
+    """Custom validator for password strength."""
+    if not is_strong_password(field.data):
+        raise ValidationError('Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.')
 
 class UserLoginForm(FlaskForm):
     # email, password, submit
@@ -22,20 +39,29 @@ class UserLoginForm(FlaskForm):
 
 
 class UserRegistrationForm(FlaskForm):
-    display_name = StringField('Display Name', validators=[DataRequired()])
 
-    first_name = StringField('First Name', validators=[DataRequired(), Length(max=150)])
-    last_name = StringField('Last Name', validators=[DataRequired(), Length(max=150)])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match.')])
-
-    submit_button = SubmitField('Create Account')
+    first_name = StringField('First Name', validators=[DataRequired("First name is required.")])
+    last_name = StringField('Last Name', validators=[DataRequired("Last name is required.")])
+    profileImage = FileField('Upload Profile Image (Optional)')
+    dob = StringField('Date of Birth', validators=[DataRequired("Date of birth is required.")]) # Use StringField for 'date' input type
+    email = StringField('Email', validators=[DataRequired("Email is required."), Email()])
+    address = StringField('Mailing Address', validators=[DataRequired("Mailing address is required.")])
+    emergency_contact_name = StringField('Emergency Contact Name', validators=[DataRequired("Emergency contact name is required.")])
+    emergency_contact_phone = StringField('Emergency Contact Phone', validators=[DataRequired("Emergency contact phone number is required.")])
+    
+    password = PasswordField('Password', validators=[
+        DataRequired("Password is required."),
+        password_strength_check
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired("Please confirm your password."),
+        EqualTo('password', message='Passwords must match.')
+    ])
+    waiver_agree = BooleanField('I agree to the Waiver', validators=[DataRequired("You must agree to the waiver to register.")])
 
 
 
 class ProfileUpdateForm(FlaskForm):
-    display_name = StringField('Display Name', validators=[DataRequired()])
     first_name = StringField('First Name', validators=[Optional()])
     last_name = StringField('Last Name', validators=[Optional()])
     profile_image = FileField('Profile Image', validators=[

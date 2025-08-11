@@ -46,11 +46,7 @@
             <img src="{{ url_for('static', filename='profile_images/' + (person.user.profile_image or 'default.png')) }}"
                 alt="User Image"
                 style="width: 40px; height: 40px; border-radius: 50%;">
-            {% if person.user.display_name %}
-                {{ person.user.display_name }}
-            {% else %}
-                {{ person.user.first_name }} {{ person.user.last_name }}
-            {% endif %}
+            {{ person.user.first_name }} {{ person.user.last_name }}
             {% if person.guest_count > 0 %}
                 <span style="color: gray;">(+{{ person.guest_count }} guest{{ 's' if person.guest_count > 1 else '' }})</span>
             {% endif %}
@@ -70,7 +66,15 @@
         {% elif is_attending %}
         <div class="rsvp-box event-rsvp-area">
             <p style="font-weight: bold;">You're going!</p>
-            <a href="#" class="edit-rsvp" data-event-id="{{ event.id }}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
+            <a href="#" 
+                class="edit-rsvp"
+                data-event-id="{{ event.id }}"
+                data-title="{{ event.title }}"
+                data-ticket-price="{{ '%.2f' % event.ticket_price }}"
+                data-guest-limit="{{ event.guest_limit if event.allow_guests else 0 }}"
+                style="color: teal; text-decoration: underline;">
+                Edit RSVP
+            </a>      
         </div>
         {% else %}
             <button 
@@ -79,6 +83,7 @@
                 data-title="{{ event.title }}"
                 data-time="{{ event.formatted_date }} {{ event.start_time.strftime('%I:%M %p') }}"
                 data-ticket-price="{{ '%.2f' % event.ticket_price }}"
+                data-location="{{event.location}}"
                 data-guest-limit="{{ event.guest_limit if event.allow_guests else 0 }}"
                 {% if event.rsvp_count >= event.max_capacity %}disabled{% endif %}>
                 Attend
@@ -100,48 +105,50 @@
             <h2 id="rsvpTitle" style="margin: 0;"></h2>
             <button type="button" id="closeRsvpX" class="close-button" aria-label="Close" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">&times;</button>
         </div>          
-      <p id="rsvpEventInfo"></p>
-      <p id="editGuestPrompt" style="margin: 4px 0 10px; font-weight: bold;"></p>
+        <p id="rsvpEventInfo"></p>
+        <p id="editGuestPrompt" style="margin: 4px 0 10px; font-weight: bold;"></p>
         <div class="guest-counter">
         <button type="button" id="guestDecrement">-</button>
         <span id="guestCount">0</span>
         <button type="button" id="guestIncrement">+</button>
-      </div>
-  
-      <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
-  
-      <div id="paypal-container" style="margin-top: 15px;"></div>
-  
-      <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
+        </div>
+
+        <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
+        <div id="rsvp-action-container" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
+
+        <div id="paypal-container" style="margin-top: 15px;"></div>
+
+        <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
     </div>
 </div>
 
-<script>
-    // Define the variables that events.js needs to function correctly
-    let isUserAuthenticated = {{ is_authenticated|tojson }};
-    let userRole = "{{ user_role|default('user') }}";
-    
-    // The script expects lists of events, so we provide the data for this single event inside an array.
-    const upcomingEventsData = [{{ event_data|tojson|safe }}];
-    const pastEventsData = []; // Can be empty
-    const calendarEventsData = []; // Not needed, but defined to prevent errors
 
-    document.addEventListener('DOMContentLoaded', function() {
-    const flashMessage = sessionStorage.getItem('flashMessage');
-    const flashEventId = sessionStorage.getItem('flashEventId');
-    const thisPageEventData = upcomingEventsData[0];
+{% block page_variables %}
+    <script>
+        // These page-specific values will now override the defaults from base.html
+        var isUserAuthenticated = {{ is_authenticated|tojson }};
+        var userRole = "{{ user_role|default('user') }}";
+        var userHasFreeEvent = {{ user_has_free_event|tojson }};
+        var userEventCredits = {{ user_event_credits|tojson }};
+        var userSubscriptionExpiryDate = {{ user_subscription_expiry_date|tojson }};
 
-    // If a message for this event exists, use our new function to show it
-    if (flashMessage && flashEventId && thisPageEventData && flashEventId == thisPageEventData.id) {
-        const container = document.querySelector('.event-details');
-        displayFlashMessage(container, flashMessage); // <-- Cleaner call
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessage = sessionStorage.getItem('flashMessage');
+            const flashEventId = sessionStorage.getItem('flashEventId');
+            const thisPageEventData = upcomingEventsData[0];
 
-        sessionStorage.removeItem('flashMessage');
-        sessionStorage.removeItem('flashEventId');
-    }
-});
+            // If a message for this event exists, use our new function to show it
+            if (flashMessage && flashEventId && thisPageEventData && flashEventId == thisPageEventData.id) {
+                const container = document.querySelector('.event-details');
+                displayFlashMessage(container, flashMessage); // <-- Cleaner call
 
-</script>
+                sessionStorage.removeItem('flashMessage');
+                sessionStorage.removeItem('flashEventId');
+            }
+            });
+    </script>
+{% endblock %}
+
 
 <script src="{{ url_for('static', filename='js/events.js') }}"></script>
 {% endblock %}

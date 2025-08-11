@@ -6,7 +6,7 @@ import urllib.parse
 from .models import Event, User, db
 import traceback
 from flask import request, jsonify # Import jsonify
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 import os
 from flask import current_app
@@ -146,8 +146,9 @@ def events():
         return {
             "id": event.id,   
             "title": event.title,
-            "start": f"{event.date.strftime('%Y-%m-%d')}T{event.start_time.strftime('%H:%M')}",
-            "end": f"{event.date.strftime('%Y-%m-%d')}T{event.end_time.strftime('%H:%M')}",
+            # Combine date and time before formatting
+            "start": datetime.combine(event.date, event.start_time).isoformat(),
+            "end": datetime.combine(event.date, event.end_time).isoformat(),
             "location": event.location,
             "description": event.description,
             "formatted_date": event.formatted_date,
@@ -169,11 +170,25 @@ def events():
     # Combine data for the FullCalendar view
     all_events_for_calendar = upcoming_events_data + past_events_data
 
+    user_has_free_event = False
+    if current_user.is_authenticated and not current_user.has_used_free_event:
+        user_has_free_event = True
+
+    user_credits = 0
+    user_expiry_date = None
+    if current_user.is_authenticated:
+        user_credits = current_user.event_credits
+        if current_user.subscription_expiry_date:
+            user_expiry_date = current_user.subscription_expiry_date.isoformat()
+
     return render_template('events.html', 
                            upcoming_events_data=upcoming_events_data,
                            past_events_data=past_events_data,
                            all_events_for_calendar=all_events_for_calendar,
                            user_role=user_role,
+                           user_has_free_event=user_has_free_event,
+                           user_event_credits=user_credits,
+                           user_subscription_expiry_date=user_expiry_date,
                            image_files=image_files,is_authenticated=is_authenticated)
 
 
@@ -208,12 +223,8 @@ def add_event():
         start_time=start_time_obj,
         end_time=end_time_obj,
         location=location,
-        # image_filename=image_filename, # Add if you handle image here
         status='active',
-        # allow_guests=allow_guests, # Add if you handle these fields here
-        # guest_limit=guest_limit,
-        # ticket_price=ticket_price,
-        # max_capacity=max_capacity
+
     )
     db.session.add(new_event)
     db.session.commit()
@@ -310,9 +321,10 @@ def event_details(event_id):
         "id": event.id,
         "title": event.title,
         "location": event.location,
+        "full_address": event.full_address,
         "description": event.description,
-        "start": event.start_time.strftime('%Y-%m-%dT%H:%M'),
-        "end": event.end_time.strftime('%Y-%m-%dT%H:%M'),
+        "start": datetime.combine(event.date, event.start_time).isoformat(),
+        "end": datetime.combine(event.date, event.end_time).isoformat(),
         "formatted_date": event.formatted_date,
         "status": event.status,
         "cancellation_reason": event.cancellation_reason,
@@ -320,8 +332,20 @@ def event_details(event_id):
         "guest_limit": event.guest_limit,
         "ticket_price": float(event.ticket_price),
         "max_capacity": event.max_capacity,
-        "rsvp_count": event.rsvp_count
+        "rsvp_count": event.rsvp_count,
+        "image_filename": event.image_filename,
+        "is_attending": is_attending
     }
+
+    user_has_free_event = False
+    user_credits = 0
+    user_expiry_date = None
+    if current_user.is_authenticated:
+        if not current_user.has_used_free_event:
+            user_has_free_event = True
+        user_credits = current_user.event_credits
+        if current_user.subscription_expiry_date:
+            user_expiry_date = current_user.subscription_expiry_date.isoformat()
 
     return render_template(
         'event_details.html', 
@@ -330,7 +354,10 @@ def event_details(event_id):
         attendees=attendees,
         is_attending=is_attending,
         maps_link=maps_link,
-        # Add these two lines to pass the user's status to the template
+        user_has_free_event=user_has_free_event,
+        user_event_credits=user_credits,
+        user_subscription_expiry_date=user_expiry_date,
+
         is_authenticated=current_user.is_authenticated,
         user_role=current_user.role if current_user.is_authenticated else 'user'
     )
@@ -345,14 +372,11 @@ def get_user_rsvp(event_id):
     
     if rsvp:
         user = User.query.get(user_id)
-        display_name = user.display_name or f"{user.first_name} {user.last_name}"
-
         return jsonify({
             'rsvp_id': rsvp.id,
             'guest_count': rsvp.guest_count,
-            'display_name': display_name,
-            'user_first_name': user.first_name,
-            'user_last_name': user.last_name
+            'first_name': user.first_name,
+            'last_name': user.last_name
         }), 200
     else:
         return jsonify({'error': 'RSVP not found for this user and event'}), 404
@@ -413,35 +437,44 @@ def create_order():
         return jsonify({"error": "Event not found"}), 404
 
     ticket_price = event.ticket_price
+    user = current_user
 
     # Calculate the amount to charge based on whether it's an edit or initial RSVP
     amount_to_charge = 0.0
     if is_edit:
-        # For edits, calculate the difference in guests
-        # requested_quantity is (1 + new_guests)
-        # initial_quantity is (1 + initial_guests)
+        # For edits, calculate the difference in guests (this logic remains the same)
         initial_quantity = 1 + initial_guest_count
         guest_difference = requested_quantity - initial_quantity
         amount_to_charge = guest_difference * ticket_price
         
-        # If amount_to_charge is negative, it means a refund is due.
-        # PayPal's createOrder doesn't handle negative amounts directly for refunds.
-        # You'd typically process refunds after capture or via a separate API call.
-        # For this example, we'll only create an order for positive differences.
-        if amount_to_charge < 0:
-            # If guests are decreased, no new payment is needed.
-            # The refund logic would be handled after the RSVP update in capture.
-            return jsonify({"error": "Decreasing guests does not require a new payment. Please proceed to update RSVP."}), 400
-        elif amount_to_charge == 0:
-            # If guest count is unchanged, no payment needed.
-            return jsonify({"error": "No change in guest count, no payment needed."}), 400
+        if amount_to_charge <= 0:
+            return jsonify({"error": "No payment required for this change."}), 400
             
     else:
-        # Initial RSVP: charge for all attendees (1 + guests)
-        amount_to_charge = requested_quantity * ticket_price
+        # --- NEW LOGIC FOR INITIAL RSVP ---
+        # By default, we assume everyone needs to be paid for.
+        payable_attendees = requested_quantity
+
+        # Check if the user's own spot is covered by a benefit.
+        # This logic mirrors the frontend checks for precedence.
+        is_subscription_active = user.event_credits > 0 and (user.subscription_expiry_date is None or user.subscription_expiry_date >= date.today())
+        
+        if not user.has_used_free_event:
+            # First free event applies, so charge for one less person (i.e., only guests).
+            payable_attendees -= 1
+        elif is_subscription_active:
+            # A subscription credit applies, so charge for one less person.
+            payable_attendees -= 1
+            
+        payable_attendees = max(0, payable_attendees)
+        
+        amount_to_charge = payable_attendees * ticket_price
 
     if amount_to_charge <= 0:
-        return jsonify({"error": "Invalid amount to charge."}), 400
+        # This case should now only be hit if a free/credit user has no guests,
+        # which is handled by the non-payment flow on the frontend.
+        # This check is a safeguard.
+        return jsonify({"error": "No payment is required for this RSVP."}), 400
 
 
     access_token = get_access_token()
@@ -468,7 +501,7 @@ def create_order():
 @login_required # Ensure user is logged in
 def capture_order(order_id):
     try:
-        user_id = current_user.id
+        user = current_user
         data = request.get_json()
 
         event_id = data.get("event_id")
@@ -500,8 +533,21 @@ def capture_order(order_id):
             success_message = f'Your RSVP for {event.title} has been updated!'
 
         else: # Initial RSVP
-            attendee = EventAttendee(event_id=event_id, user_id=user_id, guest_count=new_guest_count)
+            attendee = EventAttendee(event_id=event_id, user_id=user.id, guest_count=new_guest_count)
             db.session.add(attendee)
+
+            # --- NEW & CORRECTED BENEFIT LOGIC ---
+            # Determine which benefit was used to cover the user's own spot.
+            is_subscription_active = user.event_credits > 0 and (user.subscription_expiry_date is None or user.subscription_expiry_date >= date.today())
+            
+            # Priority 1: Was the first free event used?
+            if not user.has_used_free_event:
+                user.has_used_free_event = True
+            # Priority 2: If not, was a subscription credit used for their spot?
+            elif is_subscription_active:
+                user.event_credits -= 1 # Decrement the credit balance
+            # --- END OF CORRECTED LOGIC ---
+
             success_message = f"You're confirmed for {event.title}! See you there!"
         # Recalculate total RSVP count for the event
         all_attendees_for_event = EventAttendee.query.filter_by(event_id=event_id).all()
@@ -520,3 +566,179 @@ def capture_order(order_id):
 
     return jsonify(order_data)
 
+
+
+@main.route("/api/subscriptions/create-order", methods=["POST"])
+@login_required
+def create_subscription_order():
+    """Creates a PayPal order for a subscription purchase."""
+    # For now, we hardcode Tier 1 price. This could be dynamic later.
+    subscription_price = "40.00"
+
+    access_token = get_access_token()
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}",
+    }
+    body = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "amount": {
+                "currency_code": "USD",
+                "value": subscription_price
+            },
+            # Use custom_id to identify this as a subscription purchase
+            "custom_id": f"subscription-tier1-{current_user.id}"
+        }]
+    }
+    response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders", headers=headers, json=body)
+    response.raise_for_status()
+    return jsonify(response.json())
+
+
+@main.route("/api/subscriptions/<order_id>/capture", methods=["POST"])
+@login_required
+def capture_subscription_order(order_id):
+    """Captures the PayPal payment and grants event credits to the user."""
+    try:
+        access_token = get_access_token()
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
+        capture_response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders/{order_id}/capture", headers=headers)
+        capture_response.raise_for_status()
+        order_data = capture_response.json()
+
+        if order_data.get("status") == "COMPLETED":
+            # Payment is successful, grant credits
+            user = current_user
+            user.event_credits += 4  # Grant 4 credits for Tier 1
+            user.subscription_expiry_date = date.today() + timedelta(days=30)
+            db.session.commit()
+            flash("Subscription successful! You now have 4 event credits.", "success")
+            return jsonify({"success": True, "message": "Credits granted"}), 200
+        else:
+            return jsonify({"error": "Payment not completed"}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@main.route("/api/rsvp/credit", methods=['POST'])
+@login_required
+def rsvp_with_credit():
+    data = request.get_json()
+    event_id = data.get('event_id')
+    user = current_user
+    today = date.today()
+
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({'error': 'Event not found.'}), 404
+        
+    # Scenario 1: Use the one-time free event
+    if not user.has_used_free_event:
+        user.has_used_free_event = True
+        message = "Your first free event has been successfully claimed!"
+        
+    elif user.event_credits > 0 and (user.subscription_expiry_date is None or user.subscription_expiry_date >= today):
+        user.event_credits -= 1
+        message = f"Successfully RSVP'd using one credit! You have {user.event_credits} credits remaining."
+        
+    else:
+        return jsonify({'error': 'No free event or credits available.'}), 400
+
+    # Create the attendee record
+    new_attendee = EventAttendee(event_id=event.id, user_id=user.id, guest_count=0)
+    db.session.add(new_attendee)
+    db.session.commit()
+    
+    session['flashMessage'] = message # Use session for flash messages
+    session['flashEventId'] = event_id
+    return jsonify({'success': True, 'message': message}), 200
+
+
+
+# Add this new route to your views.py file
+
+@main.route('/events/add_recurring', methods=['POST'])
+@login_required # Make sure to import login_required from flask_login
+def add_recurring_events():
+    if not current_user.is_authenticated or current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized access'}), 403
+
+    try:
+        # 1. Parse all form data
+        form = request.form
+        start_date_str = form.get('recurring_start_date')
+        end_date_str = form.get('recurring_end_date')
+        weekdays = form.getlist('weekdays') # Gets a list of selected weekday values ('0', '1', etc.)
+
+        # Convert strings to proper data types
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        selected_weekdays = [int(day) for day in weekdays]
+        
+        start_time_obj = datetime.strptime(form.get('start_time'), "%H:%M").time()
+        end_time_obj = datetime.strptime(form.get('end_time'), "%H:%M").time()
+
+        # 2. Validate inputs
+        if not selected_weekdays:
+            return jsonify({'error': 'Please select at least one day of the week.'}), 400
+        if start_date > end_date:
+            return jsonify({'error': 'Start date cannot be after the end date.'}), 400
+        if start_time_obj >= end_time_obj:
+            return jsonify({'error': 'Start time must be before end time.'}), 400
+
+        # 3. Calculate all the dates that match the criteria
+        dates_to_create = []
+        current_date = start_date
+        while current_date <= end_date:
+            if current_date.weekday() in selected_weekdays:
+                dates_to_create.append(current_date)
+            current_date += timedelta(days=1)
+
+        if not dates_to_create:
+            return jsonify({'error': 'No matching dates found in the selected range.'}), 400
+            
+        # --- Handle image upload (same logic as single event) ---
+        image_filename = None
+        image_file = request.files.get('eventImage')
+        if image_file and image_file.filename != '':
+            filename = secure_filename(image_file.filename)
+            unique_filename = str(uuid.uuid4()) + "_" + filename
+            save_path = os.path.join(current_app.root_path, 'static/images', unique_filename)
+            image_file.save(save_path)
+            image_filename = unique_filename
+        elif form.get('existingImage'):
+            image_filename = form.get('existingImage')
+
+
+        # 4. Loop through the calculated dates and create events
+        for event_date in dates_to_create:
+            new_event = Event(
+                title=form.get('title'),
+                description=form.get('description'),
+                start_time=start_time_obj,
+                end_time=end_time_obj,
+                location=form.get('location'),
+                full_address=form.get('full_address'),
+                allow_guests=form.get('allow_guests') == 'on',
+                guest_limit=int(form.get('guest_limit') or 0),
+                ticket_price=float(form.get('ticket_price') or 0.0),
+                max_capacity=int(form.get('max_capacity') or 28),
+                date=event_date,
+                image_filename=image_filename,
+                status='active'
+            )
+            db.session.add(new_event)
+        
+        # 5. Commit all new events to the database at once
+        db.session.commit()
+
+        flash(f'{len(dates_to_create)} recurring events created successfully!', 'success')
+        return jsonify({'success': True, 'message': f'{len(dates_to_create)} events were successfully created!'})
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc() # Log the full error to your console
+        return jsonify({'error': f'An error occurred: {str(e)}'}), 500

@@ -4,6 +4,44 @@
 {% endif %}
 
 {% block content %}
+<style>
+    /* Basic styles for the modal - you can move this to your main CSS file */
+    .modal {
+        display: none; 
+        position: fixed; 
+        z-index: 1001; 
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgb(0,0,0);
+        background-color: rgba(0,0,0,0.4);
+        padding-top: 60px;
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .close-button {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+    .close-button:hover,
+    .close-button:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+</style>
 
 <div class="full-width-background-subscriptions">
     <section class="subscriptions">
@@ -15,23 +53,101 @@
                 <h2>Tier 1</h2>
                 <p class="price">$40</p>
                 <p class="details">4 events ($10/ea.)</p>
-                <button class="btn-signup">Sign Up</button>
+                <button class="btn btn-success btn-signup">Sign Up</button>
             </div>
-
         </div>
 
-        <p class="note">Subscriptions renew monthly, event credits do not roll over each month.</p>
+        <p class="note">Subscriptions renew monthly, event credits do not roll over each month and doesn't apply to guests</p>
     </section>
 </div>
 
-{% endblock %}
+<div id="subscriptionModal" class="modal">
+    <div class="modal-content">
+        <span id="closeSubscriptionModal" class="close-button">&times;</span>
+        <h2>Confirm Your Subscription</h2>
+        <p>You are purchasing the <strong>Tier 1 Subscription</strong> for $40.00.</p>
+        <p>You will receive 4 event credits that expire in 30 days.</p>
+        <strong>Note:</strong> Your active Subscription info can be found in your Profile .</p>
+        
+        <div id="subscription-paypal-container" style="margin-top: 20px;"></div>
+    </div>
+</div>
 
 <script>
-    // Example function for handling sign-up actions (could be tied to real forms later)
-    document.querySelectorAll('.btn-signup').forEach(button => {
-        button.addEventListener('click', () => {
-            alert('Sign up process initiated! (This is a placeholder)');
-        });
-    });
-</script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('subscriptionModal');
+    const signUpButton = document.querySelector('.btn-signup');
+    const closeButton = document.getElementById('closeSubscriptionModal');
+    let isPayPalRendered = false;
 
+    // When the user clicks the "Sign Up" button, open the modal
+    signUpButton.addEventListener('click', () => {
+        modal.style.display = 'block';
+
+        // Render PayPal buttons only once when the modal is first opened
+        if (!isPayPalRendered) {
+            renderPayPalButtons();
+            isPayPalRendered = true;
+        }
+    });
+
+    // When the user clicks on <span> (x), close the modal
+    closeButton.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.addEventListener('click', (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+
+    function renderPayPalButtons() {
+        paypal.Buttons({
+            // Sets up the transaction when a payment button is clicked
+            createOrder: function(data, actions) {
+                return fetch('/api/subscriptions/create-order', {
+                    method: 'post'
+                }).then(function(res) {
+                    if (!res.ok) {
+                        throw new Error('Failed to create order');
+                    }
+                    return res.json();
+                }).then(function(orderData) {
+                    return orderData.id;
+                });
+            },
+
+            // Finalize the transaction after payer approval
+            onApprove: function(data, actions) {
+                return fetch(`/api/subscriptions/${data.orderID}/capture`, {
+                    method: 'post'
+                }).then(function(res) {
+                     if (!res.ok) {
+                        throw new Error('Failed to capture order');
+                    }
+                    return res.json();
+                }).then(function(orderData) {
+                    if (orderData.success) {
+                        alert('Subscription successful! You have been granted 4 event credits.');
+                        // Redirect to the events page or profile page after success
+                        window.location.href = "{{ url_for('main.events') }}";
+                    } else {
+                        alert('There was an issue with your subscription. Please try again.');
+                    }
+                }).catch(function(error) {
+                    console.error('Error during approval:', error);
+                    alert('An error occurred while processing your payment. Please try again.');
+                });
+            },
+
+            onError: function(err) {
+                console.error('PayPal button error:', err);
+                alert('An error occurred with the payment gateway. Please try again.');
+            }
+        }).render('#subscription-paypal-container');
+    }
+});
+</script>
+{% endblock %}

@@ -1,13 +1,22 @@
 
+
+
 function sortEventsByDate(events) {
     if (!Array.isArray(events)) return [];
     return events.sort((a, b) => new Date(a.start) - new Date(b.start));
 }
 
-// Add this new function to the top of events.js
 function stripHtml(html) {
    let doc = new DOMParser().parseFromString(html, 'text/html');
    return doc.body.textContent || "";
+}
+
+function isSubscriptionActive() {
+    if (!userSubscriptionExpiryDate) return true; // If no expiry date, credits are valid
+    // Compare today's date with the expiry date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to the start of the day
+    return new Date(userSubscriptionExpiryDate) >= today;
 }
 
 // Helper functions for date/time formatting
@@ -83,7 +92,15 @@ function getActionButtonHTML(event) {
         return `
             <div class="rsvp-box" style="margin-top: 10px;">
                 <p style="font-weight: bold; color: teal; margin: 0;">You're going!</p>
-                <a href="#" class="edit-rsvp" data-event-id="${event.id}" style="color: teal; text-decoration: underline;">Edit RSVP</a>
+                <a href="#" 
+                   class="edit-rsvp" 
+                   data-event-id="${event.id}"
+                   data-title="${event.title}"
+                   data-ticket-price="${event.ticket_price || 0}"
+                   data-guest-limit="${event.allow_guests ? (event.guest_limit || 0) : 0}"
+                   style="color: teal; text-decoration: underline;">
+                   Edit RSVP
+                </a>
             </div>`;
     }
     // Default case: available to attend
@@ -92,7 +109,7 @@ function getActionButtonHTML(event) {
             class="btn btn-success custom-attend-button"
             data-event-id="${event.id}"
             data-title="${event.title}"
-            data-time="${event.formatted_date} ${formatEventTime(event.start)}"
+            data-time="${event.formatted_date}, ${formatEventTime(event.start)}"
             data-ticket-price="${event.ticket_price || 0}"
             data-guest-limit="${event.allow_guests ? (event.guest_limit || 0) : 0}"
             data-location="${event.location}">
@@ -107,12 +124,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const flashEventId = sessionStorage.getItem('flashEventId');
 
     // Assumes `upcomingEventsData` and `pastEventsData` are available from events.html
-    const sortedUpcomingEvents = sortEventsByDate(upcomingEventsData);
-    const sortedPastEvents = pastEventsData; // Already sorted on server
+    const upcomingTabPane = document.getElementById('upcoming');
+    if (upcomingTabPane) {
+        // This code will now ONLY run on the main /events page
+        const sortedUpcomingEvents = sortEventsByDate(upcomingEventsData);
+        const sortedPastEvents = pastEventsData;
 
-    // Initial render for both containers
-    renderEventCards(sortedUpcomingEvents, 'upcoming', flashMessage, flashEventId);
-    renderEventCards(sortedPastEvents, 'past');
+        renderEventCards(sortedUpcomingEvents, 'upcoming', flashMessage, flashEventId);
+        renderEventCards(sortedPastEvents, 'past');
+    }
 
     document.querySelectorAll('.dropdown-toggle').forEach(button => {
         button.addEventListener('click', function(event) {
@@ -213,7 +233,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (editDescriptionEditor) {
             quillEdit = new Quill('#editDescriptionEditor', {
                 theme: 'snow',
-                placeholder: 'Enter the event description...',
+                placeholder: 'Write the event description...',
+            });
+        }
+
+
+        // Initialize Quill for the "Add Recurring Event" Modal
+        let recurringQuill;
+        const recurringQuillEditor = document.getElementById('recurringQuillEditor');
+        if (recurringQuillEditor) {
+            recurringQuill = new Quill('#recurringQuillEditor', {
+                theme: 'snow',
+                placeholder: 'Add a description for your event series...'
             });
         }
 
@@ -271,6 +302,74 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('editDescriptionInput').value = quillEdit.root.innerHTML;
             });
         }
+
+
+         // --- Recurring Event Modal Logic ---
+        const recurringModal = document.getElementById('createRecurringEventModal');
+        const addRecurringBtn = document.getElementById('addRecurringEventButton');
+        const closeRecurringBtn = document.getElementById('closeRecurringModal');
+        const recurringForm = document.getElementById('createRecurringEventForm');
+        
+        // Open Modal
+        if (addRecurringBtn) {
+            addRecurringBtn.onclick = function() {
+                if (recurringModal) recurringModal.style.display = 'block';
+            }
+        }
+    
+        // Close with 'X' button
+        if (closeRecurringBtn) {
+            closeRecurringBtn.onclick = function() {
+                if (recurringModal) recurringModal.style.display = 'none';
+            }
+        }
+        
+        // Handle Recurring Form Submission
+        if (recurringForm) {
+            recurringForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Stop default form submission
+    
+                // Update the hidden description input with Quill's content
+                const descriptionInput = document.getElementById('recurringDescriptionInput');
+                if (recurringQuill) {
+                    descriptionInput.value = recurringQuill.root.innerHTML;
+                }
+    
+                const formData = new FormData(this);
+                
+                // Basic validation
+                if (!formData.get('recurring_start_date') || !formData.get('recurring_end_date')) {
+                    alert('Please select a start and end date.');
+                    return;
+                }
+                if (formData.getAll('weekdays').length === 0) {
+                    alert('Please select at least one day of the week.');
+                    return;
+                }
+    
+                // Optional: Add a loading spinner here
+                
+                fetch("/events/add_recurring", { // Use the direct URL
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Use sessionStorage to show a flash message on the next page
+                        sessionStorage.setItem('flashMessage', data.message);
+                        window.location.reload(); // Reload page to see new events
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An unexpected error occurred.');
+                });
+            });
+        }
+
 
 
         function openEditEventModal(event) {
@@ -376,6 +475,21 @@ document.addEventListener('DOMContentLoaded', function () {
             };
         }
     } // End of if (userRole === 'admin')
+
+    // Add this to handle closing modals when clicking the background
+    window.addEventListener('click', function(event) {
+        const createModal = document.getElementById('createEventModal');
+        const editModal = document.getElementById('editEventModal');
+        const cancelModal = document.getElementById('cancelEventModal');
+        const rsvpModal = document.getElementById('rsvpModal');
+        const recurringModal = document.getElementById('createRecurringEventModal'); // Our new modal
+
+        if (event.target == createModal) createModal.style.display = "none";
+        if (event.target == editModal) editModal.style.display = "none";
+        if (event.target == cancelModal) cancelModal.style.display = "none";
+        if (event.target == rsvpModal) rsvpModal.style.display = "none";
+        if (event.target == recurringModal) recurringModal.style.display = "none"; // Handle our new modal
+    });
 
     // General event action handler (Admin functionality for delete/cancel) - moved inside admin block
     function handleEventActions(eventId, action, eventData = null) {
@@ -541,22 +655,101 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         // Function to update total price and re-render PayPal buttons
         function updatePriceAndPayPal(eventId, guestsSelected) {
             let totalAmount;
+            let message = ''; // This will hold user-facing messages
 
+            // --- Main Logic Starts Here ---
+
+            // SCENARIO 1: User is editing an existing RSVP.
             if (isEditingRsvp) {
                 // For edits, calculate the cost of *additional* guests only.
                 const guestDifference = guestsSelected - initialGuestCount;
                 totalAmount = currentTicketPrice * guestDifference;
-            } else {
-                // For new RSVPs, calculate the full price.
-                totalAmount = currentTicketPrice * (1 + guestsSelected);
             }
-            
-            // Ensure the displayed price is never negative. A refund will show as $0.00.
+            // SCENARIO 2: This is a brand new RSVP.
+            else {
+                // Now, for this new RSVP, check if the user gets it for free.
+                if (userHasFreeEvent) {
+                    // User's spot is free, so they only pay for guests.
+                    totalAmount = currentTicketPrice * guestsSelected;
+                    message = (guestsSelected > 0)
+                        ? `Your spot is free! You are only paying for your guest(s).`
+                        : `Congratulations! Your first event is on us!`;
+                }
+
+                else if (userEventCredits > 0 && isSubscriptionActive()) {
+                    totalAmount = currentTicketPrice * guestsSelected; // Only pay for guests
+                       const remainingBalance = userEventCredits - 1;
+                        message = `
+                            <div style="text-align: left; line-height: 1.4; width: 100%;">
+                                <p style="margin-bottom: 5px;">Your spot will be covered by 1 Subscription Credit.</p>
+                                <p style="margin: 0; font-size: 0.9em; color: #333;">
+                                    <strong> Subscription Balance:</strong> ${userEventCredits} → ${remainingBalance} | <strong>Guests:</strong> Additional Charge
+                                </p>
+                            </div>
+                        `;
+
+                }
+
+                else {
+                    totalAmount = currentTicketPrice * (1 + guestsSelected);
+                }
+            }
+
+            // Ensure the displayed price is never negative (handles guest removal in edits).
             const displayPrice = Math.max(0, totalAmount);
-            totalPriceSpan.textContent = displayPrice.toFixed(2);
+            document.getElementById('totalPriceSpan').textContent = displayPrice.toFixed(2);
             
-            // Pass the actual calculated amount to the button renderer.
-            renderPayPalButtons(eventId, totalAmount);
+            // Display the relevant message (e.g., "Your spot is free!").
+            document.getElementById('rsvp-action-container').innerHTML = message;
+            
+            // This new function decides whether to show PayPal or a "Confirm Free RSVP" button.
+            renderActionButtons(eventId, totalAmount);
+        }
+
+
+        // You still need this function from the previous answer in events.js
+        function renderActionButtons(eventId, totalAmount) {
+            const paypalContainer = document.getElementById('paypal-container');
+            paypalContainer.innerHTML = ''; // Clear previous buttons
+
+            // If there is a cost, render the PayPal buttons
+            if (totalAmount > 0) {
+                // The message is already set, so we just call your existing PayPal button renderer
+                renderPayPalButtons(eventId, totalAmount);
+            }
+            // If it's a free event redemption (new RSVP with 0 guests)
+            else if ((userHasFreeEvent || (userEventCredits > 0 && isSubscriptionActive())) && !isEditingRsvp) {
+                const freeRsvpButton = document.createElement('button');
+                freeRsvpButton.textContent = userHasFreeEvent ? 'Confirm Free RSVP' : `Confirm & Use Credit `;
+                freeRsvpButton.className = 'btn btn-success';
+                paypalContainer.appendChild(freeRsvpButton);
+
+                freeRsvpButton.addEventListener('click', async () => {
+                    freeRsvpButton.disabled = true;
+                    freeRsvpButton.textContent = 'Processing...';
+
+                    const response = await fetch('/api/rsvp/credit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ event_id: eventId })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        sessionStorage.setItem('flashMessage', result.message);
+                        sessionStorage.setItem('flashEventId', eventId);
+                        window.location.reload();
+                    } else {
+                        const result = await response.json();
+                        alert(`Error: ${result.error || 'Could not complete registration.'}`);
+                        freeRsvpButton.disabled = false; // Re-enable on error
+                    }
+                });
+            }
+            // Handle cases like removing guests during an edit, where the cost becomes $0
+            else {
+                paypalContainer.innerHTML = '<p style="text-align: center; font-weight: bold; color: #333;">No payment required for this change.</p>';
+            }
         }
 
         // Function to render PayPal buttons
@@ -566,7 +759,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             // Only render if totalAmount is positive or it's an edit with potential refund
             // For simplicity, we'll render if totalAmount >= 0 (meaning no new payment or a payment of 0 for refund scenario)
             // The backend will handle if a payment is actually needed.
-            if (totalAmount >= 0 || isEditingRsvp) {
+            if (totalAmount > 0 || (isEditingRsvp && totalAmount !== 0)) {
                 paypal.Buttons({
                     createOrder: async function(data, actions) {
                         const guestsSelected = parseInt(guestCountSpan.textContent);
@@ -669,9 +862,8 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 editGuestPrompt.textContent = `Are you bringing someone? (Max: ${currentGuestLimit})`;
 
                 guestCountSpan.textContent = '0';
-                totalPriceSpan.textContent = currentTicketPrice.toFixed(2);
 
-                renderPayPalButtons(currentEventId, currentTicketPrice); // Render for initial booking
+                updatePriceAndPayPal(currentEventId, 0); // The '0' is for the initial guest count.
 
                 rsvpModal.style.display = 'block';
             });
@@ -686,45 +878,35 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 isEditingRsvp = true;
 
                 try {
-                    const response = await fetch(`/api/user_rsvp/${currentEventId}`);
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch RSVP details');
-                    }
-                    const rsvpData = await response.json();
+                    const rsvpResponse = await fetch(`/api/user_rsvp/${currentEventId}`);
+                    if (!rsvpResponse.ok) throw new Error('Failed to fetch RSVP details');
+                    const rsvpData = await rsvpResponse.json();
 
-                    if (rsvpData && rsvpData.rsvp_id) {
-                        currentRsvpId = rsvpData.rsvp_id;
-                        initialGuestCount = rsvpData.guest_count || 0; // Store initial guest count
-
-                        const allEvents = upcomingEventsData.concat(pastEventsData);
-                        const event = allEvents.find(e => e.id == currentEventId);
-
-                        if (!event) {
-                            console.error("Event data not found for ID:", currentEventId);
-                            alert("Event details not available for editing.");
-                            return;
-                        }
-
-                        currentTicketPrice = parseFloat(event.ticket_price || 0);
-                        currentGuestLimit = parseInt(event.allow_guests ? (event.guest_limit || 0) : 0);
-
-                        rsvpTitle.textContent = `Edit RSVP for: ${event.title}`;
-                        // Display current user's name and guests
-                        rsvpEventInfo.innerHTML = `You (${rsvpData.display_name}) are already going with <span id="currentGuestsDisplay">${initialGuestCount}</span> guests.`;
-                        editGuestPrompt.textContent = `Change number of guests (Max: ${currentGuestLimit}):`;
-
-                        guestCountSpan.textContent = initialGuestCount;
-                        updatePriceAndPayPal(currentEventId, initialGuestCount); // Update price and PayPal buttons
-
-                        rsvpModal.style.display = 'block';
-
-                    } else {
+                    if (!rsvpData || !rsvpData.rsvp_id) {
                         alert("Could not retrieve your current RSVP. Please try again.");
-                        console.error("No RSVP data found for event:", currentEventId);
+                        return;
                     }
+                    
+                    currentRsvpId = rsvpData.rsvp_id;
+                    initialGuestCount = rsvpData.guest_count || 0;
+
+                    const eventTitle = this.getAttribute("data-title");
+                    currentTicketPrice = parseFloat(this.getAttribute("data-ticket-price") || 0);
+                    currentGuestLimit = parseInt(this.getAttribute("data-guest-limit") || 0);
+
+                    // Now populate the modal
+                    rsvpTitle.textContent = `Edit RSVP for: ${eventTitle}`;
+                    rsvpEventInfo.innerHTML = `You (${rsvpData.first_name} ${rsvpData.last_name}) are already going with <span id="currentGuestsDisplay">${initialGuestCount}</span> guests.`;
+                    editGuestPrompt.textContent = `Change number of guests (Max: ${currentGuestLimit}):`;
+
+                    guestCountSpan.textContent = initialGuestCount;
+                    updatePriceAndPayPal(currentEventId, initialGuestCount);
+
+                    rsvpModal.style.display = 'block';
+
                 } catch (error) {
                     console.error("Error fetching RSVP for edit:", error);
-                    alert("Error loading RSVP for editing. Please try again.");
+                    alert("An error occurred while loading your RSVP details. Please try again.");
                 }
             });
         });
@@ -764,6 +946,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         userRole = 'user';
     }
     console.log("Updated User Role:", userRole);
+    console.log(userHasFreeEvent);
 
     attachAllEventListeners(); 
 });

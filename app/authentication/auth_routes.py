@@ -89,8 +89,6 @@ def register():
         password = form.password.data
         first_name = form.first_name.data
         last_name = form.last_name.data
-        display_name = form.display_name.data 
-
         
         # New waiver fields
         address = request.form.get('address')
@@ -131,9 +129,27 @@ def register():
             return render_template('register.html', form=form)
     
 
-        # --- User Creation ---
-        profile_image_filename = 'default.png' # Default image
-        if 'profileImage' in request.files:
+        #  Profile Image Handling ---
+        profile_image_filename = 'default.png'  # Default image
+        cropped_image_data = request.form.get('cropped_image_data')
+
+        if cropped_image_data:
+            try:
+                # Handle the cropped image data if it exists
+                header, encoded = cropped_image_data.split(",", 1)
+                image_data = base64.b64decode(encoded)
+                filename = f"{uuid.uuid4().hex}.png"
+                upload_path = os.path.join(current_app.root_path, 'static', 'profile_images', filename)
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                with open(upload_path, 'wb') as f:
+                    f.write(image_data)
+                profile_image_filename = filename
+            except Exception as e:
+                flash('There was an error processing the cropped image.', 'error')
+                print(f"Error saving cropped image: {e}")
+        
+        elif 'profileImage' in request.files:
+            # Fallback to the original file if no crop data is sent
             image = request.files['profileImage']
             if image and image.filename:
                 ext = os.path.splitext(image.filename)[1]
@@ -150,7 +166,6 @@ def register():
             email=email,
             role=role
         )
-        user.display_name = display_name
         user.address=address
         user.profile_image = profile_image_filename or 'default.png' # Set the profile image here instead
         user.set_password(password)
@@ -354,18 +369,63 @@ def signout():
 @auth.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    from app.forms import ProfileUpdateForm  # Make sure this form exists
+    from app.forms import ProfileUpdateForm
     form = ProfileUpdateForm(obj=current_user)
 
-    if form.validate_on_submit():
-        current_user.first_name = form.first_name.data
-        current_user.last_name = form.last_name.data
-        current_user.display_name = form.display_name.data # 👈 Add this line to handle updates
-        db.session.commit()
-        flash('Profile updated successfully!', 'success')
-        return redirect(url_for('auth.profile'))
+    if request.method == 'POST':
+        if 'update_details_submit' in request.form:
+            # Check for new cropped image data first
+            cropped_image_data = request.form.get('cropped_image_data')
 
-    return render_template('profile.html', form=form)
+            if cropped_image_data:
+                try:
+                    # Strip the header and decode the base64 string
+                    header, encoded = cropped_image_data.split(",", 1)
+                    image_data = base64.b64decode(encoded)
+
+                    # Create a unique filename
+                    filename = f"{uuid.uuid4().hex}.png"
+                    upload_path = os.path.join(current_app.root_path, 'static', 'profile_images', filename)
+                    
+                    # Save the decoded data as a file
+                    with open(upload_path, 'wb') as f:
+                        f.write(image_data)
+
+                    current_user.profile_image = filename
+                    flash('Profile image updated successfully!', 'success')
+
+                except Exception as e:
+                    flash('There was an error processing the cropped image.', 'error')
+                    print(f"Error saving cropped image: {e}")
+
+            db.session.commit()
+            return redirect(url_for('auth.profile'))
+
+        # Check if the "Save New Password" button was clicked
+        elif 'change_password_submit' in request.form:
+            # Only process if the new_password field has data
+            if form.new_password.data:
+                # Check if the new passwords match
+                if form.new_password.data == form.confirm_password.data:
+                    # Check for password strength
+                    if is_strong_password(form.new_password.data):
+                        current_user.set_password(form.new_password.data)
+                        db.session.commit()
+                        flash('Password updated successfully!', 'success')
+                    else:
+                        flash('New password does not meet complexity requirements.', 'error')
+                else:
+                    flash('New passwords do not match.', 'error')
+            else:
+                flash('Please enter a new password.', 'error')
+            return redirect(url_for('auth.profile'))
+
+    # For a GET request, pre-populate the (disabled) name fields
+    form.first_name.data = current_user.first_name
+    form.last_name.data = current_user.last_name
+    today = date.today()
+
+    return render_template('profile.html', form=form, today=today)
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])

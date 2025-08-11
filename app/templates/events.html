@@ -5,18 +5,23 @@
 {% block content %}
 <div class="page-container">
     <h1>Welcome to Sign up Page for Volleyball Events 🎉 </h1>
-    <script>
-        let isUserAuthenticated = {{ is_authenticated|tojson }};
-        let userRole = "{{ user_role|default('user') }}";
-        
-        // Pass separate data for upcoming, past, and calendar events to JavaScript
-        const upcomingEventsData = JSON.parse(`{{ upcoming_events_data|tojson|safe }}`);
-        const pastEventsData = JSON.parse(`{{ past_events_data|tojson|safe }}`);
-        const calendarEventsData = JSON.parse(`{{ all_events_for_calendar|tojson|safe }}`);
+    {% block page_variables %}
+        <script>
+            // These page-specific values will now override the defaults from base.html
+            var isUserAuthenticated = {{ is_authenticated|tojson }};
+            var userRole = "{{ user_role|default('user') }}";
+            var userHasFreeEvent = {{ user_has_free_event|tojson }};
+            var userEventCredits = {{ user_event_credits|tojson }};
+            var userSubscriptionExpiryDate = {{ user_subscription_expiry_date|tojson }};
+            
+            var upcomingEventsData = JSON.parse(`{{ upcoming_events_data|tojson|safe }}`);
+            var pastEventsData = JSON.parse(`{{ past_events_data|tojson|safe }}`);
+            var calendarEventsData = JSON.parse(`{{ all_events_for_calendar|tojson|safe }}`);
 
-        console.log("Upcoming Events:", upcomingEventsData);
-        console.log("Past Events:", pastEventsData);
-    </script>
+            console.log("Upcoming Events:", upcomingEventsData);
+            console.log("Past Events:", pastEventsData);
+        </script>
+    {% endblock %}
 
     <ul class="nav-tabs">
         <li class="nav-item">
@@ -36,6 +41,7 @@
                 <h1>Upcoming Events</h1>
                 {% if user_role == 'admin' %}
                     <button id="addEventButton" class="btn btn-green">Add Event</button>
+                    <button id="addRecurringEventButton" class="btn btn-blue">Add Recurring Event</button>
                 {% endif %}
             </div>
             <div class="events-container">
@@ -157,6 +163,104 @@
     </div>
 </div>
 
+<div id="createRecurringEventModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="form-header">
+            <button type="button" id="closeRecurringModal" class="close-button" aria-label="Close">&times;</button>
+        </div>
+
+        <form id="createRecurringEventForm" method="POST">
+            <h2>Add Recurring Events</h2>
+
+            <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h4>Recurrence Rules</h4>
+                <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="recurringStartDate">Start Date</label>
+                        <input type="date" id="recurringStartDate" name="recurring_start_date" required style="width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="recurringEndDate">End Date</label>
+                        <input type="date" id="recurringEndDate" name="recurring_end_date" required style="width: 100%;">
+                    </div>
+                </div>
+                <div>
+                    <label>On these days:</label>
+                    <div class="weekday-selector" style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 5px;">
+                        <label><input type="checkbox" name="weekdays" value="0"> Monday</label>
+                        <label><input type="checkbox" name="weekdays" value="1"> Tuesday</label>
+                        <label><input type="checkbox" name="weekdays" value="2"> Wednesday</label>
+                        <label><input type="checkbox" name="weekdays" value="3"> Thursday</label>
+                        <label><input type="checkbox" name="weekdays" value="4"> Friday</label>
+                        <label><input type="checkbox" name="weekdays" value="5"> Saturday</label>
+                        <label><input type="checkbox" name="weekdays" value="6"> Sunday</label>
+                    </div>
+                </div>
+            </div>
+
+            <label for="recurringTitle">Title</label>
+            <input type="text" id="recurringTitle" name="title" required style="width: 100%;">
+
+            <label for="recurringEventImage">Upload New Image</label>
+            <input type="file" id="recurringEventImage" name="eventImage" accept="image/*">
+
+            <label for="recurringExistingImage">Or choose an existing image</label>
+            <select id="recurringExistingImage" name="existingImage">
+                <option value="" disabled selected>Select an image</option>
+                {% for image in image_files %}
+                    <option value="{{ image }}">{{ image }}</option>
+                {% endfor %}
+            </select>
+            <img id="recurringPreviewImage" style="display:none; max-height:150px; margin-top:8px;" />            
+
+            <label for="recurringQuillEditor">Description:</label>
+            <div id="recurringQuillEditor" style="height: 250px; background: white;"></div>
+            <input type="hidden" name="description" id="recurringDescriptionInput">
+
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+                <div style="flex: 1 1 120px;">
+                    <label for="recurringStartTime">Start Time</label>
+                    <input type="time" id="recurringStartTime" name="start_time" value="19:00" required>
+                </div>
+                <div style="flex: 1 1 120px;">
+                    <label for="recurringEndTime">End Time</label>
+                    <input type="time" id="recurringEndTime" name="end_time" value="21:00" required>
+                </div>
+            </div>
+
+            <label for="recurringLocation">Location Name</label>
+            <input type="text" id="recurringLocation" name="location" required>
+
+            <label for="recurringFullAddress">Full Address (for Google Maps)</label>
+            <input type="text" id="recurringFullAddress" name="full_address" placeholder="e.g., 123 Main St, Hillsboro, OR 97123">
+
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                <label for="recurringAllowGuests">Guests Allowed?</label>
+                <input type="checkbox" id="recurringAllowGuests" name="allow_guests" checked>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+                <div style="flex: 1 1 100px;">
+                    <label for="recurringGuestLimit">Guest Limit</label>
+                    <input type="number" id="recurringGuestLimit" name="guest_limit" value="5" min="0">
+                </div>
+                <div style="flex: 1 1 100px;">
+                    <label for="recurringTicketPrice">Ticket Price ($)</label>
+                    <input type="number" step="0.01" id="recurringTicketPrice" name="ticket_price" value="12" required>
+                </div>
+                <div style="flex: 1 1 100px;">
+                    <label for="recurringMaxCapacity">Max Capacity</label>
+                    <input type="number" id="recurringMaxCapacity" name="max_capacity" value="28" required>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button type="submit" class="btn btn-blue">Create Recurring Events</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="editEventModal" class="modal">
     <div class="modal-content">
         <div class="form-header">
@@ -206,7 +310,7 @@
             <div class="form-row">
                 <div class="form-group form-group-checkbox">
                     <input type="checkbox" id="editAllowGuests" name="allow_guests" style="width: auto;">
-                    <label for="editAllowGuests">Guests Allowed?</label>
+                    <label for="editAllowGuests"> Guests Allowed?</label>
                 </div>
                 <div class="form-group">
                     <label for="editGuestLimit">Guest Limit</label>
@@ -262,37 +366,26 @@
 {% endif %}
 
 
-<div id="authPromptModal" class="modal">
-    <div class="modal-content" style="max-width: 450px; text-align: center;">
-        <button type="button" id="closeAuthPrompt" class="close-button" aria-label="Close">&times;</button>
-        <h2>Please Login or Register</h2>
-        <p>You need an account to sign up for events.</p>
-        <div class="auth-prompt-buttons">
-            <a href="{{ url_for('auth.signin') }}" class="btn btn-login">Login</a>
-            <a href="{{ url_for('auth.register') }}" class="btn btn-register">Register</a>
-        </div>
-    </div>
-</div>
-
 <div id="rsvpModal" class="modal">
     <div class="modal-content">
         <div class="form-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h2 id="rsvpTitle" style="margin: 0;"></h2>
             <button type="button" id="closeRsvpX" class="close-button" aria-label="Close" style="font-size: 1.5rem; border: none; background: transparent; cursor: pointer;">&times;</button>
         </div>          
-      <p id="rsvpEventInfo"></p>
-      <p id="editGuestPrompt" style="margin: 4px 0 10px; font-weight: bold;"></p>
+        <p id="rsvpEventInfo"></p>
+        <p id="editGuestPrompt" style="margin: 4px 0 10px; font-weight: bold;"></p>
         <div class="guest-counter">
         <button type="button" id="guestDecrement">-</button>
         <span id="guestCount">0</span>
         <button type="button" id="guestIncrement">+</button>
-      </div>
-  
-      <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
-  
-      <div id="paypal-container" style="margin-top: 15px;"></div>
-  
-      <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
+        </div>
+
+        <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
+        <div id="rsvp-action-container" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
+
+        <div id="paypal-container" style="margin-top: 15px;"></div>
+
+        <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
     </div>
 </div>
 
