@@ -98,11 +98,16 @@
             </div>
             <div class="form-group waiver-group">
                 <label>
-                    {{ form.waiver_agree() }}
-                    <span>I agree to the <a href="{{ url_for('static', filename='waiver.pdf') }}" target="_blank">Waiver and Release of Liability</a></span>
+                    {{ form.waiver_agree(id="waiver_agree_checkbox") }}
+                    <span>I agree to the 
+                        <a href="{{ url_for('static', filename='waiver.pdf') }}" id="waiver-link" target="_blank">Waiver and Release of Liability</a>
+                    </span>
                     <span class="required-star">*</span>
                 </label>
-                    {% if form.waiver_agree.errors %}
+                <div id="waiver-view-error" class="error-message" style="display: block;">
+                    You must view the waiver before you can agree.
+                </div>
+                {% if form.waiver_agree.errors %}
                     <div class="error-message">{{ form.waiver_agree.errors[0] }}</div>
                 {% endif %}
             </div>
@@ -122,7 +127,7 @@
 
 <div id="welcome-popup" class="popup-container" style="display: none;">
     <div class="popup-content">
-        <button class="close-btn" onclick="closePopup()">x</button>
+        <button class="close-btn" onclick="closePopup()">X</button>
         <p>
             <span>Hi, {{ first_name }}!</span>
             <span>Welcome to Pickup Volleyball.</span>
@@ -339,26 +344,45 @@
                     signatureDataInput.value = signaturePad.toDataURL('image/png');
                 }
             });
+        }
 
-            // In register.html, inside the <script> and DOMContentLoaded listener
+        // In register.html, inside the <script> and DOMContentLoaded listener
 
-            // --- Show Password Toggle Logic ---
-            const togglePasswordIcons = document.querySelectorAll('.toggle-password');
-            togglePasswordIcons.forEach(icon => {
-                icon.addEventListener('click', function () {
-                    // Find the password input field right before the icon
-                    const passwordField = this.previousElementSibling;
-                    
-                    // Toggle the input type between "password" and "text"
-                    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-                    passwordField.setAttribute('type', type);
-                    
-                    // Toggle the icon's appearance between the eye and slashed-eye
-                    this.classList.toggle('bi-eye');
-                    this.classList.toggle('bi-eye-slash');
-                });
+        // --- Show Password Toggle Logic ---
+        const togglePasswordIcons = document.querySelectorAll('.toggle-password');
+        togglePasswordIcons.forEach(icon => {
+            icon.addEventListener('click', function () {
+                // Find the password input field right before the icon
+                const passwordField = this.previousElementSibling;
+                
+                // Toggle the input type between "password" and "text"
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                
+                // Toggle the icon's appearance between the eye and slashed-eye
+                this.classList.toggle('bi-eye');
+                this.classList.toggle('bi-eye-slash');
+            });
+        });
+        
+        const waiverLink = document.getElementById('waiver-link');
+        const waiverCheckbox = document.getElementById('waiver_agree_checkbox');
+        const waiverError = document.getElementById('waiver-view-error');
+
+        // 1. Disable the checkbox when the page loads
+        if (waiverCheckbox) {
+            waiverCheckbox.disabled = true;
+        }
+
+        // 2. Add an event listener to the waiver link
+        if (waiverLink && waiverCheckbox && waiverError) {
+            waiverLink.addEventListener('click', function() {
+                // 3. When the link is clicked, enable the checkbox and hide the error message
+                waiverCheckbox.disabled = false;
+                waiverError.style.display = 'none';
             });
         }
+
     });
 </script>
 {% endblock %}

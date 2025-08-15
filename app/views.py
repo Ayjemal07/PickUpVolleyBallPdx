@@ -102,8 +102,8 @@ def events():
         return redirect(url_for('main.events'))
     
     # --- NEW LOGIC for sorting, auto-deleting, and preparing events ---
-    today = datetime.utcnow().date()
-    two_months_ago = today - timedelta(days=60)
+    now = now = datetime.now()
+    two_months_ago = now.date() - timedelta(days=60)
 
     # 1. Automatically delete events older than two months
     events_to_delete = Event.query.filter(Event.date < two_months_ago).all()
@@ -120,9 +120,14 @@ def events():
     past_events = []
 
     for event in displayable_events:
-        if event.date >= today:
+        # Combine the event's date and end_time into a single datetime object
+        event_end_datetime = datetime.combine(event.date, event.end_time)
+
+        # If the event's end time is in the future, it's an upcoming event
+        if event_end_datetime >= now:
             upcoming_events.append(event)
         else:
+            # Otherwise, it's a past event
             past_events.append(event)
             
     # 3. Sort past events descending to get the most recent, and limit to 2
@@ -436,6 +441,24 @@ def create_order():
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
+    current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+    current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
+    
+    # For edits, we only check against capacity if new people are being added.
+    if is_edit:
+        # Calculate how many people are being *added* in this edit.
+        new_guest_count = requested_quantity - 1
+        additional_attendees = new_guest_count - initial_guest_count
+        if additional_attendees > 0 and (current_rsvp_count + additional_attendees > event.max_capacity):
+             return jsonify({"error": f"Sorry, the event does not have enough space to add {additional_attendees} more person(s)."}), 400
+    else: # For new RSVPs
+        # Check if adding the requested number of people exceeds capacity.
+        if current_rsvp_count + requested_quantity > event.max_capacity:
+            # Calculate remaining spots for a more helpful error message.
+            spots_left = event.max_capacity - current_rsvp_count
+            return jsonify({"error": f"Sorry, this event is full or does not have enough space. Only {spots_left} spot(s) remaining."}), 400
+    # --- Bug Fix End ---
+
     ticket_price = event.ticket_price
     user = current_user
 
@@ -634,8 +657,15 @@ def rsvp_with_credit():
     event = Event.query.get(event_id)
     if not event:
         return jsonify({'error': 'Event not found.'}), 404
-        
-    # Scenario 1: Use the one-time free event
+    
+    current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+    current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
+
+    # This flow assumes the user is RSVPing for just themselves (1 person).
+    if current_rsvp_count + 1 > event.max_capacity:
+        return jsonify({'error': 'Sorry, this event is now full.'}), 400
+
+
     if not user.has_used_free_event:
         user.has_used_free_event = True
         message = "Your first free event has been successfully claimed!"

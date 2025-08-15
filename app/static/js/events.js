@@ -19,6 +19,52 @@ function isSubscriptionActive() {
     return new Date(userSubscriptionExpiryDate) >= today;
 }
 
+
+/**
+ * Formats the date for an event card with special labels for Today and Tomorrow.
+ * @param {string} dateString - The ISO date string for the event (e.g., event.start).
+ * @returns {string} The formatted date string.
+ */
+
+/**
+ * Formats the date for an event card with special labels for Today and Tomorrow.
+ * @param {string} dateString - The ISO date string for the event (e.g., event.start).
+ * @returns {string} The formatted date string.
+ */
+function formatEventCardDate(dateString) {
+    // Get the event date and normalize it to the start of its day
+    const eventDate = new Date(dateString);
+    eventDate.setHours(0, 0, 0, 0);
+
+    // Get today's date and normalize it
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Calculate tomorrow's date
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    // Define options for formatting the date string (e.g., "Wednesday, August 13")
+    const dateOptions = {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric' // No year, as requested
+    };
+
+    // Check if the event is today
+    if (eventDate.getTime() === today.getTime()) {
+        return `TODAY (${eventDate.toLocaleDateString('en-US', dateOptions)})`;
+    }
+
+    // Check if the event is tomorrow
+    if (eventDate.getTime() === tomorrow.getTime()) {
+        return `TOMORROW (${eventDate.toLocaleDateString('en-US', dateOptions)})`;
+    }
+
+    // Otherwise, for any other future date, return the standard format
+    return eventDate.toLocaleDateString('en-US', dateOptions);
+}
+
 // Helper functions for date/time formatting
 function formatEventDate(dateString) {
     const eventDate = new Date(dateString);
@@ -79,6 +125,8 @@ function displayFlashMessage(container, message) {
 
 // Helper to generate the correct action button based on event status
 function getActionButtonHTML(event) {
+    const capacityAttrs = `data-max-capacity="${event.max_capacity}" data-rsvp-count="${event.rsvp_count}"`;
+
     if (event.is_past) {
         return `<button class="btn btn-secondary" disabled>Event has passed</button>`;
     }
@@ -98,6 +146,7 @@ function getActionButtonHTML(event) {
                    data-title="${event.title}"
                    data-ticket-price="${event.ticket_price || 0}"
                    data-guest-limit="${event.allow_guests ? (event.guest_limit || 0) : 0}"
+                   ${capacityAttrs}
                    style="color: teal; text-decoration: underline;">
                    Edit RSVP
                 </a>
@@ -112,13 +161,25 @@ function getActionButtonHTML(event) {
             data-time="${event.formatted_date}, ${formatEventTime(event.start)}"
             data-ticket-price="${event.ticket_price || 0}"
             data-guest-limit="${event.allow_guests ? (event.guest_limit || 0) : 0}"
-            data-location="${event.location}">
+            data-location="${event.location}"
+            ${capacityAttrs}>
             Attend
         </button>`;
 }
 
 
 document.addEventListener('DOMContentLoaded', function () {
+
+
+    const stickyBar = document.querySelector('.sticky-action-bar');
+    const mainContent = document.querySelector('main');
+
+    if (stickyBar && mainContent) {
+        // Get the actual height of the sticky bar
+        const stickyBarHeight = stickyBar.offsetHeight;
+        // Apply that height as padding to the bottom of the main content area, plus some extra space.
+        mainContent.style.paddingBottom = `${stickyBarHeight + 20}px`;
+    }
 
     const flashMessage = sessionStorage.getItem('flashMessage');
     const flashEventId = sessionStorage.getItem('flashEventId');
@@ -132,6 +193,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
         renderEventCards(sortedUpcomingEvents, 'upcoming', flashMessage, flashEventId);
         renderEventCards(sortedPastEvents, 'past');
+    }
+
+    const eventDetailsContainer = document.querySelector('.event-details-container');
+    // Check if we are on the details page AND if the required `currentEventData` variable exists.
+    if (eventDetailsContainer && typeof currentEventData !== 'undefined') {
+        // Check if a flash message exists for this specific event
+        if (flashMessage && flashEventId && flashEventId == currentEventData.id) {
+            // The `displayFlashMessage` function is already in events.js
+            displayFlashMessage(eventDetailsContainer, flashMessage);
+
+            // Clean up sessionStorage so the message doesn't appear again
+            sessionStorage.removeItem('flashMessage');
+            sessionStorage.removeItem('flashEventId');
+        }
     }
 
     document.querySelectorAll('.dropdown-toggle').forEach(button => {
@@ -564,8 +639,8 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 <div class="event-header">
                     <p class="event-date">
                         ${isCanceled
-                            ? `<strong style="color: red;">${event.formatted_date} - Cancelled: ${cancellationReason}</strong>`
-                            : event.formatted_date}
+                            ? `<strong style="color: red;">${formatEventCardDate(event.start)} - Cancelled: ${cancellationReason}</strong>`
+                            : formatEventCardDate(event.start)}
                     </p>
                     <h2 class="event-title">${event.title}</h2>
                     <p class="event-times">
@@ -645,12 +720,24 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         const guestDecrementBtn = document.getElementById('guestDecrement');
         const guestIncrementBtn = document.getElementById('guestIncrement');
         const editGuestPrompt = document.getElementById('editGuestPrompt');
+        const capacityInfo = document.getElementById('capacityInfo'); // Get the new element
+
 
         let currentTicketPrice = 0;
         let currentGuestLimit = 0;
         let currentEventId = null; // Store the event ID being processed
         let isEditingRsvp = false; // Flag to differentiate initial RSVP from edit
         let initialGuestCount = 0; // Store the guest count before editing for comparison
+        let currentSpotsLeft = 0;
+
+        // New function to enable/disable the guest buttons based on capacity ---
+        function updateGuestButtonsState(currentGuestCount, spotsLeft, guestLimit) {
+            const userAndGuests = 1 + currentGuestCount;
+            // Disable '+' if adding a guest would exceed total spots OR the user's guest limit.
+            guestIncrementBtn.disabled = userAndGuests >= spotsLeft || (guestLimit > 0 && currentGuestCount >= guestLimit);
+            // Disable '-' if guest count is 0.
+            guestDecrementBtn.disabled = currentGuestCount <= 0;
+        }
 
         // Function to update total price and re-render PayPal buttons
         function updatePriceAndPayPal(eventId, guestsSelected) {
@@ -853,6 +940,16 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 currentTicketPrice = parseFloat(this.getAttribute("data-ticket-price"));
                 currentGuestLimit = parseInt(this.getAttribute("data-guest-limit"));
 
+                const maxCapacity = parseInt(this.getAttribute("data-max-capacity"));
+                const rsvpCount = parseInt(this.getAttribute("data-rsvp-count"));
+                currentSpotsLeft = maxCapacity - rsvpCount;
+                const spotsLeftInEvent = maxCapacity - rsvpCount;
+
+
+                // --- Replacement Code ---
+                const spotsAvailableForGuests = currentSpotsLeft - 1;
+                const maxGuestsUserCanAdd = Math.min(spotsAvailableForGuests, currentGuestLimit);
+                capacityInfo.textContent = `(You can bring up to ${maxGuestsUserCanAdd} guest${maxGuestsUserCanAdd !== 1 ? 's' : ''})`;
                 isEditingRsvp = false;
                 currentRsvpId = null;
                 initialGuestCount = 0; // For new RSVP, initial guests is 0
@@ -860,10 +957,14 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 rsvpTitle.textContent = `You're booking: ${eventTitle}`;
                 rsvpEventInfo.innerHTML = `When: ${eventTime}<br>Where: ${eventLocation}`;
                 editGuestPrompt.textContent = `Are you bringing someone? (Max: ${currentGuestLimit})`;
+                capacityInfo.textContent = `(${spotsLeftInEvent} spot${spotsLeftInEvent !== 1 ? 's' : ''} left in this event)`;
+
 
                 guestCountSpan.textContent = '0';
 
                 updatePriceAndPayPal(currentEventId, 0); // The '0' is for the initial guest count.
+                updateGuestButtonsState(0, currentSpotsLeft, currentGuestLimit);
+
 
                 rsvpModal.style.display = 'block';
             });
@@ -894,6 +995,36 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     currentTicketPrice = parseFloat(this.getAttribute("data-ticket-price") || 0);
                     currentGuestLimit = parseInt(this.getAttribute("data-guest-limit") || 0);
 
+                    const maxCapacity = parseInt(this.getAttribute("data-max-capacity"));
+                    const rsvpCount = parseInt(this.getAttribute("data-rsvp-count"));
+                    const spotsCurrentlyHeldByUser = 1 + initialGuestCount;
+
+                    // **CORE FIX**: Recalculate `currentSpotsLeft` for the button functionality.
+                    // This sets the hard limit for the incrementor button.
+                    currentSpotsLeft = (maxCapacity - rsvpCount) + spotsCurrentlyHeldByUser;
+
+                    // --- New Dynamic Messaging Logic ---
+
+                    // 1. How many more guests can the user add based on their personal limit?
+                    const personalSlotsLeft = currentGuestLimit - initialGuestCount;
+
+                    // 2. How many spots are actually open in the event?
+                    const eventSpotsLeft = maxCapacity - rsvpCount;
+
+                    // 3. The true number of guests a user can add is the MINIMUM of those two values.
+                    const maxGuestsUserCanAdd = Math.min(personalSlotsLeft, eventSpotsLeft);
+
+                    // 4. Construct the dynamic message based on the result.
+                    let capacityMessage = '';
+                    if (maxGuestsUserCanAdd > 0) {
+                        const pluralS = maxGuestsUserCanAdd !== 1 ? 's' : '';
+                        capacityMessage = `(You can add up to ${maxGuestsUserCanAdd} more guest${pluralS})`;
+                    } else {
+                        capacityMessage = `(The event is full or you've reached your guest limit)`;
+                    }
+                    capacityInfo.textContent = capacityMessage;
+
+
                     // Now populate the modal
                     rsvpTitle.textContent = `Edit RSVP for: ${eventTitle}`;
                     rsvpEventInfo.innerHTML = `You (${rsvpData.first_name} ${rsvpData.last_name}) are already going with <span id="currentGuestsDisplay">${initialGuestCount}</span> guests.`;
@@ -902,6 +1033,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     guestCountSpan.textContent = initialGuestCount;
                     updatePriceAndPayPal(currentEventId, initialGuestCount);
 
+                    updateGuestButtonsState(initialGuestCount, currentSpotsLeft, currentGuestLimit);
                     rsvpModal.style.display = 'block';
 
                 } catch (error) {
@@ -918,15 +1050,20 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 count--;
                 guestCountSpan.textContent = count;
                 updatePriceAndPayPal(currentEventId, count);
+                updateGuestButtonsState(count, currentSpotsLeft, currentGuestLimit);
+
             }
         };
 
         guestIncrementBtn.onclick = function () {
             let count = parseInt(guestCountSpan.textContent);
-            if (currentGuestLimit === 0 || count < currentGuestLimit) {
+            const userAndGuests = 1 + count;
+            if (userAndGuests < currentSpotsLeft && (currentGuestLimit === 0 || count < currentGuestLimit)) {
                 count++;
                 guestCountSpan.textContent = count;
                 updatePriceAndPayPal(currentEventId, count);
+                // --- Bug Fix: Update button state on change ---
+                updateGuestButtonsState(count, currentSpotsLeft, currentGuestLimit);
             }
         };
 

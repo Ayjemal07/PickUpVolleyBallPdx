@@ -1915,15 +1915,8 @@ html, body {
 
 
   .event-details-container {
-    /* MODIFICATION: Removed max-width and auto margin to allow the container to be wider.
-      Added a small margin on the top/bottom for spacing.
-    */
     margin: 20px; /* Provides spacing from the top/bottom and screen edges */
     padding: 25px; /* Adds space inside the border */
-    /* background-color: #ffffff; */
-    /* border: 1px solid #ddd; */
-    /* border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05); */
   }
 
   .event-image {
@@ -2054,4 +2047,107 @@ html, body {
 .cropper-view-box,
 .cropper-face {
     border-radius: 50% !important;
+}
+
+
+  .details-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 2rem;
+      align-items: start;
+  }
+
+  .event-info {
+      grid-column: 1 / 2;
+  }
+
+.sticky-action-bar {
+  position: fixed; /* This makes it stick to the viewport */
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #ffffff;
+  padding: 1rem;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.1); /* Shadow on top */
+  border-top: 1px solid #e0e0e0;
+  z-index: 999; /* Ensures it's above other content */
+
+  /* Use flexbox to arrange items inside */
+  display: flex;
+  justify-content: space-between; /* Pushes price and buttons to opposite ends */
+  align-items: center;
+  gap: 1rem;
+}
+
+.sticky-action-bar .price-info {
+    display: flex;
+    flex-direction: column; /* Stack price and spots-left vertically */
+    align-items: flex-start;
+}
+
+.sticky-action-bar .price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.sticky-action-bar .spots-left {
+    font-size: 0.9rem;
+    color: #2c2c2c;
+    font-weight: bold;;
+}
+
+.sticky-action-bar .action-buttons {
+    display: flex;
+    gap: 0.75rem; /* Space between the Share and Attend buttons */
+}
+
+.sticky-action-bar .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    white-space: nowrap; /* Prevents button text from wrapping */
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 480px) {
+    .sticky-action-bar {
+        padding: 0.75rem;
+        flex-direction: column; /* Stack price and buttons vertically */
+        align-items: stretch; /* Make children full-width */
+    }
+
+    .sticky-action-bar .price-info {
+        flex-direction: row; /* Put price and spots side-by-side */
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+
+    .sticky-action-bar .action-buttons {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Make buttons equal width */
+    }
+}
+
+
+/* --- Back to Events Button Style --- */
+
+.btn-back-gray {
+    display: inline-block; /* Allows the button to sit on the left */
+    margin-top: 2rem;
+    padding: 10px 20px;
+    background-color: #6c757d; /* A standard bootstrap secondary gray */
+    color: white;
+    font-weight: bold;
+    text-decoration: none;
+    border: none;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-back-gray:hover {
+    background-color: #5a6268; /* A slightly darker gray for hover */
+    color: white;
 }

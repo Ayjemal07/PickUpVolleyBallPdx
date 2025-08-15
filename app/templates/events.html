@@ -5,24 +5,6 @@
 {% block content %}
 <div class="page-container">
     <h1>Welcome to Sign up Page for Volleyball Events 🎉 </h1>
-    {% block page_variables %}
-        <script>
-            // These page-specific values will now override the defaults from base.html
-            var isUserAuthenticated = {{ is_authenticated|tojson }};
-            var userRole = "{{ user_role|default('user') }}";
-            var userHasFreeEvent = {{ user_has_free_event|tojson }};
-            var userEventCredits = {{ user_event_credits|tojson }};
-            var userSubscriptionExpiryDate = {{ user_subscription_expiry_date|tojson }};
-            
-            var upcomingEventsData = JSON.parse(`{{ upcoming_events_data|tojson|safe }}`);
-            var pastEventsData = JSON.parse(`{{ past_events_data|tojson|safe }}`);
-            var calendarEventsData = JSON.parse(`{{ all_events_for_calendar|tojson|safe }}`);
-
-            console.log("Upcoming Events:", upcomingEventsData);
-            console.log("Past Events:", pastEventsData);
-        </script>
-    {% endblock %}
-
     <ul class="nav-tabs">
         <li class="nav-item">
             <a class="nav-link active" href="#upcoming">Upcoming Events</a>
@@ -380,6 +362,9 @@
         <button type="button" id="guestIncrement">+</button>
         </div>
 
+        <p id="capacityInfo" style="text-align: center; color: #555; font-style: italic; font-size: 0.9em; margin-top: 5px;"></p>
+
+
         <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
         <div id="rsvp-action-container" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
 
@@ -388,5 +373,19 @@
         <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
     </div>
 </div>
+
+{% endblock %}
+
+
+{% block page_variables %}
+    var isUserAuthenticated = {{ is_authenticated|tojson }};
+    var userRole = {{ user_role|default('user')|tojson }};
+    var userHasFreeEvent = {{ user_has_free_event|tojson }};
+    var userEventCredits = {{ user_event_credits|tojson }};
+    var userSubscriptionExpiryDate = {{ user_subscription_expiry_date|tojson }};
+    
+    var upcomingEventsData = {{ upcoming_events_data|tojson|safe }};
+    var pastEventsData = {{ past_events_data|tojson|safe }};
+    var calendarEventsData = {{ all_events_for_calendar|tojson|safe }};
 
 {% endblock %}

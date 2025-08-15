@@ -34,7 +34,7 @@ def send_underage_rejection_email(user_email):
     msg = Message(
         subject="Registration Rejected: Age Requirement",
         recipients=[user_email],
-        body="Thank you for your interest in Pick Up Volleyball PDX. At this time, we are only able to accept registrations from individuals who are 18 years of age or older. We are unable to create an account for you due to this policy. We appreciate your understanding."
+        body="Thank you for your interest in Pick Up Volleyball PDX. At this time, we are only able to accept registrations from individuals who are 18 years or older. We were unable to create your account as a result of this policy. You may have a parent/legal guardian create an account and register for events, in which case they will assume liability for you. Apologies for any inconvenience, and thank you for your understanding."
     )
     mail.send(msg)
 
@@ -270,27 +270,37 @@ def register():
             p10 = "Each Releasing Party represents and warrants to the Released Parties that Participant has the physical ability and knowledge to safely engage in the Activities, and has made all appropriate inquiries of doctors or other medical professionals to confirm that Participant is healthy and capable of safely participating in the Activities without unacceptable health risks."
             draw_paragraph(text, p10, width - 2 * inch)
             
+            # --- NEW SECTION ADDED ---
             text.textLine("")
             text.setFont("Helvetica-Bold", 9)
-            text.textLine("6. Miscellaneous.")
+            text.textLine("6. Indemnification for Actions of Minors.")
             text.setFont("Helvetica", 9)
-            p11 = "If any part of this Agreement is deemed to be unenforceable, such term shall be modified to the minimum extent permitted or severed, and the remaining terms shall be an enforceable contract between the parties. It is the intent of Releasing Parties that this Agreement shall be binding upon the assignees, heirs, next of kin, executors and personal representatives of the Releasing Parties."
-            draw_paragraph(text, p11, width - 2 * inch)
-            
+            p11_new = "Participant agrees that Participant is solely responsible for ensuring that any children of Participant or other minors present at the Activity at the invitation of Participant (a \"Minor Invitee\") is properly supervised and behaves in a manner that is safe and does not present a danger to the Minor Invitee or others. By execution of this Agreement, Participant also AGREES TO DEFEND AND INDEMNIFY each Released Party from any and all claims based on the actions or behavior of any Minor Invitee of such Participant at the Activity or the associated locations, facilities or use of any equipment."
+            draw_paragraph(text, p11_new, width - 2 * inch)
+
+            # --- RENUMBERED ---
             text.textLine("")
             text.setFont("Helvetica-Bold", 9)
-            text.textLine("7. Participant:")
+            text.textLine("7. Miscellaneous.")
+            text.setFont("Helvetica", 9)
+            p12 = "If any part of this Agreement is deemed to be unenforceable, such term shall be modified to the minimum extent permitted or severed, and the remaining terms shall be an enforceable contract between the parties. It is the intent of Releasing Parties that this Agreement shall be binding upon the assignees, heirs, next of kin, executors and personal representatives of the Releasing Parties."
+            draw_paragraph(text, p12, width - 2 * inch)
+            
+            # --- RENUMBERED ---
+            text.textLine("")
+            text.setFont("Helvetica-Bold", 9)
+            text.textLine("8. Participant:")
             text.setFont("Helvetica", 9)
             text.textLine("Participant represents and warrants to the Releasing Parties that:")
             c.drawText(text)
             
-            # Always check the "18 or older" box
-            box_x, box_y = 1.1 * inch, height - 8.2 * inch
+            # The vertical offset (9.7) is increased to move the checkbox further down the page.
+            box_x, box_y = 1.1 * inch, height - 9.7 * inch 
             c.rect(box_x, box_y, 10, 10)
             c.setFont("ZapfDingbats", 12)
             c.drawString(box_x + 1, box_y + 2, u'✔')
             c.setFont("Helvetica", 9)
-            c.drawString(1.3 * inch, height - 8.18 * inch, "Participant is 18 years of age or older.")
+            c.drawString(1.3 * inch, height - 9.68 * inch, "Participant is 18 years of age or older.")
             c.showPage() # END PAGE 2
 
             # --- PAGE 3: SIGNATURE PAGE ---
@@ -342,7 +352,7 @@ def register():
                 subject=f"Waiver Confirmation for {user_name}",
                 sender="noreply.pickupvbpdx@gmail.com",  # This explicit line overrides any incorrect defaults
                 recipients=[user_email, admin_email],
-                body=f"Attached is the signed waiver for {user_name} for Pick Up Volleyball PDX."
+                body=f"Attached is {user_name}'s signed waiver, assumption of risk, release of liability & Indemnification agreement for participation in events offered by Pick Up Volleyball PDX. "
             )
             msg.attach(f"waiver_{user.id}.pdf", "application/pdf", pdf_data)
             mail.send(msg)
