@@ -169,7 +169,35 @@ function getActionButtonHTML(event) {
 
 
 document.addEventListener('DOMContentLoaded', function () {
+    if (subStatus === 'pending') {
+        // Optional: Show a loading indicator (add this HTML to events.html if needed, or use alertDiv from displayFlashMessage)
+        const loadingMessage = document.createElement('div');
+        loadingMessage.className = 'alert alert-warning';
+        loadingMessage.innerHTML = 'Processing subscription... <span class="spinner-border spinner-border-sm" role="status"></span>';
+        document.querySelector('#upcoming .tab-pane-body').prepend(loadingMessage);  // Adjust selector to your content area
 
+        let previousCredits = userEventCredits;  // From page_variables in events.html
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/user/subscription_status');
+                if (!response.ok) throw new Error('Polling failed');
+                const data = await response.json();
+
+                if (data.event_credits > previousCredits) {
+                    clearInterval(pollInterval);
+                    loadingMessage.remove();  // Hide loader
+                    displayFlashMessage(document.querySelector('#upcoming .tab-pane-body'), 'Subscription activated! Credits added.');
+                    location.reload();  // Refresh to update UI
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+                clearInterval(pollInterval);
+                loadingMessage.remove();
+                alert('Error checking subscription status. Please refresh manually.');
+            }
+        }, 5000);  // Poll every 5 seconds
+    }
 
     const stickyBar = document.querySelector('.sticky-action-bar');
     const mainContent = document.querySelector('main');

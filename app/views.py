@@ -643,7 +643,7 @@ def create_paypal_subscription():
         "plan_id": PAYPAL_PLAN_ID,
         "custom_id": current_user.id,
         "application_context": {
-            "return_url": url_for('main.events', _external=True),
+            "return_url": url_for('main.events', _external=True) + '?sub_status=pending',  # Add query param here
             "cancel_url": url_for('main.subscriptions', _external=True)
         }
     }
@@ -656,6 +656,14 @@ def create_paypal_subscription():
         print(f"PayPal API Error: {err.response.text}")
         return jsonify({"error": "Could not create subscription with PayPal."}), 500
 
+
+@main.route('/api/user/subscription_status', methods=['GET'])
+@login_required  # Ensure user is logged in (import from flask_login if needed)
+def get_subscription_status():
+    return jsonify({
+        'event_credits': current_user.event_credits,
+        'subscription_expiry_date': current_user.subscription_expiry_date.isoformat() if current_user.subscription_expiry_date else None
+    })
 
 @main.route("/api/paypal/webhook", methods=["POST"])
 def paypal_webhook():

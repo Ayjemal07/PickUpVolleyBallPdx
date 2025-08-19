@@ -3,6 +3,13 @@
 {% block title %}Events{% endblock %}
 
 {% block content %}
+
+    {% if request.args.get('sub_status') == 'pending' %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert" style="margin-bottom: 15px;">
+            Your subscription is being processed. Please wait a moment or refresh the page to see your updated credits.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endif %}
 <div class="page-container">
     <h1>Welcome to Sign up Page for Volleyball Events 🎉 </h1>
     <ul class="nav-tabs">
@@ -395,5 +402,6 @@
     var upcomingEventsData = {{ upcoming_events_data|tojson|safe }};
     var pastEventsData = {{ past_events_data|tojson|safe }};
     var calendarEventsData = {{ all_events_for_calendar|tojson|safe }};
+    var subStatus = {{ request.args.get('sub_status')|tojson|safe }};
 
 {% endblock %}
