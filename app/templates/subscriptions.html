@@ -66,23 +66,34 @@
         <span id="closeSubscriptionModal" class="close-button">&times;</span>
         <h2>Confirm Your Subscription</h2>
         <p>You are purchasing the <strong>Tier 1 Subscription</strong> for $40.00.</p>
-        <p>You will receive 4 event credits that expire in 30 days.</p>
-        <strong>Note:</strong> Your active Subscription info can be found in your Profile .</p>
+        <p>This subscription will automatically renew every month.</p>
+        <strong>Note:</strong> Your active Subscription info can be found in your Profile.</p>
         
         <div id="subscription-paypal-container" style="margin-top: 20px;"></div>
+        <div id="subscription-message"></div>
     </div>
 </div>
+
+{% block page_scripts %}
+    <!-- IMPORTANT: Add `vault=true` to the SDK script for subscriptions -->
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=subscription&vault=true"
+            onload="console.log('PayPal SDK for Subscriptions loaded successfully')"
+            onerror="console.error('Failed to load PayPal SDK')">
+    </script>
+{% endblock %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('subscriptionModal');
     const signUpButton = document.querySelector('.btn-signup');
     const closeButton = document.getElementById('closeSubscriptionModal');
+    const messageContainer = document.getElementById('subscription-message');
     let isPayPalRendered = false;
 
     // When the user clicks the "Sign Up" button, open the modal
     signUpButton.addEventListener('click', () => {
         modal.style.display = 'block';
+        messageContainer.innerHTML = ''; // Clear previous messages
 
         // Render PayPal buttons only once when the modal is first opened
         if (!isPayPalRendered) {
@@ -105,47 +116,48 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderPayPalButtons() {
         paypal.Buttons({
-            // Sets up the transaction when a payment button is clicked
-            createOrder: function(data, actions) {
-                return fetch('/api/subscriptions/create-order', {
-                    method: 'post'
-                }).then(function(res) {
+            // This function is called when the user clicks the PayPal button
+            createSubscription: function(data, actions) {
+                // This calls your new backend endpoint
+                return fetch('/api/paypal/create-subscription', {
+                    method: 'POST',
+                }).then(res => {
                     if (!res.ok) {
-                        throw new Error('Failed to create order');
+                        messageContainer.innerHTML = `<p style="color: red;">Error: Could not start the subscription process. Please try again later.</p>`;
+                        throw new Error("Backend failed to create subscription");
                     }
                     return res.json();
-                }).then(function(orderData) {
-                    return orderData.id;
+                }).then(details => {
+                    // The backend returns the subscription ID from PayPal
+                    return details.id;
                 });
             },
 
-            // Finalize the transaction after payer approval
+            // This function is called after the user approves the subscription in the PayPal popup
             onApprove: function(data, actions) {
-                return fetch(`/api/subscriptions/${data.orderID}/capture`, {
-                    method: 'post'
-                }).then(function(res) {
-                     if (!res.ok) {
-                        throw new Error('Failed to capture order');
-                    }
-                    return res.json();
-                }).then(function(orderData) {
-                    if (orderData.success) {
-                        alert('Subscription successful! You have been granted 4 event credits.');
-                        // Redirect to the events page or profile page after success
-                        window.location.href = "{{ url_for('main.events') }}";
-                    } else {
-                        alert('There was an issue with your subscription. Please try again.');
-                    }
-                }).catch(function(error) {
-                    console.error('Error during approval:', error);
-                    alert('An error occurred while processing your payment. Please try again.');
-                });
+                console.log('Subscription approved:', data);
+                
+                // Hide the PayPal buttons and show a success message.
+                document.getElementById('subscription-paypal-container').style.display = 'none';
+                messageContainer.innerHTML = `<p style="color: green;">Thank you! Your subscription is being activated. You will be redirected shortly.</p>`;
+
+                // The backend webhook will handle granting credits.
+                // We just redirect the user after a short delay.
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('main.events') }}";
+                }, 3000); // Redirect after 3 seconds
             },
 
             onError: function(err) {
                 console.error('PayPal button error:', err);
-                alert('An error occurred with the payment gateway. Please try again.');
+                messageContainer.innerHTML = `<p style="color: red;">An error occurred with the payment gateway. Please try again.</p>`;
+            },
+
+            onCancel: function(data) {
+                console.log('Subscription cancelled:', data);
+                messageContainer.innerHTML = `<p>Your subscription request was cancelled.</p>`;
             }
+
         }).render('#subscription-paypal-container');
     }
 });

@@ -122,6 +122,14 @@
 {% endblock %}
 
 
+{% block page_scripts %}
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=capture"
+            onload="console.log('PayPal SDK loaded successfully')"
+            onerror="console.error('Failed to load PayPal SDK')">
+    </script>
+    <script src="/static/js/events.js"></script>
+{% endblock %}
+
 {% block page_variables %}
         // These page-specific values will now override the defaults from base.html
         var isUserAuthenticated = {{ is_authenticated|tojson }};

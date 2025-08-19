@@ -16,10 +16,47 @@ from flask_login import current_user
 
 from .models import EventAttendee
 from flask_login import current_user, login_required # Import login_required
+from flask_mail import Mail, Message
+mail = Mail()
+
+import os
+from dotenv import load_dotenv
+import requests
+
+
+load_dotenv() # Load variables from .env file
 
 
 
 main = Blueprint('main', __name__)
+
+# PayPal credentials
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
+PAYPAL_PLAN_ID = os.getenv("PAYPAL_PLAN_ID") # Make sure to add this to your .env file
+PAYPAL_BASE = "https://api-m.paypal.com" 
+
+def send_subscription_email(user_email):
+    body = """
+    Thank you for subscribing to Pick Up Volleyball events, we are excited to have you join and be part of our community! 
+
+    You can view and sign up for all events using this link: https://pickupvolleyballpdx.com/events
+
+    Subscriptions will renew every 30 days starting from the time of purchase, with 4 new event credits being issued every cycle. Event credits cannot be used for guests, and any unused credits will not roll over. 
+
+    Please note that subscriptions must be managed with Paypal directly, and cannot be canceled/updated from your Pick Up Volleyball Profile. This function will become available in future releases. 
+
+    See you out there!
+    """
+
+    msg = Message(
+        subject="Subscription Receipt Email",
+        recipients=[user_email],
+        body=body.strip()
+    )
+    print(f"Attempting to send subscription email to: {user_email}") # <--- ADD THIS LINE
+    mail.send(msg)
+    print("Email send attempt completed.") # <--- AND THIS LINE
 
 @main.route('/')
 def home():
@@ -137,12 +174,17 @@ def events():
     # 4. Process event data for the template
     user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
 
+    db.session.commit()
+
+
     def process_event_list(event_list):
-        for event in event_list:
-            event.formatted_date = event.date.strftime('%b %d, %Y')
-            attendees = EventAttendee.query.filter_by(event_id=event.id).all()
-            event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
-            event.is_attending = any(a.user_id == user_id for a in attendees)
+        with db.session.no_autoflush:
+            for event in event_list:
+                event.formatted_date = event.date.strftime('%b %d, %Y')
+                attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+                event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
+                event.is_attending = any(a.user_id == user_id for a in attendees)
+    
     
     process_event_list(upcoming_events)
     process_event_list(past_events_display)
@@ -186,6 +228,7 @@ def events():
         if current_user.subscription_expiry_date:
             user_expiry_date = current_user.subscription_expiry_date.isoformat()
 
+    print("PayPal Client ID:", PAYPAL_CLIENT_ID)
     return render_template('events.html', 
                            upcoming_events_data=upcoming_events_data,
                            past_events_data=past_events_data,
@@ -194,7 +237,8 @@ def events():
                            user_has_free_event=user_has_free_event,
                            user_event_credits=user_credits,
                            user_subscription_expiry_date=user_expiry_date,
-                           image_files=image_files,is_authenticated=is_authenticated)
+                           image_files=image_files,is_authenticated=is_authenticated,
+                           paypal_client_id=PAYPAL_CLIENT_ID)
 
 
 #Route to add an event
@@ -362,7 +406,7 @@ def event_details(event_id):
         user_has_free_event=user_has_free_event,
         user_event_credits=user_credits,
         user_subscription_expiry_date=user_expiry_date,
-
+        paypal_client_id=PAYPAL_CLIENT_ID,
         is_authenticated=current_user.is_authenticated,
         user_role=current_user.role if current_user.is_authenticated else 'user'
     )
@@ -389,7 +433,7 @@ def get_user_rsvp(event_id):
 
 @main.route('/subscriptions')
 def subscriptions():
-    return render_template('subscriptions.html')
+    return render_template('subscriptions.html', paypal_client_id=PAYPAL_CLIENT_ID)
 
 @main.route('/hosting')
 def hosting():
@@ -407,17 +451,6 @@ def contactus():
 
 
 
-#paypal logic starts here:
-
-import json
-import os
-import requests
-from flask import jsonify, request
-
-# PayPal credentials (use your actual client ID/secret or load from env)
-PAYPAL_CLIENT_ID = "AaeOK9F7Bor-M4-yDY_0li_nPkLIXo0Ul0vuW5EVUEdJmOj9nIbryb_lCe5Lt-wODB-lPqUS7REXtqTx"
-PAYPAL_SECRET = "EKOLBO_CdpzLvMZ9q7yWNzgFQj7srp00Sntt1a3kBF5-b2l5zcH9QmDCa_-5vzLu8wVqReTlhpiTiboN"
-PAYPAL_BASE = "https://api-m.sandbox.paypal.com"  # use live URL when in production
 
 def get_access_token():
     auth = (PAYPAL_CLIENT_ID, PAYPAL_SECRET)
@@ -590,60 +623,114 @@ def capture_order(order_id):
     return jsonify(order_data)
 
 
-
-@main.route("/api/subscriptions/create-order", methods=["POST"])
+@main.route("/api/paypal/create-subscription", methods=["POST"])
 @login_required
-def create_subscription_order():
-    """Creates a PayPal order for a subscription purchase."""
-    # For now, we hardcode Tier 1 price. This could be dynamic later.
-    subscription_price = "40.00"
+def create_paypal_subscription():
+    """
+    Creates a PayPal subscription for the logged-in user.
+    """
+    if not PAYPAL_PLAN_ID:
+        return jsonify({"error": "Subscription plan is not configured on the server."}), 500
 
     access_token = get_access_token()
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {access_token}",
     }
+    
+    # The custom_id is crucial. We pass the user's ID to identify them in the webhook.
     body = {
-        "intent": "CAPTURE",
-        "purchase_units": [{
-            "amount": {
-                "currency_code": "USD",
-                "value": subscription_price
-            },
-            # Use custom_id to identify this as a subscription purchase
-            "custom_id": f"subscription-tier1-{current_user.id}"
-        }]
+        "plan_id": PAYPAL_PLAN_ID,
+        "custom_id": current_user.id,
+        "application_context": {
+            "return_url": url_for('main.events', _external=True),
+            "cancel_url": url_for('main.subscriptions', _external=True)
+        }
     }
-    response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders", headers=headers, json=body)
-    response.raise_for_status()
-    return jsonify(response.json())
-
-
-@main.route("/api/subscriptions/<order_id>/capture", methods=["POST"])
-@login_required
-def capture_subscription_order(order_id):
-    """Captures the PayPal payment and grants event credits to the user."""
+    
     try:
-        access_token = get_access_token()
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
-        capture_response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders/{order_id}/capture", headers=headers)
-        capture_response.raise_for_status()
-        order_data = capture_response.json()
+        response = requests.post(f"{PAYPAL_BASE}/v1/billing/subscriptions", headers=headers, json=body)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.HTTPError as err:
+        print(f"PayPal API Error: {err.response.text}")
+        return jsonify({"error": "Could not create subscription with PayPal."}), 500
 
-        if order_data.get("status") == "COMPLETED":
-            # Payment is successful, grant credits
-            user = current_user
-            user.event_credits += 4  # Grant 4 credits for Tier 1
-            user.subscription_expiry_date = date.today() + timedelta(days=30)
-            db.session.commit()
-            flash("Subscription successful! You now have 4 event credits.", "success")
-            return jsonify({"success": True, "message": "Credits granted"}), 200
+
+@main.route("/api/paypal/webhook", methods=["POST"])
+def paypal_webhook():
+    """
+    Listens for notifications from PayPal about subscription events.
+    This is the key to handling automatic renewals.
+    """
+    webhook_data = request.get_json()
+    event_type = webhook_data.get("event_type")
+    resource = webhook_data.get("resource", {})
+
+    print(f"--- PayPal Webhook Received: {event_type} ---")
+
+    # The two most important events are:
+    # 1. BILLING.SUBSCRIPTION.ACTIVATED: When the subscription starts.
+    # 2. PAYMENT.SALE.COMPLETED: For every successful recurring payment.
+
+    if event_type in ["BILLING.SUBSCRIPTION.ACTIVATED", "PAYMENT.SALE.COMPLETED"]:
+        subscription_id = resource.get("id")
+        if event_type == "PAYMENT.SALE.COMPLETED":
+            # For recurring payments, the subscription ID is in a different place
+            subscription_id = resource.get("billing_agreement_id")
+
+        # Get the user ID we stored in `custom_id` when creating the subscription
+        user_id = resource.get("custom_id")
+        if not user_id:
+             # If custom_id is not in the top-level resource, we need to fetch the subscription details
+            try:
+                access_token = get_access_token()
+                headers = {"Authorization": f"Bearer {access_token}"}
+                sub_details_resp = requests.get(f"{PAYPAL_BASE}/v1/billing/subscriptions/{subscription_id}", headers=headers)
+                sub_details_resp.raise_for_status()
+                user_id = sub_details_resp.json().get("custom_id")
+            except Exception as e:
+                print(f"Could not fetch subscription details to find user_id: {e}")
+                return jsonify(status="error", reason="could not find user"), 500
+
+        user = User.query.get(user_id)
+        if not user:
+            print(f"Webhook Error: User with ID {user_id} not found.")
+            return jsonify(status="error", reason="user not found"), 404
+
+        # Grant credits and update expiry date
+        # If the subscription is already active, this adds 30 days to the current expiry date
+        # Otherwise, it sets it to 30 days from now.
+        current_expiry = user.subscription_expiry_date or date.today()
+        if current_expiry < date.today():
+            current_expiry = date.today()
+
+        user.event_credits = (user.event_credits or 0) + 4
+        user.subscription_expiry_date = current_expiry + timedelta(days=30)
+        user.paypal_subscription_id = subscription_id # Store the subscription ID
+        
+        db.session.commit()
+        
+        # Send a confirmation email only on the first activation
+        if event_type == "BILLING.SUBSCRIPTION.ACTIVATED":
+            send_subscription_email(user.email)
+
+        print(f"Successfully processed webhook for user {user.email}. Credits: {user.event_credits}, Expiry: {user.subscription_expiry_date}")
+
+    elif event_type == "BILLING.SUBSCRIPTION.CANCELLED":
+        subscription_id = resource.get("id")
+        # Find the user by their subscription ID and handle cancellation
+        # For now, we'll just log it. You could clear their expiry date here if you want.
+        user = User.query.filter_by(paypal_subscription_id=subscription_id).first()
+        if user:
+            # Optionally, you can set their expiry date to now or leave it to run out.
+            # user.subscription_expiry_date = date.today()
+            # db.session.commit()
+            print(f"Subscription {subscription_id} for user {user.email} was cancelled.")
         else:
-            return jsonify({"error": "Payment not completed"}), 400
+            print(f"Received cancellation for unknown subscription ID: {subscription_id}")
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    return jsonify(status="success"), 200
 
 
 @main.route("/api/rsvp/credit", methods=['POST'])

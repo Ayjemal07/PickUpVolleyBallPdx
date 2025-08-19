@@ -45,6 +45,9 @@ class User(UserMixin, db.Model):
     event_credits = db.Column(db.Integer, default=0, nullable=False)
     subscription_expiry_date = db.Column(db.Date, nullable=True)
 
+    paypal_subscription_id = db.Column(db.String(255), nullable=True) 
+
+
 
 
     def __init__(self, email, first_name, last_name, role, password='', token='', g_auth_verify=False):
@@ -59,6 +62,7 @@ class User(UserMixin, db.Model):
         self.has_used_free_event = False
         self.event_credits = 0
         self.subscription_expiry_date = None
+        self.paypal_subscription_id = None
 
     def set_token(self, length):
         return secrets.token_hex(length)
