@@ -177,6 +177,7 @@
             function renderPayPalButtons() {
                 paypal.Buttons({
                     createSubscription: function(data, actions) {
+                        // ... (this part remains the same) ...
                         return fetch('/api/paypal/create-subscription', {
                             method: 'POST',
                         }).then(res => {
@@ -190,18 +191,45 @@
                         });
                     },
                     onApprove: function(data, actions) {
-                        console.log('Subscription approved:', data);
-                        document.getElementById('paypal-button-container').style.display = 'none';
-                        messageContainer.innerHTML = `<p style="color: green;">Thank you! Your subscription is being activated. You will be redirected shortly.</p>`;
-                        setTimeout(() => {
-                            window.location.href = "{{ url_for('main.events') }}?sub_status=pending";
-                        }, 3000);
+                        console.log('Subscription approved by user:', data);
+                        messageContainer.innerHTML = `<p style="color: green;">Finalizing your subscription... Please wait.</p>`;
+                        document.getElementById('paypal-button-container').style.display = 'none'; // Hide PayPal buttons
+
+                        // --- NEW LOGIC: Call our new confirmation endpoint ---
+                        fetch('/api/paypal/confirm-subscription', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                subscription_id: data.subscriptionID
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(result => {
+                            if (result.success) {
+                                messageContainer.innerHTML = `<p style="color: green;">Success! Your subscription is active. Redirecting...</p>`;
+                                // Redirect to the events page where a success flash message will be shown
+                                setTimeout(() => {
+                                    window.location.href = "{{ url_for('main.events') }}";
+                                }, 2000); // 2-second delay to allow user to read the message
+                            } else {
+                                // Show an error message if the backend confirmation fails
+                                messageContainer.innerHTML = `<p style="color: red;">Error: ${result.error}. Please contact support.</p>`;
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Confirmation fetch error:', err);
+                            messageContainer.innerHTML = `<p style="color: red;">A critical error occurred. Please contact us to confirm your subscription status.</p>`;
+                        });
                     },
                     onError: function(err) {
+                        // ... (this part remains the same) ...
                         console.error('PayPal button error:', err);
                         messageContainer.innerHTML = `<p style="color: red;">An error occurred with the payment gateway. Please try again.</p>`;
                     },
                     onCancel: function(data) {
+                        // ... (this part remains the same) ...
                         console.log('Subscription cancelled:', data);
                         messageContainer.innerHTML = `<p>Your subscription request was cancelled.</p>`;
                     }

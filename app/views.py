@@ -624,6 +624,47 @@ def capture_order(order_id):
     return jsonify(order_data)
 
 
+@main.route("/api/paypal/confirm-subscription", methods=["POST"])
+@login_required
+def confirm_subscription():
+    """
+    Synchronously confirms a subscription after frontend approval,
+    and applies credits to the user's account immediately.
+    """
+    data = request.get_json()
+    subscription_id = data.get('subscription_id')
+
+    if not subscription_id:
+        return jsonify({'error': 'Subscription ID is missing.'}), 400
+
+    # Security check: Ensure the subscription ID from PayPal matches the one stored on the user
+    if current_user.paypal_subscription_id != subscription_id:
+        return jsonify({'error': 'Subscription ID mismatch.'}), 403
+
+    try:
+        # Prevent double-crediting if the webhook arrives first
+        if current_user.event_credits > 0 and current_user.subscription_expiry_date and current_user.subscription_expiry_date > date.today():
+            print(f"User {current_user.email} subscription is already active. No action taken.")
+            return jsonify({'success': True, 'message': 'Subscription already active.'}), 200
+
+        # Apply subscription benefits immediately
+        current_user.event_credits = 4
+        current_user.subscription_expiry_date = date.today() + timedelta(days=30)
+        db.session.commit()
+        
+        # Send the confirmation email
+        send_subscription_email(current_user.email)
+        
+        print(f"Successfully activated subscription for {current_user.email}.")
+        flash('Your subscription is now active! Thank you for joining.', 'success')
+        return jsonify({'success': True, 'message': 'Subscription activated successfully!'}), 200
+
+    except Exception as e:
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({'error': f'An internal server error occurred: {str(e)}'}), 500
+
+
 @main.route('/api/paypal/create-subscription', methods=['POST'])
 @login_required
 def create_subscription():
@@ -686,12 +727,14 @@ def get_subscription_status():
         'subscription_expiry_date': current_user.subscription_expiry_date.isoformat() if current_user.subscription_expiry_date else None
     })
 
+
 @main.route('/paypal_webhook', methods=['POST'])
 def paypal_webhook():
     data = request.get_json()
     event_type = data.get('event_type')
     resource = data.get('resource')
 
+    # This condition handles renewals and the initial activation if the instant confirmation fails.
     if event_type in ["BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED"]:
         subscription_id = resource.get('id')
         user = User.query.filter_by(paypal_subscription_id=subscription_id).first()
@@ -699,21 +742,32 @@ def paypal_webhook():
             print(f"Received webhook for unknown subscription ID: {subscription_id}")
             return jsonify(status="ignored"), 200
 
-        current_expiry = user.subscription_expiry_date
-        if current_expiry and current_expiry < date.today():
-            current_expiry = date.today()
-
-        user.event_credits = (user.event_credits or 0) + 4
-        user.subscription_expiry_date = current_expiry + timedelta(days=30)
-        
-        db.session.commit()
-        
+        # --- MODIFIED LOGIC ---
+        # For a new activation, only apply credits if they haven't been applied by the synchronous route yet.
         if event_type == "BILLING.SUBSCRIPTION.ACTIVATED":
-            send_subscription_email(user.email)
+            if user.event_credits == 0:
+                user.event_credits = 4
+                user.subscription_expiry_date = date.today() + timedelta(days=30)
+                db.session.commit()
+                send_subscription_email(user.email)
+                print(f"Webhook processed FIRST-TIME activation for {user.email}.")
+            else:
+                print(f"Webhook noted ACTIVATION for {user.email}, but credits were already present. Synchronous confirmation likely succeeded.")
+        
+        # For renewals (or updates), add credits as before.
+        elif event_type == "BILLING.SUBSCRIPTION.UPDATED":
+            current_expiry = user.subscription_expiry_date
+            if not current_expiry or current_expiry < date.today():
+                 current_expiry = date.today()
+            
+            user.event_credits = (user.event_credits or 0) + 4
+            user.subscription_expiry_date = current_expiry + timedelta(days=30)
+            db.session.commit()
+            print(f"Webhook processed RENEWAL for {user.email}. Credits: {user.event_credits}, Expiry: {user.subscription_expiry_date}")
 
-        print(f"Successfully processed webhook for user {user.email}. Credits: {user.event_credits}, Expiry: {user.subscription_expiry_date}")
 
     elif event_type == "BILLING.SUBSCRIPTION.CANCELLED":
+        # ... (Your existing cancellation logic remains unchanged) ...
         subscription_id = resource.get('id')
         user = User.query.filter_by(paypal_subscription_id=subscription_id).first()
         if user:
