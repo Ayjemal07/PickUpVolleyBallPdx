@@ -109,7 +109,7 @@
                 <strong>Plan Price:</strong> $40.00
                 </p>
                 <p><i class="bi bi-calendar-x"></i> 
-                <strong>Expires On:</strong> {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}
+                <strong>Renews On:</strong> {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}
                 </p>
 
             {% elif not current_user.has_used_free_event %}
@@ -137,6 +137,30 @@
         </div>
     </div>
 </div>
+
+
+{% block page_variables %}
+    var subStatus = {{ session.get('sub_status')|default(None)|tojson|safe }} || {{ request.args.get('sub_status')|tojson|safe }};
+    var userEventCredits = {{ current_user.event_credits|tojson }};
+{% endblock %}
+
+{% block page_scripts %}
+    <script>
+        // --- NEW: Polling JS (similar to events.js) ---
+        if (subStatus === 'pending') {
+            let previousCredits = userEventCredits;
+            const pollInterval = setInterval(async () => {
+                const response = await fetch('/api/user/subscription_status');
+                const data = await response.json();
+                if (data.event_credits > previousCredits) {
+                    clearInterval(pollInterval);
+                    // Display success (e.g., update DOM or reload)
+                    location.reload();  // Refresh to show updates
+                }
+            }, 5000);  // Every 5s
+        }
+    </script>
+{% endblock %}
 
 <script>
 

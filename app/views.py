@@ -433,7 +433,8 @@ def get_user_rsvp(event_id):
 
 @main.route('/subscriptions')
 def subscriptions():
-    return render_template('subscriptions.html', paypal_client_id=PAYPAL_CLIENT_ID)
+    today = date.today()
+    return render_template('subscriptions.html', paypal_client_id=PAYPAL_CLIENT_ID, today=today,)
 
 @main.route('/hosting')
 def hosting():
@@ -623,38 +624,58 @@ def capture_order(order_id):
     return jsonify(order_data)
 
 
-@main.route("/api/paypal/create-subscription", methods=["POST"])
+@main.route('/api/paypal/create-subscription', methods=['POST'])
 @login_required
-def create_paypal_subscription():
-    """
-    Creates a PayPal subscription for the logged-in user.
-    """
-    if not PAYPAL_PLAN_ID:
-        return jsonify({"error": "Subscription plan is not configured on the server."}), 500
-
-    access_token = get_access_token()
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {access_token}",
-    }
-    
-    # The custom_id is crucial. We pass the user's ID to identify them in the webhook.
-    body = {
-        "plan_id": PAYPAL_PLAN_ID,
-        "custom_id": current_user.id,
-        "application_context": {
-            "return_url": url_for('main.events', _external=True) + '?sub_status=pending',  # Add query param here
-            "cancel_url": url_for('main.subscriptions', _external=True)
-        }
-    }
-    
+def create_subscription():
     try:
-        response = requests.post(f"{PAYPAL_BASE}/v1/billing/subscriptions", headers=headers, json=body)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except requests.exceptions.HTTPError as err:
-        print(f"PayPal API Error: {err.response.text}")
-        return jsonify({"error": "Could not create subscription with PayPal."}), 500
+        access_token = get_access_token()
+        url = f"{PAYPAL_BASE}/v1/billing/subscriptions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}"
+        }
+        data = {
+            "plan_id": PAYPAL_PLAN_ID,
+            "subscriber": {
+                "email_address": current_user.email
+            },
+            "application_context": {
+                "return_url": url_for('main.subscriptions', _external=True),
+                "cancel_url": url_for('main.subscriptions', _external=True)
+            }
+        }
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 201:
+            subscription = response.json()
+            current_user.paypal_subscription_id = subscription['id']
+            db.session.commit()
+            return jsonify({'id': subscription['id']}), 201
+        else:
+            return jsonify({'error': 'Failed to create subscription'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/cancel_subscription', methods=['POST'])
+@login_required
+def cancel_subscription():
+    if not current_user.paypal_subscription_id:
+        return jsonify({'error': 'No active subscription found.'}), 400
+    try:
+        access_token = get_access_token()
+        url = f"{PAYPAL_BASE}/v1/billing/subscriptions/{current_user.paypal_subscription_id}/cancel"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}"
+        }
+        response = requests.post(url, headers=headers)
+        if response.status_code == 204:
+            current_user.paypal_subscription_id = None
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Subscription canceled successfully. You can continue using your remaining credits until the expiry date.'}), 200
+        else:
+            return jsonify({'error': 'Failed to cancel subscription. Please try again or contact support.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @main.route('/api/user/subscription_status', methods=['GET'])
@@ -665,75 +686,39 @@ def get_subscription_status():
         'subscription_expiry_date': current_user.subscription_expiry_date.isoformat() if current_user.subscription_expiry_date else None
     })
 
-@main.route("/api/paypal/webhook", methods=["POST"])
+@main.route('/paypal_webhook', methods=['POST'])
 def paypal_webhook():
-    """
-    Listens for notifications from PayPal about subscription events.
-    This is the key to handling automatic renewals.
-    """
-    webhook_data = request.get_json()
-    event_type = webhook_data.get("event_type")
-    resource = webhook_data.get("resource", {})
+    data = request.get_json()
+    event_type = data.get('event_type')
+    resource = data.get('resource')
 
-    print(f"--- PayPal Webhook Received: {event_type} ---")
-
-    # The two most important events are:
-    # 1. BILLING.SUBSCRIPTION.ACTIVATED: When the subscription starts.
-    # 2. PAYMENT.SALE.COMPLETED: For every successful recurring payment.
-
-    if event_type in ["BILLING.SUBSCRIPTION.ACTIVATED", "PAYMENT.SALE.COMPLETED"]:
-        subscription_id = resource.get("id")
-        if event_type == "PAYMENT.SALE.COMPLETED":
-            # For recurring payments, the subscription ID is in a different place
-            subscription_id = resource.get("billing_agreement_id")
-
-        # Get the user ID we stored in `custom_id` when creating the subscription
-        user_id = resource.get("custom_id")
-        if not user_id:
-             # If custom_id is not in the top-level resource, we need to fetch the subscription details
-            try:
-                access_token = get_access_token()
-                headers = {"Authorization": f"Bearer {access_token}"}
-                sub_details_resp = requests.get(f"{PAYPAL_BASE}/v1/billing/subscriptions/{subscription_id}", headers=headers)
-                sub_details_resp.raise_for_status()
-                user_id = sub_details_resp.json().get("custom_id")
-            except Exception as e:
-                print(f"Could not fetch subscription details to find user_id: {e}")
-                return jsonify(status="error", reason="could not find user"), 500
-
-        user = User.query.get(user_id)
+    if event_type in ["BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED"]:
+        subscription_id = resource.get('id')
+        user = User.query.filter_by(paypal_subscription_id=subscription_id).first()
         if not user:
-            print(f"Webhook Error: User with ID {user_id} not found.")
-            return jsonify(status="error", reason="user not found"), 404
+            print(f"Received webhook for unknown subscription ID: {subscription_id}")
+            return jsonify(status="ignored"), 200
 
-        # Grant credits and update expiry date
-        # If the subscription is already active, this adds 30 days to the current expiry date
-        # Otherwise, it sets it to 30 days from now.
-        current_expiry = user.subscription_expiry_date or date.today()
-        if current_expiry < date.today():
+        current_expiry = user.subscription_expiry_date
+        if current_expiry and current_expiry < date.today():
             current_expiry = date.today()
 
         user.event_credits = (user.event_credits or 0) + 4
         user.subscription_expiry_date = current_expiry + timedelta(days=30)
-        user.paypal_subscription_id = subscription_id # Store the subscription ID
         
         db.session.commit()
         
-        # Send a confirmation email only on the first activation
         if event_type == "BILLING.SUBSCRIPTION.ACTIVATED":
             send_subscription_email(user.email)
 
         print(f"Successfully processed webhook for user {user.email}. Credits: {user.event_credits}, Expiry: {user.subscription_expiry_date}")
 
     elif event_type == "BILLING.SUBSCRIPTION.CANCELLED":
-        subscription_id = resource.get("id")
-        # Find the user by their subscription ID and handle cancellation
-        # For now, we'll just log it. You could clear their expiry date here if you want.
+        subscription_id = resource.get('id')
         user = User.query.filter_by(paypal_subscription_id=subscription_id).first()
         if user:
-            # Optionally, you can set their expiry date to now or leave it to run out.
-            # user.subscription_expiry_date = date.today()
-            # db.session.commit()
+            user.paypal_subscription_id = None
+            db.session.commit()
             print(f"Subscription {subscription_id} for user {user.email} was cancelled.")
         else:
             print(f"Received cancellation for unknown subscription ID: {subscription_id}")

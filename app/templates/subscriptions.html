@@ -15,7 +15,6 @@
         width: 100%;
         height: 100%;
         overflow: auto;
-        background-color: rgb(0,0,0);
         background-color: rgba(0,0,0,0.4);
         padding-top: 60px;
     }
@@ -47,119 +46,167 @@
     <section class="subscriptions">
         <h1>Join the Fun!</h1>
         <p class="intro-text">Subscriptions are the best bang for your buck. More options to come!</p>
-
-        <div class="subscription-plans">
-            <div class="plan" id="tier1">
-                <h2>Tier 1</h2>
+        {% if current_user.is_authenticated %}
+            {% set is_active = current_user.event_credits > 0 and current_user.subscription_expiry_date and current_user.subscription_expiry_date >= today %}
+            {% if is_active %}
+                <div class="subscription-details card mb-4">
+                    <div class="card-header">
+                        Your Subscription
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">Status: Active Subscription (Tier 1)</li>
+                            <li class="list-group-item">Remaining Credits: {{ current_user.event_credits }}</li>
+                            <li class="list-group-item">Plan Price: $40.00</li>
+                            <li class="list-group-item">Expires On: {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}</li>
+                        </ul>
+                        {% if current_user.paypal_subscription_id %}
+                            <button id="cancel-subscription-btn" class="btn btn-danger mt-3">Cancel Subscription</button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="tier-card">
+                    <h3>Tier 1</h3>
+                    <p class="price">$40</p>
+                    <p>4 events ($10/ea.)</p>
+                    <button id="subscribe-button" class="btn btn-primary">Sign Up</button>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="tier-card">
+                <h3>Tier 1</h3>
                 <p class="price">$40</p>
-                <p class="details">4 events ($10/ea.)</p>
-                <button class="btn btn-success btn-signup">Sign Up</button>
+                <p>4 events ($10/ea.)</p>
+                <button id="subscribe-button" class="btn btn-primary btn-signup">Sign Up</button>
             </div>
-        </div>
-
+        {% endif %}
         <p class="note">Subscriptions renew monthly, event credits do not roll over each month and cannot be used for guests</p>
     </section>
 </div>
 
 <div id="subscriptionModal" class="modal">
     <div class="modal-content">
-        <span id="closeSubscriptionModal" class="close-button">&times;</span>
+        <span class="close-button" id="closeSubscriptionModal">&times;</span>
         <h2>Confirm Your Subscription</h2>
-        <p>You are purchasing the <strong>Tier 1 Subscription</strong> for $40.00.</p>
+        <p>You are purchasing the Tier 1 Subscription for $40.00.</p>
         <p>This subscription will automatically renew every month.</p>
-        <strong>Note:</strong> Your active Subscription info can be found in your Profile.</p>
-        
-        <div id="subscription-paypal-container" style="margin-top: 20px;"></div>
+        <p>Note: Your active Subscription info can be found in your Profile.</p>
+        <div id="paypal-button-container"></div>
+        <button id="cancel-button" class="btn btn-secondary">Cancel</button>
         <div id="subscription-message"></div>
     </div>
 </div>
 
+{% endblock %}
+
 {% block page_scripts %}
-    <!-- IMPORTANT: Add `vault=true` to the SDK script for subscriptions -->
+    <!-- PayPal SDK -->
     <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=subscription&vault=true"
             onload="console.log('PayPal SDK for Subscriptions loaded successfully')"
             onerror="console.error('Failed to load PayPal SDK')">
     </script>
-{% endblock %}
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const modal = document.getElementById('subscriptionModal');
-    const signUpButton = document.querySelector('.btn-signup');
-    const closeButton = document.getElementById('closeSubscriptionModal');
-    const messageContainer = document.getElementById('subscription-message');
-    let isPayPalRendered = false;
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('subscriptionModal');
+            const signUpButtons = document.querySelectorAll('#subscribe-button');
+            const closeButton = document.getElementById('closeSubscriptionModal');
+            const cancelModalBtn = document.getElementById('cancel-button');
+            const messageContainer = document.getElementById('subscription-message');
+            let isPayPalRendered = false;
 
-    // When the user clicks the "Sign Up" button, open the modal
-    signUpButton.addEventListener('click', () => {
-        modal.style.display = 'block';
-        messageContainer.innerHTML = ''; // Clear previous messages
-
-        // Render PayPal buttons only once when the modal is first opened
-        if (!isPayPalRendered) {
-            renderPayPalButtons();
-            isPayPalRendered = true;
-        }
-    });
-
-    // When the user clicks on <span> (x), close the modal
-    closeButton.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    // When the user clicks anywhere outside of the modal, close it
-    window.addEventListener('click', (event) => {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    });
-
-    function renderPayPalButtons() {
-        paypal.Buttons({
-            // This function is called when the user clicks the PayPal button
-            createSubscription: function(data, actions) {
-                // This calls your new backend endpoint
-                return fetch('/api/paypal/create-subscription', {
-                    method: 'POST',
-                }).then(res => {
-                    if (!res.ok) {
-                        messageContainer.innerHTML = `<p style="color: red;">Error: Could not start the subscription process. Please try again later.</p>`;
-                        throw new Error("Backend failed to create subscription");
+            // Handle Sign Up button clicks
+            signUpButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    modal.style.display = 'block';
+                    messageContainer.innerHTML = ''; // Clear previous messages
+                    if (!isPayPalRendered) {
+                        renderPayPalButtons();
+                        isPayPalRendered = true;
                     }
-                    return res.json();
-                }).then(details => {
-                    // The backend returns the subscription ID from PayPal
-                    return details.id;
                 });
-            },
+            });
 
-            // This function is called after the user approves the subscription in the PayPal popup
-            onApprove: function(data, actions) {
-                console.log('Subscription approved:', data);
-                
-                // Hide the PayPal buttons and show a success message.
-                document.getElementById('subscription-paypal-container').style.display = 'none';
-                messageContainer.innerHTML = `<p style="color: green;">Thank you! Your subscription is being activated. You will be redirected shortly.</p>`;
-
-                // The backend webhook will handle granting credits.
-                // We just redirect the user after a short delay.
-                setTimeout(() => {
-                    window.location.href = "{{ url_for('main.events') }}";
-                }, 3000); // Redirect after 3 seconds
-            },
-
-            onError: function(err) {
-                console.error('PayPal button error:', err);
-                messageContainer.innerHTML = `<p style="color: red;">An error occurred with the payment gateway. Please try again.</p>`;
-            },
-
-            onCancel: function(data) {
-                console.log('Subscription cancelled:', data);
-                messageContainer.innerHTML = `<p>Your subscription request was cancelled.</p>`;
+            // Handle modal close
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
             }
 
-        }).render('#subscription-paypal-container');
-    }
-});
-</script>
+            if (cancelModalBtn) {
+                cancelModalBtn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+            }
+
+            // Close modal when clicking outside
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Handle Cancel Subscription button
+            const cancelBtn = document.getElementById('cancel-subscription-btn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', async function() {
+                    if (confirm('Are you sure you want to cancel your subscription? You will retain access until the current expiry date.')) {
+                        try {
+                            const response = await fetch('/cancel_subscription', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                // Rely on backend flash message instead of alert
+                                location.reload(); // Reload to update UI and show flash message
+                            } else {
+                                alert(data.error); // Fallback to alert if flash message fails
+                            }
+                        } catch (error) {
+                            alert('An error occurred. Please try again.');
+                        }
+                    }
+                });
+            }
+
+            function renderPayPalButtons() {
+                paypal.Buttons({
+                    createSubscription: function(data, actions) {
+                        return fetch('/api/paypal/create-subscription', {
+                            method: 'POST',
+                        }).then(res => {
+                            if (!res.ok) {
+                                messageContainer.innerHTML = `<p style="color: red;">Error: Could not start the subscription process. Please try again later.</p>`;
+                                throw new Error("Backend failed to create subscription");
+                            }
+                            return res.json();
+                        }).then(details => {
+                            return details.id;
+                        });
+                    },
+                    onApprove: function(data, actions) {
+                        console.log('Subscription approved:', data);
+                        document.getElementById('paypal-button-container').style.display = 'none';
+                        messageContainer.innerHTML = `<p style="color: green;">Thank you! Your subscription is being activated. You will be redirected shortly.</p>`;
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('main.events') }}?sub_status=pending";
+                        }, 3000);
+                    },
+                    onError: function(err) {
+                        console.error('PayPal button error:', err);
+                        messageContainer.innerHTML = `<p style="color: red;">An error occurred with the payment gateway. Please try again.</p>`;
+                    },
+                    onCancel: function(data) {
+                        console.log('Subscription cancelled:', data);
+                        messageContainer.innerHTML = `<p>Your subscription request was cancelled.</p>`;
+                    }
+                }).render('#paypal-button-container');
+            }
+        });
+    </script>
 {% endblock %}
