@@ -70,7 +70,7 @@
                     <h3>Tier 1</h3>
                     <p class="price">$40</p>
                     <p>4 events ($10/ea.)</p>
-                    <button id="subscribe-button" class="btn btn-primary">Sign Up</button>
+                    <button class="btn btn-primary btn-signup">Sign Up</button>
                 </div>
             {% endif %}
         {% else %}
@@ -78,7 +78,7 @@
                 <h3>Tier 1</h3>
                 <p class="price">$40</p>
                 <p>4 events ($10/ea.)</p>
-                <button id="subscribe-button" class="btn btn-primary btn-signup">Sign Up</button>
+                <button class="btn btn-primary btn-signup">Sign Up</button>
             </div>
         {% endif %}
         <p class="note">Subscriptions renew monthly, event credits do not roll over each month and cannot be used for guests</p>
@@ -110,7 +110,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const modal = document.getElementById('subscriptionModal');
-            const signUpButtons = document.querySelectorAll('#subscribe-button');
+            const signUpButtons = document.querySelectorAll('.btn-signup');
             const closeButton = document.getElementById('closeSubscriptionModal');
             const cancelModalBtn = document.getElementById('cancel-button');
             const messageContainer = document.getElementById('subscription-message');
