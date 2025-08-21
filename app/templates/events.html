@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 {% extends "base.html" %}
 
 {% block title %}Events{% endblock %}
@@ -405,3 +406,4 @@
     var subStatus = {{ request.args.get('sub_status')|tojson|safe }};
 
 {% endblock %}
+ 

@@ -1,7 +1,7 @@
-{% if not embedded %}
-    {% extends "base.html" %}
-    {% block title %}Subscriptions - Pick Up Volleyball PDX{% endblock %}
-{% endif %}
+
+<!DOCTYPE html>
+{% extends "base.html" %}
+{% block title %}Subscriptions - Pick Up Volleyball PDX{% endblock %}
 
 {% block content %}
 <style>
@@ -40,6 +40,26 @@
         text-decoration: none;
         cursor: pointer;
     }
+
+    .subscription-details {
+        max-width: 400px;
+        margin: 20px auto; /* Centers the card on the page */
+        width: 100%;
+    }
+
+    /* Basic styles for the modal - you can move this to your main CSS file */
+    .modal {
+        display: none; 
+        position: fixed; 
+        z-index: 1001; 
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+        padding-top: 60px;
+    }
 </style>
 
 <div class="full-width-background-subscriptions">
@@ -58,27 +78,47 @@
                             <li class="list-group-item">Status: Active Subscription (Tier 1)</li>
                             <li class="list-group-item">Remaining Credits: {{ current_user.event_credits }}</li>
                             <li class="list-group-item">Plan Price: $40.00</li>
-                            <li class="list-group-item">Expires On: {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}</li>
+
+                            {# Check if the subscription is set to renew or has been canceled #}
+                            {% if current_user.paypal_subscription_id %}
+                                <li class="list-group-item">
+                                    <strong>Renews On:</strong> {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}
+                                </li>
+                            {% else %}
+                                <li class="list-group-item">
+                                    <strong style="color: #dc3545;">Benefits Expire On:</strong> {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}
+                                </li>
+                            {% endif %}
                         </ul>
+
+                        {# Show the cancel button or the canceled status message #}
                         {% if current_user.paypal_subscription_id %}
                             <button id="cancel-subscription-btn" class="btn btn-danger mt-3">Cancel Subscription</button>
+                        {% else %}
+                            <p class="text-muted mt-3" style="font-size: 0.9rem;">
+                                Your subscription has been canceled and will not renew. You can sign up again after your benefits expire.
+                            </p>
                         {% endif %}
                     </div>
                 </div>
             {% else %}
-                <div class="tier-card">
-                    <h3>Tier 1</h3>
-                    <p class="price">$40</p>
-                    <p>4 events ($10/ea.)</p>
-                    <button class="btn btn-primary btn-signup">Sign Up</button>
+                <div class="subscription-plans">
+                    <div class="plan">
+                        <h2>Tier 1</h2>
+                        <p class="price">$40</p>
+                        <p class="details">4 events ($10/ea.)</p>
+                        <button class="btn btn-success btn-signup">Sign Up</button>
+                    </div>
                 </div>
             {% endif %}
         {% else %}
-            <div class="tier-card">
-                <h3>Tier 1</h3>
-                <p class="price">$40</p>
-                <p>4 events ($10/ea.)</p>
-                <button class="btn btn-primary btn-signup">Sign Up</button>
+            <div class="subscription-plans">
+                <div class="plan">
+                    <h2>Tier 1</h2>
+                    <p class="price">$40</p>
+                    <p class="details">4 events ($10/ea.)</p>
+                    <button class="btn btn-success btn-signup">Sign Up</button>
+                </div>
             </div>
         {% endif %}
         <p class="note">Subscriptions renew monthly, event credits do not roll over each month and cannot be used for guests</p>

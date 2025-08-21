@@ -169,7 +169,7 @@ function getActionButtonHTML(event) {
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    if (subStatus === 'pending') {
+    if (typeof subStatus !== 'undefined' && subStatus === 'pending') {
         // Optional: Show a loading indicator (add this HTML to events.html if needed, or use alertDiv from displayFlashMessage)
         const loadingMessage = document.createElement('div');
         loadingMessage.className = 'alert alert-warning';
