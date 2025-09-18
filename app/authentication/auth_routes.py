@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, redirect, url_for, flash, session
 from app.forms import UserLoginForm, UserRegistrationForm
-from ..models import User, db
+from ..models import User, Subscription, db
 from flask_login import login_user, logout_user, login_required
 from flask import request
 from itsdangerous import URLSafeTimedSerializer
@@ -429,13 +429,20 @@ def profile():
             else:
                 flash('Please enter a new password.', 'error')
             return redirect(url_for('auth.profile'))
+        
+    # Fetch all active subscriptions for the current user
+    active_subscriptions = Subscription.query.filter(
+        Subscription.user_id == current_user.id,
+        Subscription.status == 'active',
+        Subscription.expiry_date >= date.today()
+    ).all()
 
     # For a GET request, pre-populate the (disabled) name fields
     form.first_name.data = current_user.first_name
     form.last_name.data = current_user.last_name
     today = date.today()
 
-    return render_template('profile.html', form=form, today=today)
+    return render_template('profile.html', form=form, today=today, active_subscriptions=active_subscriptions)
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])

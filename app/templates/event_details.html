@@ -116,6 +116,12 @@
         <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
         <div id="rsvp-action-container" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
         <div id="paypal-container" style="margin-top: 15px;"></div>
+
+        <div id="notGoingContainer" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px; text-align: center;">
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">No longer able to make it?</p>
+            <button type="button" id="notGoingBtn" class="btn btn-danger">Not Going</button>
+        </div>
+        
         <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
     </div>
 </div>
@@ -136,6 +142,6 @@
         var userRole = {{ user_role|default('user')|tojson }};
         var userHasFreeEvent = {{ user_has_free_event|tojson }};
         var userEventCredits = {{ user_event_credits|tojson }};
-        var userSubscriptionExpiryDate = {{ user_subscription_expiry_date|tojson }};
+        var hasActiveSubscription = {{ has_active_subscription|tojson }}; 
         //var currentEventData = {{ event_data|tojson|safe }};
 {% endblock %}

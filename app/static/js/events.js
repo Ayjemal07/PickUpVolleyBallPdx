@@ -12,11 +12,7 @@ function stripHtml(html) {
 }
 
 function isSubscriptionActive() {
-    if (!userSubscriptionExpiryDate) return true; // If no expiry date, credits are valid
-    // Compare today's date with the expiry date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to the start of the day
-    return new Date(userSubscriptionExpiryDate) >= today;
+    return hasActiveSubscription;
 }
 
 
@@ -749,6 +745,8 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         const guestIncrementBtn = document.getElementById('guestIncrement');
         const editGuestPrompt = document.getElementById('editGuestPrompt');
         const capacityInfo = document.getElementById('capacityInfo'); // Get the new element
+        const notGoingContainer = document.getElementById('notGoingContainer');
+        const notGoingBtn = document.getElementById('notGoingBtn');
 
 
         let currentTicketPrice = 0;
@@ -986,6 +984,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 rsvpEventInfo.innerHTML = `When: ${eventTime}<br>Where: ${eventLocation}`;
                 editGuestPrompt.textContent = `Are you bringing someone? (Max: ${currentGuestLimit})`;
                 capacityInfo.textContent = `(${spotsLeftInEvent} spot${spotsLeftInEvent !== 1 ? 's' : ''} left in this event)`;
+                if (notGoingContainer) notGoingContainer.style.display = 'none';
 
 
                 guestCountSpan.textContent = '0';
@@ -1058,6 +1057,8 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     rsvpEventInfo.innerHTML = `You (${rsvpData.first_name} ${rsvpData.last_name}) are already going with <span id="currentGuestsDisplay">${initialGuestCount}</span> guests.`;
                     editGuestPrompt.textContent = `Change number of guests (Max: ${currentGuestLimit}):`;
 
+                    if (notGoingContainer) notGoingContainer.style.display = 'block';
+
                     guestCountSpan.textContent = initialGuestCount;
                     updatePriceAndPayPal(currentEventId, initialGuestCount);
 
@@ -1094,6 +1095,81 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 updateGuestButtonsState(count, currentSpotsLeft, currentGuestLimit);
             }
         };
+
+        
+        // --- New Reusable Confirmation Modal Logic ---
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationMessage = document.getElementById('confirmationMessage');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+
+        let onConfirmCallback = null;
+
+        function showConfirmationModal(message, onConfirm) {
+            onConfirmCallback = onConfirm;
+            confirmationMessage.textContent = message;
+            if (confirmationModal) confirmationModal.style.display = 'block';
+            // Reset button state
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = 'Confirm';
+        }
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                // Provide visual feedback and prevent multiple clicks
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+                
+                if (onConfirmCallback) {
+                    onConfirmCallback();
+                }
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                if (confirmationModal) confirmationModal.style.display = 'none';
+                onConfirmCallback = null; // Clear callback
+            });
+        }
+
+        if (notGoingBtn) {
+            notGoingBtn.addEventListener('click', function() {
+                const message = "You and your guests (if any) will not be refunded. This will remove you from this event.";
+                
+                showConfirmationModal(message, () => {
+                    if (!currentEventId) {
+                        alert('Error: Event ID not found.');
+                        if (confirmationModal) confirmationModal.style.display = 'none';
+                        return;
+                    }
+
+                    fetch(`/api/rsvp/delete/${currentEventId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            sessionStorage.setItem('flashMessage', data.message);
+                            sessionStorage.setItem('flashEventId', currentEventId);
+                            window.location.reload();
+                        } else {
+                            alert('Error: ' + (data.error || 'Could not cancel RSVP.'));
+                            // Hide modal on error
+                            if (confirmationModal) confirmationModal.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error canceling RSVP:', error);
+                        alert('An unexpected error occurred. Please try again.');
+                        // Hide modal on error
+                        if (confirmationModal) confirmationModal.style.display = 'none';
+                    });
+                });
+            });
+        }
+
 
         // Close RSVP modal
         document.getElementById('closeRsvpModal').addEventListener('click', function () {

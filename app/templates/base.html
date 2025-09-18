@@ -95,11 +95,20 @@
             </div>
         </div>
 
+        <div id="confirmationModal" class="modal">
+            <div class="modal-content" style="max-width: 450px; text-align: center;">
+                <h2 id="confirmationTitle" style="margin-bottom: 15px;">Are you sure?</h2>
+                <p id="confirmationMessage" style="margin-bottom: 25px;"></p>
+                <div class="confirmation-buttons" style="display: flex; justify-content: center; gap: 15px;">
+                    <button id="confirmBtn" class="btn btn-danger">Confirm</button>
+                    <button id="cancelBtn" class="btn btn-grey">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         {% block scripts %}
             {% block page_scripts %}{% endblock %}
         {% endblock %}
-
-        <script src="{{ url_for('static', filename='js/events.js') }}"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
@@ -112,7 +121,7 @@
                 var userRole = 'guest';
                 var userHasFreeEvent = false;
                 var userEventCredits = 0;
-                var userSubscriptionExpiryDate = null;
+                var hasActiveSubscription = false; 
                 var upcomingEventsData = [];
                 var pastEventsData = [];
                 var calendarEventsData = [];

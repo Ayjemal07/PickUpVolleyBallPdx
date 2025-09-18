@@ -43,11 +43,8 @@ class User(UserMixin, db.Model):
 
     has_used_free_event = db.Column(db.Boolean, default=False, nullable=False)
     event_credits = db.Column(db.Integer, default=0, nullable=False)
-    subscription_expiry_date = db.Column(db.Date, nullable=True)
 
-    paypal_subscription_id = db.Column(db.String(255), nullable=True) 
-
-
+    subscriptions = db.relationship('Subscription', back_populates='user', lazy=True, cascade="all, delete-orphan")
 
 
     def __init__(self, email, first_name, last_name, role, password='', token='', g_auth_verify=False):
@@ -61,8 +58,6 @@ class User(UserMixin, db.Model):
         # New users start with eligibility for one free event
         self.has_used_free_event = False
         self.event_credits = 0
-        self.subscription_expiry_date = None
-        self.paypal_subscription_id = None
 
     def set_token(self, length):
         return secrets.token_hex(length)
@@ -117,3 +112,21 @@ class EventAttendee(db.Model):
 
     user = db.relationship('User', backref='attendances')
     event = db.relationship('Event', back_populates='attendees')
+
+
+# Add to models.py
+
+class Subscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    paypal_subscription_id = db.Column(db.String(255), unique=True, nullable=False)
+    tier = db.Column(db.Integer, nullable=False)  # e.g., 1 or 2
+    credits_per_month = db.Column(db.Integer, nullable=False) # e.g., 4 or 8
+    status = db.Column(db.String(50), default='active', nullable=False)  # 'active' or 'canceled'
+    expiry_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', back_populates='subscriptions')
+
+    def __repr__(self):
+        return f'<Subscription {self.id} - Tier {self.tier} for User {self.user_id}>'

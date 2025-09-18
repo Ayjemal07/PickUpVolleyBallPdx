@@ -64,7 +64,6 @@ main {
     position: sticky;
     top: 0;
     z-index: 1000;
-    background-image: url('/static/images/placeholdR.jpg'); /* Add topographic pattern */
     background-repeat: no-repeat;
     background-size: cover;
     border-top: 1px solid rgba(0, 0, 0, 1); /* Darker black top border */
@@ -2151,3 +2150,4 @@ html, body {
     background-color: #5a6268; /* A slightly darker gray for hover */
     color: white;
 }
+

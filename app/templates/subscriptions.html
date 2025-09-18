@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 {% extends "base.html" %}
 {% block title %}Subscriptions - Pick Up Volleyball PDX{% endblock %}
 
 {% block content %}
 <style>
-    /* Basic styles for the modal - you can move this to your main CSS file */
+    /* You can move these styles to your main CSS file */
     .modal {
         display: none; 
         position: fixed; 
@@ -40,25 +39,18 @@
         text-decoration: none;
         cursor: pointer;
     }
-
-    .subscription-details {
-        max-width: 400px;
-        margin: 20px auto; /* Centers the card on the page */
+    .subscription-details-card {
+        max-width: 500px;
+        margin: 20px auto;
         width: 100%;
     }
-
-    /* Basic styles for the modal - you can move this to your main CSS file */
-    .modal {
-        display: none; 
-        position: fixed; 
-        z-index: 1001; 
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0,0,0,0.4);
-        padding-top: 60px;
+    .upgrade-add-note {
+        font-size: 0.8rem;
+        color: #6c757d; /* Bootstrap's text-muted color */
+        margin-top: 5px;
+    }
+    .plan-actions .btn {
+        margin: 5px;
     }
 </style>
 
@@ -66,101 +58,152 @@
     <section class="subscriptions">
         <h1>Join the Fun!</h1>
         <p class="intro-text">Subscriptions are the best bang for your buck. More options to come!</p>
-        {% if current_user.is_authenticated %}
-            {% set is_active = current_user.event_credits > 0 and current_user.subscription_expiry_date and current_user.subscription_expiry_date >= today %}
-            {% if is_active %}
-                <div class="subscription-details card mb-4">
+
+        {# =============================================================== #}
+        {# DYNAMIC ACTIVE SUBSCRIPTIONS DISPLAY #}
+        {# =============================================================== #}
+        
+        {# In your backend (views.py), you'll need to pass these variables:
+           - subscriptions: A list of active subscription objects for the user.
+           - total_monthly_credits: The sum of credits from all active subscriptions.
+           - has_tier_1: Boolean flag if user has an active Tier 1 sub.
+           - has_tier_2: Boolean flag if user has an active Tier 2 sub.
+        #}
+
+        {% if current_user.is_authenticated and subscriptions %}
+            <div class="active-subscriptions-summary mb-4">
+                <h3 style="text-align: center;">Your Subscriptions</h3>
+                <div class="card subscription-details-card">
                     <div class="card-header">
-                        Your Subscription
+                        <strong>Total Credit Balance: {{ total_monthly_credits }}</strong>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">Status: Active Subscription (Tier 1)</li>
-                            <li class="list-group-item">Remaining Credits: {{ current_user.event_credits }}</li>
-                            <li class="list-group-item">Plan Price: $40.00</li>
-
-                            {# Check if the subscription is set to renew or has been canceled #}
-                            {% if current_user.paypal_subscription_id %}
-                                <li class="list-group-item">
-                                    <strong>Renews On:</strong> {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}
-                                </li>
+                    <ul class="list-group list-group-flush">
+                        {% for sub in subscriptions %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Tier {{ sub.tier }}</strong> ({{ sub.credits }} credits/mo)
+                                <br>
+                                <small class="text-muted">
+                                    {% if sub.status == 'active' %}
+                                        Renews on: {{ sub.renews_on.strftime('%B %d, %Y') }}
+                                    {% else %}
+                                        <span class="text-danger">Expires on: {{ sub.expires_on.strftime('%B %d, %Y') }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% if sub.status == 'active' %}
+                            <button class="btn btn-sm btn-outline-danger cancel-subscription-btn" data-sub-id="{{ sub.id }}" data-tier="{{ sub.tier }}">Cancel</button>
                             {% else %}
-                                <li class="list-group-item">
-                                    <strong style="color: #dc3545;">Benefits Expire On:</strong> {{ current_user.subscription_expiry_date.strftime('%B %d, %Y') }}
-                                </li>
+                            <span class="badge bg-secondary">Canceled</span>
                             {% endif %}
-                        </ul>
-
-                        {# Show the cancel button or the canceled status message #}
-                        {% if current_user.paypal_subscription_id %}
-                            <button id="cancel-subscription-btn" class="btn btn-danger mt-3">Cancel Subscription</button>
-                        {% else %}
-                            <p class="text-muted mt-3" style="font-size: 0.9rem;">
-                                Your subscription has been canceled and will not renew. You can sign up again after your benefits expire.
-                            </p>
-                        {% endif %}
-                    </div>
-                </div>
-            {% else %}
-                <div class="subscription-plans">
-                    <div class="plan">
-                        <h2>Tier 1</h2>
-                        <p class="price">$40</p>
-                        <p class="details">4 events ($10/ea.)</p>
-                        <button class="btn btn-success btn-signup">Sign Up</button>
-                    </div>
-                </div>
-            {% endif %}
-        {% else %}
-            <div class="subscription-plans">
-                <div class="plan">
-                    <h2>Tier 1</h2>
-                    <p class="price">$40</p>
-                    <p class="details">4 events ($10/ea.)</p>
-                    <button class="btn btn-success btn-signup">Sign Up</button>
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         {% endif %}
-        <p class="note">Subscriptions renew monthly, event credits do not roll over each month and cannot be used for guests</p>
+
+
+        {# =============================================================== #}
+        {# DYNAMIC SUBSCRIPTION PLANS & ACTIONS #}
+        {# =============================================================== #}
+
+        <div class="subscription-plans">
+            {% if not has_tier_1 %}
+            <div class="plan">
+                <h2>Tier 1</h2>
+                <p class="price">$40</p>
+                <p class="details">4 events ($10/ea.)</p>
+                <div class="plan-actions">
+                    <button class="btn btn-success btn-signup" data-tier="1">Sign Up</button>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not has_tier_2 %}
+            <div class="plan">
+                <h2>Tier 2</h2>
+                <p class="price">$75</p>
+                <p class="details">8 events ($9.38/ea.)</p>
+                <div class="plan-actions">
+                    {% if has_tier_1 %}
+                        {# User has Tier 1, so show Upgrade and Add options for Tier 2 #}
+                        <button class="btn btn-primary btn-upgrade" data-tier="2">Upgrade</button>
+                        <button class="btn btn-info btn-add" data-tier="2">Add</button>
+                        <p class="upgrade-add-note">'Upgrade' replaces your current subscription, 'Add' will maintain both.</p>
+                    {% else %}
+                        {# User has no subscriptions, so show Sign Up #}
+                        <button class="btn btn-success btn-signup" data-tier="2">Sign Up</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <p class="note">Subscriptions renew monthly, event credits do not roll over each month and cannot be used for guests. <strong>You may have multiple active subscriptions.</strong></p>
     </section>
 </div>
+
+{# =============================================================== #}
+{# MODALS #}
+{# =============================================================== #}
 
 <div id="subscriptionModal" class="modal">
     <div class="modal-content">
         <span class="close-button" id="closeSubscriptionModal">&times;</span>
         <h2>Confirm Your Subscription</h2>
-        <p>You are purchasing the Tier 1 Subscription for $40.00.</p>
+        <p id="modalTierText"></p>
         <p>This subscription will automatically renew every month.</p>
-        <p>Note: Your active Subscription info can be found in your Profile.</p>
         <div id="paypal-button-container"></div>
-        <button id="cancel-button" class="btn btn-secondary">Cancel</button>
         <div id="subscription-message"></div>
     </div>
 </div>
 
+<div id="downgradeModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button" id="closeDowngradeModal">&times;</span>
+        <h2>Are you sure?</h2>
+        <p>You have the option to downgrade your Tier 2 plan to a Tier 1 plan instead of canceling completely.</p>
+        <div class="d-flex justify-content-center gap-2 mt-3">
+            <button id="confirmCancelBtn" class="btn btn-danger">Cancel Subscription</button>
+            <button id="confirmDowngradeBtn" class="btn btn-warning">Downgrade to Tier 1</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block page_scripts %}
-    <!-- PayPal SDK -->
-    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=subscription&vault=true"
-            onload="console.log('PayPal SDK for Subscriptions loaded successfully')"
-            onerror="console.error('Failed to load PayPal SDK')">
-    </script>
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=subscription&vault=true"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const modal = document.getElementById('subscriptionModal');
-            const signUpButtons = document.querySelectorAll('.btn-signup');
-            const closeButton = document.getElementById('closeSubscriptionModal');
-            const cancelModalBtn = document.getElementById('cancel-button');
+            // Modal Elements
+            const subModal = document.getElementById('subscriptionModal');
+            const downgradeModal = document.getElementById('downgradeModal');
+            const closeSubModal = document.getElementById('closeSubscriptionModal');
+            const closeDowngradeModal = document.getElementById('closeDowngradeModal');
             const messageContainer = document.getElementById('subscription-message');
+            const modalTierText = document.getElementById('modalTierText');
+
+            let selectedTier = null;
+            let selectedSubToCancel = null;
             let isPayPalRendered = false;
 
-            // Handle Sign Up button clicks
-            signUpButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    modal.style.display = 'block';
-                    messageContainer.innerHTML = ''; // Clear previous messages
+            // --- Event Listeners for Sign Up / Add / Upgrade ---
+            document.querySelectorAll('.btn-signup, .btn-add, .btn-upgrade').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    selectedTier = e.target.getAttribute('data-tier');
+                    const action = e.target.classList.contains('btn-upgrade') ? 'upgrade to' : 'purchase';
+                    
+                    if (selectedTier == '1') {
+                        modalTierText.textContent = `You are about to ${action} the Tier 1 Subscription for $40.00.`;
+                    } else {
+                        modalTierText.textContent = `You are about to ${action} the Tier 2 Subscription for $75.00.`;
+                    }
+                    
+                    subModal.style.display = 'block';
+                    messageContainer.innerHTML = ''; 
+                    
                     if (!isPayPalRendered) {
                         renderPayPalButtons();
                         isPayPalRendered = true;
@@ -168,110 +211,121 @@
                 });
             });
 
-            // Handle modal close
-            if (closeButton) {
-                closeButton.addEventListener('click', () => {
-                    modal.style.display = 'none';
-                });
-            }
+            // --- Event Listeners for Cancellation ---
+            document.querySelectorAll('.cancel-subscription-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const tier = e.target.getAttribute('data-tier');
+                    selectedSubToCancel = e.target.getAttribute('data-sub-id');
 
-            if (cancelModalBtn) {
-                cancelModalBtn.addEventListener('click', () => {
-                    modal.style.display = 'none';
-                });
-            }
-
-            // Close modal when clicking outside
-            window.addEventListener('click', (event) => {
-                if (event.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-
-            // Handle Cancel Subscription button
-            const cancelBtn = document.getElementById('cancel-subscription-btn');
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', async function() {
-                    if (confirm('Are you sure you want to cancel your subscription? You will retain access until the current expiry date.')) {
-                        try {
-                            const response = await fetch('/cancel_subscription', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-                            const data = await response.json();
-                            if (data.success) {
-                                // Rely on backend flash message instead of alert
-                                location.reload(); // Reload to update UI and show flash message
-                            } else {
-                                alert(data.error); // Fallback to alert if flash message fails
-                            }
-                        } catch (error) {
-                            alert('An error occurred. Please try again.');
+                    if (tier === '2') {
+                        // Show special downgrade modal for Tier 2
+                        downgradeModal.style.display = 'block';
+                    } else {
+                        // Show standard confirm for Tier 1
+                        if (confirm('Are you sure you want to cancel your subscription? Your credits will remain available until the end of the current billing period.')) {
+                            cancelSubscription(selectedSubToCancel);
                         }
                     }
                 });
-            }
+            });
 
+            // --- Downgrade Modal Button Handlers ---
+            document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+                cancelSubscription(selectedSubToCancel);
+                downgradeModal.style.display = 'none';
+            });
+            
+            document.getElementById('confirmDowngradeBtn').addEventListener('click', () => {
+                // You will need to build a backend endpoint for this
+                // For now, it will just show an alert.
+                alert('Initiating downgrade process for subscription ' + selectedSubToCancel); 
+                // executeDowngrade(selectedSubToCancel); 
+                downgradeModal.style.display = 'none';
+            });
+
+
+            // --- Modal Closing Logic ---
+            closeSubModal.onclick = () => subModal.style.display = 'none';
+            closeDowngradeModal.onclick = () => downgradeModal.style.display = 'none';
+            window.onclick = (event) => {
+                if (event.target == subModal) subModal.style.display = 'none';
+                if (event.target == downgradeModal) downgradeModal.style.display = 'none';
+            };
+
+
+            // --- API Call Functions ---
+            async function cancelSubscription(subscriptionId) {
+                try {
+                    // IMPORTANT: You'll need to update your backend route to accept a subscription ID
+                    const response = await fetch(`/cancel_subscription/${subscriptionId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to cancel subscription.'));
+                    }
+                } catch (error) {
+                    console.error('Cancellation error:', error);
+                    alert('An unexpected error occurred.');
+                }
+            }
+            
+            // --- PayPal Button Rendering ---
             function renderPayPalButtons() {
                 paypal.Buttons({
                     createSubscription: function(data, actions) {
-                        // ... (this part remains the same) ...
-                        return fetch('/api/paypal/create-subscription', {
+                        
+                        // Determine if this is an upgrade action
+                        const actionButton = document.querySelector(`.btn-upgrade[data-tier='${selectedTier}']`);
+                        const isUpgrade = actionButton !== null;
+                        
+                        let fetchUrl;
+                        // Use the new upgrade route if the user clicked "Upgrade"
+                        if (isUpgrade) {
+                            fetchUrl = '/api/subscription/upgrade';
+                        } else {
+                            // Otherwise, use the standard creation route
+                            fetchUrl = '/api/paypal/create-subscription';
+                        }
+
+                        return fetch(fetchUrl, {
                             method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tier: selectedTier })
                         }).then(res => {
                             if (!res.ok) {
-                                messageContainer.innerHTML = `<p style="color: red;">Error: Could not start the subscription process. Please try again later.</p>`;
-                                throw new Error("Backend failed to create subscription");
+                                // Handle errors from the backend
+                                return res.json().then(err => { throw new Error(err.error) });
                             }
                             return res.json();
                         }).then(details => {
-                            return details.id;
+                            return details.id; // Return the new subscription ID to PayPal
+                        }).catch(error => {
+                            // Display the error in the modal
+                            messageContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                            throw error; // Stop the PayPal process
                         });
                     },
                     onApprove: function(data, actions) {
-                        console.log('Subscription approved by user:', data);
-                        messageContainer.innerHTML = `<p style="color: green;">Finalizing your subscription... Please wait.</p>`;
-                        document.getElementById('paypal-button-container').style.display = 'none'; // Hide PayPal buttons
-
-                        // --- NEW LOGIC: Call our new confirmation endpoint ---
+                        // This part does not need to change. 
+                        // The existing confirm-subscription route will handle both new and upgraded subs.
+                        messageContainer.innerHTML = `<p style="color: green;">Finalizing... Please wait.</p>`;
                         fetch('/api/paypal/confirm-subscription', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                subscription_id: data.subscriptionID
-                            })
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ subscription_id: data.subscriptionID })
                         })
                         .then(res => res.json())
                         .then(result => {
                             if (result.success) {
-                                messageContainer.innerHTML = `<p style="color: green;">Success! Your subscription is active. Redirecting...</p>`;
-                                // Redirect to the events page where a success flash message will be shown
-                                setTimeout(() => {
-                                    window.location.href = "{{ url_for('main.events') }}";
-                                }, 2000); // 2-second delay to allow user to read the message
+                                window.location.href = "{{ url_for('main.events') }}";
                             } else {
-                                // Show an error message if the backend confirmation fails
                                 messageContainer.innerHTML = `<p style="color: red;">Error: ${result.error}. Please contact support.</p>`;
                             }
-                        })
-                        .catch(err => {
-                            console.error('Confirmation fetch error:', err);
-                            messageContainer.innerHTML = `<p style="color: red;">A critical error occurred. Please contact us to confirm your subscription status.</p>`;
                         });
-                    },
-                    onError: function(err) {
-                        // ... (this part remains the same) ...
-                        console.error('PayPal button error:', err);
-                        messageContainer.innerHTML = `<p style="color: red;">An error occurred with the payment gateway. Please try again.</p>`;
-                    },
-                    onCancel: function(data) {
-                        // ... (this part remains the same) ...
-                        console.log('Subscription cancelled:', data);
-                        messageContainer.innerHTML = `<p>Your subscription request was cancelled.</p>`;
                     }
                 }).render('#paypal-button-container');
             }

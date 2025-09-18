@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 import uuid 
 from flask_login import current_user
 
-from .models import EventAttendee
+from .models import EventAttendee, Subscription
 from flask_login import current_user, login_required # Import login_required
 from flask_mail import Mail, Message
 mail = Mail()
@@ -33,19 +33,17 @@ main = Blueprint('main', __name__)
 # PayPal credentials
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
-PAYPAL_PLAN_ID = os.getenv("PAYPAL_PLAN_ID") # Make sure to add this to your .env file
-PAYPAL_BASE = "https://api-m.paypal.com" 
+PAYPAL_BASE = "https://api-m.paypal.com"
+PAYPAL_PLAN_ID_TIER1 = os.getenv("PAYPAL_PLAN_ID_TIER1")
+PAYPAL_PLAN_ID_TIER2 = os.getenv("PAYPAL_PLAN_ID_TIER2")
 
 def send_subscription_email(user_email):
     body = """
     Thank you for subscribing to Pick Up Volleyball events, we are excited to have you join and be part of our community! 
-
+    
     You can view and sign up for all events using this link: https://pickupvolleyballpdx.com/events
 
     Subscriptions will renew every 30 days starting from the time of purchase, with 4 new event credits being issued every cycle. Event credits cannot be used for guests, and any unused credits will not roll over. 
-
-    Please note that subscriptions must be managed with Paypal directly, and cannot be canceled/updated from your Pick Up Volleyball Profile. This function will become available in future releases. 
-
     See you out there!
     """
 
@@ -80,7 +78,7 @@ def events():
         # This section remains unchanged...
         title = request.form.get('title')
         description = request.form.get('description')
-        date = request.form.get('date')
+        date_str = request.form.get('date')
         start_time = request.form.get('start_time')
         end_time = request.form.get('end_time')
         location = request.form.get('location')
@@ -107,8 +105,8 @@ def events():
 
         # Create datetime objects for start and end times
         try:
-            start_datetime = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
-            end_datetime = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
+            start_datetime = datetime.strptime(f"{date_str} {start_time}", "%Y-%m-%d %H:%M")
+            end_datetime = datetime.strptime(f"{date_str} {end_time}", "%Y-%m-%d %H:%M")
         except ValueError:
             flash("Invalid date or time format.", "error")
             return redirect(url_for('main.events'))
@@ -130,7 +128,7 @@ def events():
             guest_limit=guest_limit,
             ticket_price=ticket_price,
             max_capacity=max_capacity,
-            date=datetime.strptime(date, "%Y-%m-%d").date(),
+            date=datetime.strptime(date_str, "%Y-%m-%d").date(),
             image_filename=image_filename
         )
         db.session.add(new_event)
@@ -218,15 +216,21 @@ def events():
     all_events_for_calendar = upcoming_events_data + past_events_data
 
     user_has_free_event = False
-    if current_user.is_authenticated and not current_user.has_used_free_event:
-        user_has_free_event = True
-
     user_credits = 0
-    user_expiry_date = None
+    can_use_credits = False # Renamed for clarity
+
     if current_user.is_authenticated:
         user_credits = current_user.event_credits
-        if current_user.subscription_expiry_date:
-            user_expiry_date = current_user.subscription_expiry_date.isoformat()
+        if not current_user.has_used_free_event:
+            user_has_free_event = True
+        
+        # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
+        valid_sub_for_credits = Subscription.query.filter(
+            Subscription.user_id == current_user.id,
+            Subscription.expiry_date >= date.today()
+        ).first()
+        if valid_sub_for_credits:
+            can_use_credits = True
 
     print("PayPal Client ID:", PAYPAL_CLIENT_ID)
     return render_template('events.html', 
@@ -236,8 +240,9 @@ def events():
                            user_role=user_role,
                            user_has_free_event=user_has_free_event,
                            user_event_credits=user_credits,
-                           user_subscription_expiry_date=user_expiry_date,
-                           image_files=image_files,is_authenticated=is_authenticated,
+                           has_active_subscription=can_use_credits,
+                           image_files=image_files,
+                           is_authenticated=is_authenticated,
                            paypal_client_id=PAYPAL_CLIENT_ID)
 
 
@@ -349,8 +354,7 @@ def cancel_event(event_id):
     return jsonify({'message': 'Event canceled successfully'}), 200
 
 
-
-# event_details()
+#event details page
 @main.route('/events/<int:event_id>')
 def event_details(event_id):
     event = Event.query.get_or_404(event_id)
@@ -360,8 +364,6 @@ def event_details(event_id):
     user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
     is_attending = any(a.user_id == user_id for a in attendees)
 
-
-    # Generate Google Maps link
     maps_link = None
     if event.full_address:
         maps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(event.full_address)}"
@@ -388,13 +390,20 @@ def event_details(event_id):
 
     user_has_free_event = False
     user_credits = 0
-    user_expiry_date = None
+    can_use_credits = False # Renamed for clarity
+
     if current_user.is_authenticated:
+        user_credits = current_user.event_credits
         if not current_user.has_used_free_event:
             user_has_free_event = True
-        user_credits = current_user.event_credits
-        if current_user.subscription_expiry_date:
-            user_expiry_date = current_user.subscription_expiry_date.isoformat()
+        
+        # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
+        valid_sub_for_credits = Subscription.query.filter(
+            Subscription.user_id == current_user.id,
+            Subscription.expiry_date >= date.today()
+        ).first()
+        if valid_sub_for_credits:
+            can_use_credits = True
 
     return render_template(
         'event_details.html', 
@@ -405,7 +414,7 @@ def event_details(event_id):
         maps_link=maps_link,
         user_has_free_event=user_has_free_event,
         user_event_credits=user_credits,
-        user_subscription_expiry_date=user_expiry_date,
+        has_active_subscription=can_use_credits, # <-- Pass new variable
         paypal_client_id=PAYPAL_CLIENT_ID,
         is_authenticated=current_user.is_authenticated,
         user_role=current_user.role if current_user.is_authenticated else 'user'
@@ -429,12 +438,6 @@ def get_user_rsvp(event_id):
         }), 200
     else:
         return jsonify({'error': 'RSVP not found for this user and event'}), 404
-
-
-@main.route('/subscriptions')
-def subscriptions():
-    today = date.today()
-    return render_template('subscriptions.html', paypal_client_id=PAYPAL_CLIENT_ID, today=today,)
 
 @main.route('/hosting')
 def hosting():
@@ -470,6 +473,7 @@ def create_order():
     is_edit = data.get("is_edit", False)
     rsvp_id = data.get("rsvp_id")
     initial_guest_count = data.get("initial_guest_count", 0)
+
 
     event = Event.query.get(event_id)
     if not event:
@@ -512,19 +516,18 @@ def create_order():
         # By default, we assume everyone needs to be paid for.
         payable_attendees = requested_quantity
 
-        # Check if the user's own spot is covered by a benefit.
-        # This logic mirrors the frontend checks for precedence.
-        is_subscription_active = user.event_credits > 0 and (user.subscription_expiry_date is None or user.subscription_expiry_date >= date.today())
-        
+        # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
+        valid_sub_for_credits = Subscription.query.filter(
+            Subscription.user_id == user.id,
+            Subscription.expiry_date >= date.today()
+        ).first()
+
         if not user.has_used_free_event:
-            # First free event applies, so charge for one less person (i.e., only guests).
             payable_attendees -= 1
-        elif is_subscription_active:
-            # A subscription credit applies, so charge for one less person.
+        elif valid_sub_for_credits and user.event_credits > 0: # Check if a valid sub exists
             payable_attendees -= 1
             
         payable_attendees = max(0, payable_attendees)
-        
         amount_to_charge = payable_attendees * ticket_price
 
     if amount_to_charge <= 0:
@@ -593,17 +596,16 @@ def capture_order(order_id):
             attendee = EventAttendee(event_id=event_id, user_id=user.id, guest_count=new_guest_count)
             db.session.add(attendee)
 
-            # --- NEW & CORRECTED BENEFIT LOGIC ---
-            # Determine which benefit was used to cover the user's own spot.
-            is_subscription_active = user.event_credits > 0 and (user.subscription_expiry_date is None or user.subscription_expiry_date >= date.today())
-            
-            # Priority 1: Was the first free event used?
+            # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
+            valid_sub_for_credits = Subscription.query.filter(
+                Subscription.user_id == user.id,
+                Subscription.expiry_date >= date.today()
+            ).first()
+
             if not user.has_used_free_event:
                 user.has_used_free_event = True
-            # Priority 2: If not, was a subscription credit used for their spot?
-            elif is_subscription_active:
-                user.event_credits -= 1 # Decrement the credit balance
-            # --- END OF CORRECTED LOGIC ---
+            elif valid_sub_for_credits and user.event_credits > 0: # Check if a valid sub exists
+                user.event_credits -= 1
 
             success_message = f"You're confirmed for {event.title}! See you there!"
         # Recalculate total RSVP count for the event
@@ -623,45 +625,102 @@ def capture_order(order_id):
 
     return jsonify(order_data)
 
+@main.route('/subscriptions')
+@login_required
+def subscriptions():
+    today = date.today()
+    
+    # Fetch all of the user's subscriptions
+    user_subscriptions = Subscription.query.filter_by(user_id=current_user.id).order_by(Subscription.tier).all()
+
+    # Determine which active tiers the user has
+    active_subs = [sub for sub in user_subscriptions if sub.status == 'active']
+    has_tier_1 = any(sub.tier == 1 for sub in active_subs)
+    has_tier_2 = any(sub.tier == 2 for sub in active_subs)
+
+    # Prepare subscription data for the template
+    # This matches the structure expected by the new subscriptions.html
+    subscriptions_data = []
+    for sub in user_subscriptions:
+        subscriptions_data.append({
+            'id': sub.id,
+            'tier': sub.tier,
+            'status': sub.status,
+            'credits': sub.credits_per_month,
+            # Use 'renews_on' or 'expires_on' based on status
+            'renews_on': sub.expiry_date if sub.status == 'active' else None,
+            'expires_on': sub.expiry_date if sub.status == 'canceled' else None,
+        })
+
+    return render_template(
+        'subscriptions.html',
+        paypal_client_id=PAYPAL_CLIENT_ID,
+        today=today,
+        subscriptions=subscriptions_data, # Pass the list of subscriptions
+        total_monthly_credits=current_user.event_credits, # Pass the central credit balance
+        has_tier_1=has_tier_1,
+        has_tier_2=has_tier_2
+    )
+
 
 @main.route("/api/paypal/confirm-subscription", methods=["POST"])
 @login_required
 def confirm_subscription():
-    """
-    Synchronously confirms a subscription after frontend approval,
-    and applies credits to the user's account immediately.
-    """
     data = request.get_json()
-    subscription_id = data.get('subscription_id')
+    paypal_sub_id = data.get('subscription_id')
 
-    if not subscription_id:
+    if not paypal_sub_id:
         return jsonify({'error': 'Subscription ID is missing.'}), 400
 
-    # Security check: Ensure the subscription ID from PayPal matches the one stored on the user
-    if current_user.paypal_subscription_id != subscription_id:
-        return jsonify({'error': 'Subscription ID mismatch.'}), 403
-
     try:
-        # Prevent double-crediting if the webhook arrives first
-        if current_user.event_credits > 0 and current_user.subscription_expiry_date and current_user.subscription_expiry_date > date.today():
-            print(f"User {current_user.email} subscription is already active. No action taken.")
-            return jsonify({'success': True, 'message': 'Subscription already active.'}), 200
+        # Check if this subscription already exists in our DB to prevent duplicates
+        existing_sub = Subscription.query.filter_by(paypal_subscription_id=paypal_sub_id).first()
+        if existing_sub:
+            return jsonify({'success': True, 'message': 'Subscription already confirmed.'}), 200
 
-        # Apply subscription benefits immediately
-        current_user.event_credits = 4
-        current_user.subscription_expiry_date = date.today() + timedelta(days=30)
+        # Fetch subscription details from PayPal to get the Plan ID, which tells us the tier
+        access_token = get_access_token()
+        headers = {"Authorization": f"Bearer {access_token}"}
+        sub_details_response = requests.get(f"{PAYPAL_BASE}/v1/billing/subscriptions/{paypal_sub_id}", headers=headers)
+        sub_details_response.raise_for_status()
+        paypal_sub_data = sub_details_response.json()
+        plan_id = paypal_sub_data.get('plan_id')
+
+        # Determine tier and credits from the Plan ID
+        if plan_id == PAYPAL_PLAN_ID_TIER1:
+            tier = 1
+            credits_to_add = 4
+        elif plan_id == PAYPAL_PLAN_ID_TIER2:
+            tier = 2
+            credits_to_add = 8
+        else:
+            return jsonify({'error': 'Unknown subscription plan from PayPal.'}), 400
+
+        # Create the new subscription record in our database
+        new_sub = Subscription(
+            user_id=current_user.id,
+            paypal_subscription_id=paypal_sub_id,
+            tier=tier,
+            credits_per_month=credits_to_add,
+            status='active',
+            expiry_date=date.today() + timedelta(days=30)
+        )
+        db.session.add(new_sub)
+
+        # Add credits to the user's central balance
+        current_user.event_credits += credits_to_add
+        
         db.session.commit()
         
         # Send the confirmation email
         send_subscription_email(current_user.email)
         
-        print(f"Successfully activated subscription for {current_user.email}.")
         flash('Your subscription is now active! Thank you for joining.', 'success')
         return jsonify({'success': True, 'message': 'Subscription activated successfully!'}), 200
 
     except Exception as e:
-        traceback.print_exc()
         db.session.rollback()
+        traceback.print_exc()
         return jsonify({'error': f'An internal server error occurred: {str(e)}'}), 500
 
 
@@ -669,6 +728,18 @@ def confirm_subscription():
 @login_required
 def create_subscription():
     try:
+        # 1. Get tier from the frontend request
+        request_data = request.get_json()
+        tier = request_data.get('tier')
+
+        # 2. Select the correct Plan ID based on the tier
+        if tier == '1':
+            plan_id = PAYPAL_PLAN_ID_TIER1
+        elif tier == '2':
+            plan_id = PAYPAL_PLAN_ID_TIER2
+        else:
+            return jsonify({'error': 'Invalid subscription tier provided.'}), 400
+        
         access_token = get_access_token()
         url = f"{PAYPAL_BASE}/v1/billing/subscriptions"
         headers = {
@@ -676,7 +747,7 @@ def create_subscription():
             "Authorization": f"Bearer {access_token}"
         }
         data = {
-            "plan_id": PAYPAL_PLAN_ID,
+            "plan_id": plan_id,
             "subscriber": {
                 "email_address": current_user.email
             },
@@ -688,33 +759,42 @@ def create_subscription():
         response = requests.post(url, headers=headers, json=data)
         if response.status_code == 201:
             subscription = response.json()
-            current_user.paypal_subscription_id = subscription['id']
-            db.session.commit()
             return jsonify({'id': subscription['id']}), 201
         else:
             return jsonify({'error': 'Failed to create subscription'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@main.route('/cancel_subscription', methods=['POST'])
+# In views.py, update the cancel_subscription route
+
+@main.route('/cancel_subscription/<int:subscription_id>', methods=['POST'])
 @login_required
-def cancel_subscription():
-    if not current_user.paypal_subscription_id:
-        return jsonify({'error': 'No active subscription found.'}), 400
+def cancel_subscription(subscription_id):
+    # Find the subscription in our database
+    sub_to_cancel = Subscription.query.get(subscription_id)
+
+    # Security check: ensure the sub belongs to the current user
+    if not sub_to_cancel or sub_to_cancel.user_id != current_user.id:
+        return jsonify({'error': 'Subscription not found or you do not have permission to cancel it.'}), 404
+    
+    if sub_to_cancel.status == 'canceled':
+        return jsonify({'error': 'This subscription has already been canceled.'}), 400
+
     try:
+        # Cancel the subscription with PayPal
         access_token = get_access_token()
-        url = f"{PAYPAL_BASE}/v1/billing/subscriptions/{current_user.paypal_subscription_id}/cancel"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {access_token}"
-        }
-        response = requests.post(url, headers=headers)
+        url = f"{PAYPAL_BASE}/v1/billing/subscriptions/{sub_to_cancel.paypal_subscription_id}/cancel"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.post(url, headers=headers, json={'reason': 'User requested cancellation'})
+
         if response.status_code == 204:
-            current_user.paypal_subscription_id = None
+            # Update the status in our database
+            sub_to_cancel.status = 'canceled'
             db.session.commit()
-            return jsonify({'success': True, 'message': 'Subscription canceled successfully. You can continue using your remaining credits until the expiry date.'}), 200
+            flash('Subscription canceled successfully. Your credits remain until the expiry date.', 'success')
+            return jsonify({'success': True}), 200
         else:
-            return jsonify({'error': 'Failed to cancel subscription. Please try again or contact support.'}), 500
+            return jsonify({'error': 'Failed to cancel subscription with PayPal.'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -722,10 +802,74 @@ def cancel_subscription():
 @main.route('/api/user/subscription_status', methods=['GET'])
 @login_required  # Ensure user is logged in (import from flask_login if needed)
 def get_subscription_status():
+    # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
+    valid_sub = Subscription.query.filter(
+        Subscription.user_id == current_user.id,
+        Subscription.expiry_date >= date.today()
+    ).first()
+    
     return jsonify({
         'event_credits': current_user.event_credits,
-        'subscription_expiry_date': current_user.subscription_expiry_date.isoformat() if current_user.subscription_expiry_date else None
+        'has_active_subscription': valid_sub is not None
     })
+
+
+#upgrade subscription:
+@main.route('/api/subscription/upgrade', methods=['POST'])
+@login_required
+def upgrade_subscription():
+    data = request.get_json()
+    target_tier = data.get('tier')
+
+    if target_tier != '2':
+        return jsonify({'error': 'Upgrade path not supported.'}), 400
+
+    try:
+        # Step 1: Find the user's active Tier 1 subscription to cancel it.
+        old_subscription = Subscription.query.filter_by(
+            user_id=current_user.id, 
+            tier=1, 
+            status='active'
+        ).first()
+
+        if not old_subscription:
+            return jsonify({'error': 'No active Tier 1 subscription found to upgrade.'}), 404
+
+        # Step 2: Cancel the old subscription in PayPal to stop future billing.
+        access_token = get_access_token()
+        cancel_url = f"{PAYPAL_BASE}/v1/billing/subscriptions/{old_subscription.paypal_subscription_id}/cancel"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        cancel_response = requests.post(cancel_url, headers=headers, json={'reason': 'User upgraded to a new plan.'})
+        
+        # We proceed even if cancellation fails, but we should log it.
+        if cancel_response.status_code != 204:
+            print(f"Warning: Failed to cancel old PayPal subscription {old_subscription.paypal_subscription_id} during upgrade.")
+
+        # Step 3: Update the old subscription's status in our database.
+        old_subscription.status = 'canceled'
+        db.session.commit()
+
+        # Step 4: Create a new PayPal subscription for Tier 2.
+        # This part is similar to your existing create_subscription route.
+        create_url = f"{PAYPAL_BASE}/v1/billing/subscriptions"
+        create_data = {
+            "plan_id": PAYPAL_PLAN_ID_TIER2, # Explicitly use Tier 2 plan
+            "subscriber": {"email_address": current_user.email},
+            "application_context": {
+                "return_url": url_for('main.subscriptions', _external=True),
+                "cancel_url": url_for('main.subscriptions', _external=True)
+            }
+        }
+        create_response = requests.post(create_url, headers=headers, json=create_data)
+        create_response.raise_for_status() # Raise an error if this fails
+        
+        new_paypal_sub = create_response.json()
+        return jsonify({'id': new_paypal_sub['id']}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({'error': f'An error occurred during the upgrade process: {str(e)}'}), 500
 
 
 @main.route('/paypal_webhook', methods=['POST'])
@@ -734,48 +878,39 @@ def paypal_webhook():
     event_type = data.get('event_type')
     resource = data.get('resource')
 
-    # This condition handles renewals and the initial activation if the instant confirmation fails.
-    if event_type in ["BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED"]:
-        subscription_id = resource.get('id')
-        user = User.query.filter_by(paypal_subscription_id=subscription_id).first()
-        if not user:
-            print(f"Received webhook for unknown subscription ID: {subscription_id}")
-            return jsonify(status="ignored"), 200
+    if not resource or not event_type:
+        return jsonify(status="ignored", reason="Missing resource or event_type"), 200
 
-        # --- MODIFIED LOGIC ---
-        # For a new activation, only apply credits if they haven't been applied by the synchronous route yet.
-        if event_type == "BILLING.SUBSCRIPTION.ACTIVATED":
-            if user.event_credits == 0:
-                user.event_credits = 4
-                user.subscription_expiry_date = date.today() + timedelta(days=30)
-                db.session.commit()
-                send_subscription_email(user.email)
-                print(f"Webhook processed FIRST-TIME activation for {user.email}.")
-            else:
-                print(f"Webhook noted ACTIVATION for {user.email}, but credits were already present. Synchronous confirmation likely succeeded.")
-        
-        # For renewals (or updates), add credits as before.
-        elif event_type == "BILLING.SUBSCRIPTION.UPDATED":
-            current_expiry = user.subscription_expiry_date
-            if not current_expiry or current_expiry < date.today():
-                 current_expiry = date.today()
-            
-            user.event_credits = (user.event_credits or 0) + 4
-            user.subscription_expiry_date = current_expiry + timedelta(days=30)
-            db.session.commit()
-            print(f"Webhook processed RENEWAL for {user.email}. Credits: {user.event_credits}, Expiry: {user.subscription_expiry_date}")
+    subscription_id = resource.get('id')
+    if not subscription_id:
+        return jsonify(status="ignored", reason="Missing subscription ID in resource"), 200
 
+    # Find the subscription in our database, not the user
+    subscription = Subscription.query.filter_by(paypal_subscription_id=subscription_id).first()
+    if not subscription:
+        print(f"Received webhook for unknown subscription ID: {subscription_id}")
+        return jsonify(status="ignored"), 200
+
+    user = subscription.user
+
+    if event_type == "BILLING.SUBSCRIPTION.UPDATED" or event_type == "BILLING.SUBSCRIPTION.RE-ACTIVATED":
+        # On renewal, add the subscription's credits to the user's balance
+        # and push the expiry date forward 30 days.
+        user.event_credits += subscription.credits_per_month
+        subscription.expiry_date = date.today() + timedelta(days=30)
+        subscription.status = 'active' # Ensure status is active on renewal
+        db.session.commit()
+        print(f"Webhook processed RENEWAL for {user.email}. Credits: {user.event_credits}")
 
     elif event_type == "BILLING.SUBSCRIPTION.CANCELLED":
-        # ... (Your existing cancellation logic remains unchanged) ...
-        subscription_id = resource.get('id')
-        user = User.query.filter_by(paypal_subscription_id=subscription_id).first()
-        if user:
-            user.paypal_subscription_id = None
-            db.session.commit()
-            print(f"Subscription {subscription_id} for user {user.email} was cancelled.")
-        else:
-            print(f"Received cancellation for unknown subscription ID: {subscription_id}")
+        subscription.status = 'canceled'
+        db.session.commit()
+        print(f"Subscription {subscription_id} for user {user.email} was cancelled via webhook.")
+        
+    elif event_type == "BILLING.SUBSCRIPTION.EXPIRED" or event_type == "BILLING.SUBSCRIPTION.SUSPENDED":
+        subscription.status = 'canceled' # Or another status like 'expired'
+        db.session.commit()
+        print(f"Subscription {subscription_id} for user {user.email} has expired or been suspended.")
 
     return jsonify(status="success"), 200
 
@@ -786,7 +921,6 @@ def rsvp_with_credit():
     data = request.get_json()
     event_id = data.get('event_id')
     user = current_user
-    today = date.today()
 
     event = Event.query.get(event_id)
     if not event:
@@ -798,13 +932,18 @@ def rsvp_with_credit():
     # This flow assumes the user is RSVPing for just themselves (1 person).
     if current_rsvp_count + 1 > event.max_capacity:
         return jsonify({'error': 'Sorry, this event is now full.'}), 400
-
+    
+    # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
+    valid_sub_for_credits = Subscription.query.filter(
+        Subscription.user_id == user.id,
+        Subscription.expiry_date >= date.today()
+    ).first()
 
     if not user.has_used_free_event:
         user.has_used_free_event = True
         message = "Your first free event has been successfully claimed!"
         
-    elif user.event_credits > 0 and (user.subscription_expiry_date is None or user.subscription_expiry_date >= today):
+    elif user.event_credits > 0 and valid_sub_for_credits: # Check if a valid sub exists
         user.event_credits -= 1
         message = f"Successfully RSVP'd using one credit! You have {user.event_credits} credits remaining."
         
@@ -820,6 +959,32 @@ def rsvp_with_credit():
     session['flashEventId'] = event_id
     return jsonify({'success': True, 'message': message}), 200
 
+
+@main.route('/api/rsvp/delete/<int:event_id>', methods=['POST'])
+@login_required
+def delete_rsvp(event_id):
+    user = current_user
+    event = Event.query.get_or_404(event_id)
+
+    # Check if the event is in the past
+    event_end_datetime = datetime.combine(event.date, event.end_time)
+    if event_end_datetime < datetime.now():
+        return jsonify({'error': 'Cannot cancel RSVP for an event that has already passed.'}), 400
+
+    # Find the user's RSVP
+    rsvp = EventAttendee.query.filter_by(event_id=event.id, user_id=user.id).first()
+
+    if not rsvp:
+        return jsonify({'error': 'You are not currently RSVP\'d to this event.'}), 404
+
+    try:
+        db.session.delete(rsvp)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Your RSVP has been successfully canceled.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
 
 
 # Add this new route to your views.py file
