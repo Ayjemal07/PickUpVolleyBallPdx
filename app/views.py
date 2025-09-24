@@ -626,38 +626,40 @@ def capture_order(order_id):
     return jsonify(order_data)
 
 @main.route('/subscriptions')
-@login_required
 def subscriptions():
     today = date.today()
-    
-    # Fetch all of the user's subscriptions
-    user_subscriptions = Subscription.query.filter_by(user_id=current_user.id).order_by(Subscription.tier).all()
-
-    # Determine which active tiers the user has
-    active_subs = [sub for sub in user_subscriptions if sub.status == 'active']
-    has_tier_1 = any(sub.tier == 1 for sub in active_subs)
-    has_tier_2 = any(sub.tier == 2 for sub in active_subs)
-
-    # Prepare subscription data for the template
-    # This matches the structure expected by the new subscriptions.html
     subscriptions_data = []
-    for sub in user_subscriptions:
-        subscriptions_data.append({
-            'id': sub.id,
-            'tier': sub.tier,
-            'status': sub.status,
-            'credits': sub.credits_per_month,
-            # Use 'renews_on' or 'expires_on' based on status
-            'renews_on': sub.expiry_date if sub.status == 'active' else None,
-            'expires_on': sub.expiry_date if sub.status == 'canceled' else None,
-        })
+    total_monthly_credits = 0
+    has_tier_1 = False
+    has_tier_2 = False
+
+    if current_user.is_authenticated:
+        # Fetch all of the user's subscriptions
+        user_subscriptions = Subscription.query.filter_by(user_id=current_user.id).order_by(Subscription.tier).all()
+
+        # Determine which active tiers the user has
+        active_subs = [sub for sub in user_subscriptions if sub.status == 'active']
+        has_tier_1 = any(sub.tier == 1 for sub in active_subs)
+        has_tier_2 = any(sub.tier == 2 for sub in active_subs)
+
+        for sub in user_subscriptions:
+            subscriptions_data.append({
+                'id': sub.id,
+                'tier': sub.tier,
+                'status': sub.status,
+                'credits': sub.credits_per_month,
+                'renews_on': sub.expiry_date if sub.status == 'active' else None,
+                'expires_on': sub.expiry_date if sub.status == 'canceled' else None,
+            })
+        
+        total_monthly_credits = current_user.event_credits
 
     return render_template(
         'subscriptions.html',
         paypal_client_id=PAYPAL_CLIENT_ID,
         today=today,
-        subscriptions=subscriptions_data, # Pass the list of subscriptions
-        total_monthly_credits=current_user.event_credits, # Pass the central credit balance
+        subscriptions=subscriptions_data,
+        total_monthly_credits=total_monthly_credits,
         has_tier_1=has_tier_1,
         has_tier_2=has_tier_2
     )
@@ -985,7 +987,35 @@ def delete_rsvp(event_id):
         db.session.rollback()
         traceback.print_exc()
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+    
 
+@main.route('/api/rsvp/update', methods=['POST'])
+@login_required
+def update_rsvp():
+    data = request.get_json()
+    event_id = data.get('event_id')
+    new_guest_count = data.get('new_guest_count')
+
+    if event_id is None or new_guest_count is None:
+        return jsonify({'error': 'Event ID and new guest count are required.'}), 400
+
+    # Find the existing RSVP for the current user and event
+    rsvp = EventAttendee.query.filter_by(event_id=event_id, user_id=current_user.id).first()
+
+    if not rsvp:
+        return jsonify({'error': 'No existing RSVP found to update.'}), 404
+
+    try:
+        rsvp.guest_count = int(new_guest_count)
+        db.session.commit()
+        return jsonify({
+            'success': True, 
+            'message': 'Your RSVP has been successfully updated!'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
 
 # Add this new route to your views.py file
 

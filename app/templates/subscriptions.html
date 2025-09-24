@@ -176,6 +176,8 @@
     <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=subscription&vault=true"></script>
 
     <script>
+        var isUserAuthenticated = {{ current_user.is_authenticated|tojson }};
+
         document.addEventListener('DOMContentLoaded', function () {
             // Modal Elements
             const subModal = document.getElementById('subscriptionModal');
@@ -190,8 +192,13 @@
             let isPayPalRendered = false;
 
             // --- Event Listeners for Sign Up / Add / Upgrade ---
+            const authModal = document.getElementById('authPromptModal');
             document.querySelectorAll('.btn-signup, .btn-add, .btn-upgrade').forEach(button => {
                 button.addEventListener('click', (e) => {
+                    if (!isUserAuthenticated) {
+                        if(authModal) authModal.style.display = 'block';
+                        return; // Stop the function here
+                    }
                     selectedTier = e.target.getAttribute('data-tier');
                     const action = e.target.classList.contains('btn-upgrade') ? 'upgrade to' : 'purchase';
                     

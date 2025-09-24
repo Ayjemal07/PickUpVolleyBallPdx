@@ -117,12 +117,19 @@
         <div id="rsvp-action-container" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
         <div id="paypal-container" style="margin-top: 15px;"></div>
 
+        <div id="dynamicRsvpMessage" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
+
         <div id="notGoingContainer" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px; text-align: center;">
-            <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">No longer able to make it?</p>
-            <button type="button" id="notGoingBtn" class="btn btn-danger">Not Going</button>
+            <button type="button" id="notGoingBtn" class="btn btn-danger">
+                <i class="bi bi-x-circle"></i> Not Going
+            </button>
         </div>
-        
-        <button type="button" id="closeRsvpModal" class="btn btn-grey">Cancel</button>
+
+        <div id="updateGuestContainer" style="display: none; margin-top: 15px; text-align: center;">
+             <button type="button" id="updateGuestsBtn" class="btn btn-primary">
+                 <i class="bi bi-person-plus"></i> Change Guests
+             </button>
+        </div>        
     </div>
 </div>
 {% endblock %}

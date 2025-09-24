@@ -753,7 +753,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         let currentGuestLimit = 0;
         let currentEventId = null; // Store the event ID being processed
         let isEditingRsvp = false; // Flag to differentiate initial RSVP from edit
-        let initialGuestCount = 0; // Store the guest count before editing for comparison
+        let initialGuestCount = null;
         let currentSpotsLeft = 0;
 
         // New function to enable/disable the guest buttons based on capacity ---
@@ -831,7 +831,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 renderPayPalButtons(eventId, totalAmount);
             }
             // If it's a free event redemption (new RSVP with 0 guests)
-            else if ((userHasFreeEvent || (userEventCredits > 0 && isSubscriptionActive())) && !isEditingRsvp) {
+            else if (!isEditingRsvp && (userHasFreeEvent || (userEventCredits > 0 && isSubscriptionActive()))) {
                 const freeRsvpButton = document.createElement('button');
                 freeRsvpButton.textContent = userHasFreeEvent ? 'Confirm Free RSVP' : `Confirm & Use Credit `;
                 freeRsvpButton.className = 'btn btn-success';
@@ -856,6 +856,75 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                         const result = await response.json();
                         alert(`Error: ${result.error || 'Could not complete registration.'}`);
                         freeRsvpButton.disabled = false; // Re-enable on error
+                    }
+                });
+            }
+            else if (isEditingRsvp && totalAmount <= 0) {
+                const saveChangesBtn = document.createElement('button');
+                saveChangesBtn.textContent = 'Update Guest Count';
+                saveChangesBtn.className = 'btn btn-success';
+
+                // --- NEW: Redesign the modal footer for a cleaner UI ---
+                const notGoingBtn = document.getElementById('notGoingBtn');
+                const footerContainer = document.getElementById('notGoingContainer');
+
+                // Clear the original paypal container since we are moving the button.
+                paypalContainer.innerHTML = ''; 
+                
+                if (footerContainer && notGoingBtn) {
+                    // 1. Clear any existing content (like "No longer able to make it?" text).
+                    footerContainer.innerHTML = '';
+
+                    // 2. Style it as a proper modal footer.
+                    footerContainer.style.display = 'flex';
+                    footerContainer.style.justifyContent = 'space-between';
+                    footerContainer.style.alignItems = 'center';
+                    footerContainer.style.marginTop = '20px';
+                    footerContainer.style.paddingTop = '15px';
+                    footerContainer.style.borderTop = '1px solid #dee2e6';
+                    
+                    // 3. Add the "Not Going" button (destructive action) to the left.
+                    footerContainer.appendChild(notGoingBtn);
+
+                    // 4. Add the "Update" button (primary action) to the right.
+                    footerContainer.appendChild(saveChangesBtn);
+                } else {
+                    // Fallback to original behavior if containers aren't found
+                    paypalContainer.appendChild(saveChangesBtn);
+                }
+                // --- End of UI Redesign ---
+
+                saveChangesBtn.addEventListener('click', async () => {
+                    saveChangesBtn.disabled = true;
+                    saveChangesBtn.textContent = 'Saving...';
+
+                    const newGuestCount = parseInt(guestCountSpan.textContent);
+
+                    try {
+                        const response = await fetch('/api/rsvp/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                event_id: eventId,
+                                new_guest_count: newGuestCount
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (response.ok) {
+                            sessionStorage.setItem('flashMessage', result.message);
+                            sessionStorage.setItem('flashEventId', eventId);
+                            window.location.reload();
+                        } else {
+                            alert(`Error: ${result.error || 'Could not update RSVP.'}`);
+                            saveChangesBtn.disabled = false;
+                            saveChangesBtn.textContent = 'Update Guest Count';
+                        }
+                    } catch (error) {
+                        console.error('Error updating RSVP:', error);
+                        alert('An unexpected network error occurred.');
+                        saveChangesBtn.disabled = false;
+                        saveChangesBtn.textContent = 'Save Changes';
                     }
                 });
             }
@@ -1101,7 +1170,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         const confirmationModal = document.getElementById('confirmationModal');
         const confirmationMessage = document.getElementById('confirmationMessage');
         const confirmBtn = document.getElementById('confirmBtn');
-        const cancelBtn = document.getElementById('cancelBtn');
+        // const cancelBtn = document.getElementById('cancelBtn');
 
         let onConfirmCallback = null;
 
@@ -1126,16 +1195,16 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             });
         }
         
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                if (confirmationModal) confirmationModal.style.display = 'none';
-                onConfirmCallback = null; // Clear callback
-            });
-        }
+        // if (cancelBtn) {
+        //     cancelBtn.addEventListener('click', () => {
+        //         if (confirmationModal) confirmationModal.style.display = 'none';
+        //         onConfirmCallback = null; // Clear callback
+        //     });
+        // }
 
         if (notGoingBtn) {
             notGoingBtn.addEventListener('click', function() {
-                const message = "You and your guests (if any) will not be refunded. This will remove you from this event.";
+                const message = "This will remove everyone in your rsvp. You and your guests (if any) will not be refunded.";
                 
                 showConfirmationModal(message, () => {
                     if (!currentEventId) {
