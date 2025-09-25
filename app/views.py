@@ -656,6 +656,7 @@ def subscriptions():
 
     return render_template(
         'subscriptions.html',
+        is_authenticated=current_user.is_authenticated,
         paypal_client_id=PAYPAL_CLIENT_ID,
         today=today,
         subscriptions=subscriptions_data,

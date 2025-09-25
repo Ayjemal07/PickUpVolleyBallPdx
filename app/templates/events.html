@@ -365,32 +365,30 @@
         <p id="rsvpEventInfo"></p>
         <p id="editGuestPrompt" style="margin: 4px 0 10px; font-weight: bold;"></p>
         <div class="guest-counter">
-        <button type="button" id="guestDecrement">-</button>
-        <span id="guestCount">0</span>
-        <button type="button" id="guestIncrement">+</button>
+            <button type="button" id="guestDecrement">-</button>
+            <span id="guestCount">0</span>
+            <button type="button" id="guestIncrement">+</button>
         </div>
 
         <p id="capacityInfo" style="text-align: center; color: #555; font-style: italic; font-size: 0.9em; margin-top: 5px;"></p>
 
-
         <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
-        <div id="rsvp-action-container" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
-
-        <div id="paypal-container" style="margin-top: 15px;"></div>
         
-        <div id="dynamicRsvpMessage" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
-
-        <div id="notGoingContainer" style="display: none; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px; text-align: center;">
-            <button type="button" id="notGoingBtn" class="btn btn-danger">
-                <i class="bi bi-x-circle"></i> Not Going
-            </button>
+        <div id="updateGuestContainer" style="display: none; margin-top: 15px; text-align: center;">
+             <button type="button" id="updateGuestsBtn" class="btn btn-green"> <i class="bi bi-person-plus"></i> Update Guests
+             </button>
         </div>
 
-        <div id="updateGuestContainer" style="display: none; margin-top: 15px; text-align: center;">
-             <button type="button" id="updateGuestsBtn" class="btn btn-primary">
-                 <i class="bi bi-person-plus"></i> Change Guests
-             </button>
-        </div>       
+        <div id="rsvp-action-container" style="margin-top: 15px; font-weight: bold; color: teal;"></div>
+        <div id="paypal-container" style="margin-top: 15px;"></div>
+        
+        <div id="edit-rsvp-actions" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 15px; display: none;">
+            <div id="notGoingContainer" style="display: none;">
+                <button type="button" id="notGoingBtn" class="btn btn-danger">
+                    <i class="bi bi-x-circle"></i> Not Going
+                </button>
+            </div>
+        </div>   
     </div>
 </div>
 

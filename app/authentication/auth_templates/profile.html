@@ -95,12 +95,15 @@
                 </form>
             </div>
         <hr>
-            <div class="benefits-container" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-top: 20px; background-color: #f9f9f9;">
+        <div class="benefits-container" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-top: 20px; background-color: #f9f9f9;">
             <h4 style="margin-top: 0;">Your Benefits</h4>
 
             {% if active_subscriptions %}
+                {# THIS IS THE MODIFIED LINE #}
                 <p><i class="bi bi-ticket-perforated-fill" style="color: #0d6efd;"></i> 
-                <strong>Status:</strong> <span style="color: green; font-weight: bold;">Active Subscription (Tier 1)</span>
+                <strong>Status:</strong> <span style="color: green; font-weight: bold;">
+                    Active Subscription ({% for sub in active_subscriptions %}Tier {{ sub.tier }}{% if not loop.last %}, {% endif %}{% endfor %})
+                </span>
                 </p>
                 <p><i class="bi bi-bar-chart-steps"></i> 
                 <strong>Total Remaining Credits:</strong> <span style="font-weight: bold;">{{ current_user.event_credits }}</span>

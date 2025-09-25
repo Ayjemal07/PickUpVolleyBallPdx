@@ -176,7 +176,6 @@
     <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=subscription&vault=true"></script>
 
     <script>
-        var isUserAuthenticated = {{ current_user.is_authenticated|tojson }};
 
         document.addEventListener('DOMContentLoaded', function () {
             // Modal Elements
@@ -338,4 +337,8 @@
             }
         });
     </script>
+{% endblock %}
+
+{% block page_variables %}
+    var isUserAuthenticated = {{ is_authenticated|tojson }};
 {% endblock %}

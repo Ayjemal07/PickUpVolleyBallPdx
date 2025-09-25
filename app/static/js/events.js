@@ -747,7 +747,46 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         const capacityInfo = document.getElementById('capacityInfo'); // Get the new element
         const notGoingContainer = document.getElementById('notGoingContainer');
         const notGoingBtn = document.getElementById('notGoingBtn');
+        const updateGuestContainer = document.getElementById('updateGuestContainer');
 
+
+        const updateGuestsBtn = document.getElementById('updateGuestsBtn');
+
+        if (updateGuestsBtn) {
+            updateGuestsBtn.addEventListener('click', async () => {
+                updateGuestsBtn.disabled = true;
+                updateGuestsBtn.innerHTML = '<i class="bi bi-person-plus"></i> Saving...';
+
+                const newGuestCount = parseInt(guestCountSpan.textContent);
+
+                try {
+                    const response = await fetch('/api/rsvp/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            event_id: currentEventId,
+                            new_guest_count: newGuestCount
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        sessionStorage.setItem('flashMessage', result.message);
+                        sessionStorage.setItem('flashEventId', currentEventId);
+                        window.location.reload();
+                    } else {
+                        alert(`Error: ${result.error || 'Could not update RSVP.'}`);
+                        updateGuestsBtn.disabled = false;
+                        updateGuestsBtn.innerHTML = '<i class="bi bi-person-plus"></i> Update Guests';
+                    }
+                } catch (error) {
+                    console.error('Error updating RSVP:', error);
+                    alert('An unexpected network error occurred.');
+                    updateGuestsBtn.disabled = false;
+                    updateGuestsBtn.innerHTML = '<i class="bi bi-person-plus"></i> Update Guests';
+                }
+            });
+        }
 
         let currentTicketPrice = 0;
         let currentGuestLimit = 0;
@@ -859,75 +898,75 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     }
                 });
             }
-            else if (isEditingRsvp && totalAmount <= 0) {
-                const saveChangesBtn = document.createElement('button');
-                saveChangesBtn.textContent = 'Update Guest Count';
-                saveChangesBtn.className = 'btn btn-success';
+            // else if (isEditingRsvp && totalAmount <= 0) {
+            //     const saveChangesBtn = document.createElement('button');
+            //     saveChangesBtn.textContent = 'Update Guest Count';
+            //     saveChangesBtn.className = 'btn btn-success';
 
-                // --- NEW: Redesign the modal footer for a cleaner UI ---
-                const notGoingBtn = document.getElementById('notGoingBtn');
-                const footerContainer = document.getElementById('notGoingContainer');
+            //     // --- NEW: Redesign the modal footer for a cleaner UI ---
+            //     const notGoingBtn = document.getElementById('notGoingBtn');
+            //     const footerContainer = document.getElementById('notGoingContainer');
 
-                // Clear the original paypal container since we are moving the button.
-                paypalContainer.innerHTML = ''; 
+            //     // Clear the original paypal container since we are moving the button.
+            //     paypalContainer.innerHTML = ''; 
                 
-                if (footerContainer && notGoingBtn) {
-                    // 1. Clear any existing content (like "No longer able to make it?" text).
-                    footerContainer.innerHTML = '';
+            //     if (footerContainer && notGoingBtn) {
+            //         // 1. Clear any existing content (like "No longer able to make it?" text).
+            //         footerContainer.innerHTML = '';
 
-                    // 2. Style it as a proper modal footer.
-                    footerContainer.style.display = 'flex';
-                    footerContainer.style.justifyContent = 'space-between';
-                    footerContainer.style.alignItems = 'center';
-                    footerContainer.style.marginTop = '20px';
-                    footerContainer.style.paddingTop = '15px';
-                    footerContainer.style.borderTop = '1px solid #dee2e6';
+            //         // 2. Style it as a proper modal footer.
+            //         footerContainer.style.display = 'flex';
+            //         footerContainer.style.justifyContent = 'space-between';
+            //         footerContainer.style.alignItems = 'center';
+            //         footerContainer.style.marginTop = '20px';
+            //         footerContainer.style.paddingTop = '15px';
+            //         footerContainer.style.borderTop = '1px solid #dee2e6';
                     
-                    // 3. Add the "Not Going" button (destructive action) to the left.
-                    footerContainer.appendChild(notGoingBtn);
+            //         // 3. Add the "Not Going" button (destructive action) to the left.
+            //         footerContainer.appendChild(notGoingBtn);
 
-                    // 4. Add the "Update" button (primary action) to the right.
-                    footerContainer.appendChild(saveChangesBtn);
-                } else {
-                    // Fallback to original behavior if containers aren't found
-                    paypalContainer.appendChild(saveChangesBtn);
-                }
-                // --- End of UI Redesign ---
+            //         // 4. Add the "Update" button (primary action) to the right.
+            //         footerContainer.appendChild(saveChangesBtn);
+            //     } else {
+            //         // Fallback to original behavior if containers aren't found
+            //         paypalContainer.appendChild(saveChangesBtn);
+            //     }
+            //     // --- End of UI Redesign ---
 
-                saveChangesBtn.addEventListener('click', async () => {
-                    saveChangesBtn.disabled = true;
-                    saveChangesBtn.textContent = 'Saving...';
+            //     saveChangesBtn.addEventListener('click', async () => {
+            //         saveChangesBtn.disabled = true;
+            //         saveChangesBtn.textContent = 'Saving...';
 
-                    const newGuestCount = parseInt(guestCountSpan.textContent);
+            //         const newGuestCount = parseInt(guestCountSpan.textContent);
 
-                    try {
-                        const response = await fetch('/api/rsvp/update', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                event_id: eventId,
-                                new_guest_count: newGuestCount
-                            })
-                        });
+            //         try {
+            //             const response = await fetch('/api/rsvp/update', {
+            //                 method: 'POST',
+            //                 headers: { 'Content-Type': 'application/json' },
+            //                 body: JSON.stringify({ 
+            //                     event_id: eventId,
+            //                     new_guest_count: newGuestCount
+            //                 })
+            //             });
 
-                        const result = await response.json();
-                        if (response.ok) {
-                            sessionStorage.setItem('flashMessage', result.message);
-                            sessionStorage.setItem('flashEventId', eventId);
-                            window.location.reload();
-                        } else {
-                            alert(`Error: ${result.error || 'Could not update RSVP.'}`);
-                            saveChangesBtn.disabled = false;
-                            saveChangesBtn.textContent = 'Update Guest Count';
-                        }
-                    } catch (error) {
-                        console.error('Error updating RSVP:', error);
-                        alert('An unexpected network error occurred.');
-                        saveChangesBtn.disabled = false;
-                        saveChangesBtn.textContent = 'Save Changes';
-                    }
-                });
-            }
+            //             const result = await response.json();
+            //             if (response.ok) {
+            //                 sessionStorage.setItem('flashMessage', result.message);
+            //                 sessionStorage.setItem('flashEventId', eventId);
+            //                 window.location.reload();
+            //             } else {
+            //                 alert(`Error: ${result.error || 'Could not update RSVP.'}`);
+            //                 saveChangesBtn.disabled = false;
+            //                 saveChangesBtn.textContent = 'Update Guest Count';
+            //             }
+            //         } catch (error) {
+            //             console.error('Error updating RSVP:', error);
+            //             alert('An unexpected network error occurred.');
+            //             saveChangesBtn.disabled = false;
+            //             saveChangesBtn.textContent = 'Save Changes';
+            //         }
+            //     });
+            // }
             // Handle cases like removing guests during an edit, where the cost becomes $0
             else {
                 paypalContainer.innerHTML = '<p style="text-align: center; font-weight: bold; color: #333;">No payment required for this change.</p>';
@@ -1095,13 +1134,9 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     const rsvpCount = parseInt(this.getAttribute("data-rsvp-count"));
                     const spotsCurrentlyHeldByUser = 1 + initialGuestCount;
 
-                    // **CORE FIX**: Recalculate `currentSpotsLeft` for the button functionality.
-                    // This sets the hard limit for the incrementor button.
                     currentSpotsLeft = (maxCapacity - rsvpCount) + spotsCurrentlyHeldByUser;
 
-                    // --- New Dynamic Messaging Logic ---
 
-                    // 1. How many more guests can the user add based on their personal limit?
                     const personalSlotsLeft = currentGuestLimit - initialGuestCount;
 
                     // 2. How many spots are actually open in the event?
@@ -1126,13 +1161,22 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     rsvpEventInfo.innerHTML = `You (${rsvpData.first_name} ${rsvpData.last_name}) are already going with <span id="currentGuestsDisplay">${initialGuestCount}</span> guests.`;
                     editGuestPrompt.textContent = `Change number of guests (Max: ${currentGuestLimit}):`;
 
+                    // Find the action buttons container
+                    const editRsvpActions = document.getElementById('edit-rsvp-actions');
+                    const notGoingContainer = document.getElementById('notGoingContainer');
+                    const updateGuestContainer = document.getElementById('updateGuestContainer');
+                    
+                    // Show the main actions container and the "Not Going" button by default for edits
+                    if (editRsvpActions) editRsvpActions.style.display = 'flex';
                     if (notGoingContainer) notGoingContainer.style.display = 'block';
+                    if (updateGuestContainer) updateGuestContainer.style.display = 'none';
 
                     guestCountSpan.textContent = initialGuestCount;
                     updatePriceAndPayPal(currentEventId, initialGuestCount);
 
                     updateGuestButtonsState(initialGuestCount, currentSpotsLeft, currentGuestLimit);
                     rsvpModal.style.display = 'block';
+
 
                 } catch (error) {
                     console.error("Error fetching RSVP for edit:", error);
@@ -1148,8 +1192,17 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 count--;
                 guestCountSpan.textContent = count;
                 updatePriceAndPayPal(currentEventId, count);
-                updateGuestButtonsState(count, currentSpotsLeft, currentGuestLimit);
+                // When editing, show the 'Change Guests' button only if guest count drops below the initial count.
+                if (isEditingRsvp) {
+                    notGoingContainer.style.display = 'block';
 
+                    if (count < initialGuestCount) {
+                        updateGuestContainer.style.display = 'block';
+                    } else {
+                        updateGuestContainer.style.display = 'none';
+                    }
+                }
+                updateGuestButtonsState(count, currentSpotsLeft, currentGuestLimit);
             }
         };
 
@@ -1160,7 +1213,22 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 count++;
                 guestCountSpan.textContent = count;
                 updatePriceAndPayPal(currentEventId, count);
-                // --- Bug Fix: Update button state on change ---
+                // When editing, hide the 'Change Guests' button if the count returns to the initial count or higher.
+                if (isEditingRsvp) {
+                    // Hide "Not Going" button if user increments beyond their original number of guests.
+                    if (count > initialGuestCount) {
+                        notGoingContainer.style.display = 'none';
+                    } else {
+                        notGoingContainer.style.display = 'block';
+                    }
+
+                    // "Update Guests" button should be hidden if count is not less than initial.
+                    if (count < initialGuestCount) {
+                        updateGuestContainer.style.display = 'block';
+                    } else {
+                        updateGuestContainer.style.display = 'none';
+                    }
+                }
                 updateGuestButtonsState(count, currentSpotsLeft, currentGuestLimit);
             }
         };
@@ -1241,9 +1309,9 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
 
 
         // Close RSVP modal
-        document.getElementById('closeRsvpModal').addEventListener('click', function () {
-            rsvpModal.style.display = 'none';
-        });
+        // document.getElementById('closeRsvpModal').addEventListener('click', function () {
+        //     rsvpModal.style.display = 'none';
+        // });
         document.getElementById('closeRsvpX').addEventListener('click', function () {
             rsvpModal.style.display = 'none';
         });
