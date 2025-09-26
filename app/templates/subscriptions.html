@@ -151,9 +151,11 @@
 <div id="subscriptionModal" class="modal">
     <div class="modal-content">
         <span class="close-button" id="closeSubscriptionModal">&times;</span>
-        <h2>Confirm Your Subscription</h2>
-        <p id="modalTierText"></p>
-        <p>This subscription will automatically renew every month.</p>
+        <h2 id="modalTitle">
+            <i id="modalIcon" class="fas fa-info-circle me-2" style="display: none;"></i>
+            <span id="modalTitleText"></span>
+        </h2>
+        <p id="modalDescription"></p>
         <div id="paypal-button-container"></div>
         <div id="subscription-message"></div>
     </div>
@@ -178,17 +180,44 @@
     <script>
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Modal Elements
+        // Modal Elements
             const subModal = document.getElementById('subscriptionModal');
             const downgradeModal = document.getElementById('downgradeModal');
             const closeSubModal = document.getElementById('closeSubscriptionModal');
             const closeDowngradeModal = document.getElementById('closeDowngradeModal');
             const messageContainer = document.getElementById('subscription-message');
-            const modalTierText = document.getElementById('modalTierText');
+            
+            // New modal elements for dynamic content
+            const modalTitle = document.getElementById('modalTitle');
+            const modalTitleText = document.getElementById('modalTitleText');
+            const modalDescription = document.getElementById('modalDescription');
+            const modalIcon = document.getElementById('modalIcon'); 
+
+            const paypalButtonContainer = document.getElementById('paypal-button-container');
 
             let selectedTier = null;
             let selectedSubToCancel = null;
             let isPayPalRendered = false;
+
+            // --- Define the messages for each action ---
+            const messages = {
+                'signup_1': {
+                    title: 'Confirm Subscription for Tier 1',
+                    description: 'You are signing up for the **Tier 1** monthly subscription for **$40**. This plan provides **4 event credits** per month and automatically renews monthly.'
+                },
+                'signup_2': {
+                    title: 'Confirm Subscription for Tier 2',
+                    description: 'You are signing up for the **Tier 2** monthly subscription for **$75**. This plan provides **8 event credits** per month and automatically renews monthly.'
+                },
+                'upgrade': {
+                    title: 'Confirm Subscription Upgrade',
+                    description: 'You are upgrading your subscription to Tier 2. This will charge you the Tier 2 price, cancel your current Tier 1 subscription at the end of its billing cycle, and add 8 event credits to your balance.'
+                },
+                'add': {
+                    title: 'Confirm Additional Subscription',
+                    description: 'You are adding a new Tier 2 subscription. This will not affect your current Tier 1 subscription.'
+                }
+            };
 
             // --- Event Listeners for Sign Up / Add / Upgrade ---
             const authModal = document.getElementById('authPromptModal');
@@ -199,21 +228,34 @@
                         return; // Stop the function here
                     }
                     selectedTier = e.target.getAttribute('data-tier');
-                    const action = e.target.classList.contains('btn-upgrade') ? 'upgrade to' : 'purchase';
-                    
-                    if (selectedTier == '1') {
-                        modalTierText.textContent = `You are about to ${action} the Tier 1 Subscription for $40.00.`;
+                    const isUpgradeOrAdd = e.target.classList.contains('btn-upgrade') || e.target.classList.contains('btn-add');
+
+
+                    // Set the correct modal content based on the action
+                    if (isUpgradeOrAdd) {
+                        actionType = e.target.classList.contains('btn-upgrade') ? 'upgrade' : 'add';
+                        modalTitle.classList.add('text-primary');
+                        modalDescription.classList.add('fw-bold');
+                        modalIcon.style.display = 'inline-block';
                     } else {
-                        modalTierText.textContent = `You are about to ${action} the Tier 2 Subscription for $75.00.`;
+                        actionType = `signup_${selectedTier}`;
+                        modalDescription.classList.add('fw-bold');
+                        modalTitle.classList.add('text-success');
+                        modalDescription.classList.add('fw-normal');
+
                     }
+                    
+                    modalTitleText.textContent = messages[actionType].title;
+                    modalDescription.textContent = messages[actionType].description;
+
+                    // Determine the PayPal plan ID based on the tier
+                    const paypalPlanId = selectedTier === '1' ? '{{ paypal_plan_id_tier1 }}' : '{{ paypal_plan_id_tier2 }}';
                     
                     subModal.style.display = 'block';
-                    messageContainer.innerHTML = ''; 
+                    messageContainer.innerHTML = '';
                     
-                    if (!isPayPalRendered) {
-                        renderPayPalButtons();
-                        isPayPalRendered = true;
-                    }
+                    // Re-render PayPal buttons with the correct plan ID
+                    renderPayPalButtons(paypalPlanId);
                 });
             });
 
@@ -242,8 +284,6 @@
             });
             
             document.getElementById('confirmDowngradeBtn').addEventListener('click', () => {
-                // You will need to build a backend endpoint for this
-                // For now, it will just show an alert.
                 alert('Initiating downgrade process for subscription ' + selectedSubToCancel); 
                 // executeDowngrade(selectedSubToCancel); 
                 downgradeModal.style.display = 'none';
@@ -251,10 +291,20 @@
 
 
             // --- Modal Closing Logic ---
-            closeSubModal.onclick = () => subModal.style.display = 'none';
+            closeSubModal.onclick = () => {
+                subModal.style.display = 'none';
+                if (paypalButtonContainer) {
+                    paypalButtonContainer.innerHTML = ''; // Clear PayPal buttons
+                }
+            }
             closeDowngradeModal.onclick = () => downgradeModal.style.display = 'none';
             window.onclick = (event) => {
-                if (event.target == subModal) subModal.style.display = 'none';
+                if (event.target == subModal) {
+                    subModal.style.display = 'none';
+                    if (paypalButtonContainer) {
+                        paypalButtonContainer.innerHTML = ''; // Clear PayPal buttons
+                    }
+                }
                 if (event.target == downgradeModal) downgradeModal.style.display = 'none';
             };
 
@@ -262,7 +312,6 @@
             // --- API Call Functions ---
             async function cancelSubscription(subscriptionId) {
                 try {
-                    // IMPORTANT: You'll need to update your backend route to accept a subscription ID
                     const response = await fetch(`/cancel_subscription/${subscriptionId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
@@ -280,20 +329,16 @@
             }
             
             // --- PayPal Button Rendering ---
-            function renderPayPalButtons() {
+            function renderPayPalButtons(planId) {
+                if (!paypalButtonContainer) return;
+                paypalButtonContainer.innerHTML = ''; // Clear previous buttons
                 paypal.Buttons({
                     createSubscription: function(data, actions) {
-                        
-                        // Determine if this is an upgrade action
-                        const actionButton = document.querySelector(`.btn-upgrade[data-tier='${selectedTier}']`);
-                        const isUpgrade = actionButton !== null;
-                        
                         let fetchUrl;
-                        // Use the new upgrade route if the user clicked "Upgrade"
-                        if (isUpgrade) {
+                        // Check the planId to determine the correct backend route
+                        if (planId === '{{ paypal_plan_id_tier2 }}' && document.querySelector('.btn-upgrade[data-tier="2"]:not([style*="display: none"])')) {
                             fetchUrl = '/api/subscription/upgrade';
                         } else {
-                            // Otherwise, use the standard creation route
                             fetchUrl = '/api/paypal/create-subscription';
                         }
 
@@ -303,21 +348,17 @@
                             body: JSON.stringify({ tier: selectedTier })
                         }).then(res => {
                             if (!res.ok) {
-                                // Handle errors from the backend
                                 return res.json().then(err => { throw new Error(err.error) });
                             }
                             return res.json();
                         }).then(details => {
-                            return details.id; // Return the new subscription ID to PayPal
+                            return details.id;
                         }).catch(error => {
-                            // Display the error in the modal
                             messageContainer.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-                            throw error; // Stop the PayPal process
+                            throw error;
                         });
                     },
                     onApprove: function(data, actions) {
-                        // This part does not need to change. 
-                        // The existing confirm-subscription route will handle both new and upgraded subs.
                         messageContainer.innerHTML = `<p style="color: green;">Finalizing... Please wait.</p>`;
                         fetch('/api/paypal/confirm-subscription', {
                             method: 'POST',
