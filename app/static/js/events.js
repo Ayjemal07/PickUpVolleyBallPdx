@@ -129,9 +129,7 @@ function getActionButtonHTML(event) {
     if (event.status === 'canceled') {
         return `<button class="btn btn-secondary" disabled>Event Canceled</button>`;
     }
-    if (event.rsvp_count >= event.max_capacity) {
-        return `<button class="btn btn-secondary" disabled>Event Full</button>`;
-    }
+    // 1. Check if the user is attending FIRST.
     if (event.is_attending) {
         return `
             <div class="rsvp-box" style="margin-top: 10px;">
@@ -147,6 +145,10 @@ function getActionButtonHTML(event) {
                    Edit RSVP
                 </a>
             </div>`;
+    }
+    // 2. If they are not attending, THEN check if it's full.
+    if (event.rsvp_count >= event.max_capacity) {
+        return `<button class="btn btn-secondary" disabled>Event Full</button>`;
     }
     // Default case: available to attend
     return `

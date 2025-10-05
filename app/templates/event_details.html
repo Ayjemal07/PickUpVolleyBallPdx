@@ -64,12 +64,8 @@
         <span class="price">${{ "%.2f"|format(event.ticket_price) }}</span>
         <span class="spots-left">{{ event.max_capacity - event.rsvp_count }} spots left</span>
     </div>
-    <div class="action-buttons">            
-        {% if event.status == 'canceled' %}
-            <button class="btn btn-secondary" disabled>Canceled</button>
-        {% elif event.rsvp_count >= event.max_capacity %}
-            <button class="btn btn-secondary" disabled>Event Full</button>
-        {% elif is_attending %}
+    <div class="action-buttons">
+        {% if is_attending %}
             <button 
                 class="btn btn-primary edit-rsvp"
                 data-event-id="{{ event.id }}"
@@ -80,6 +76,10 @@
                 data-rsvp-count="{{ event.rsvp_count }}">
                 Edit RSVP
             </button>
+        {% elif event.status == 'canceled' %}
+            <button class="btn btn-secondary" disabled>Canceled</button>
+        {% elif event.rsvp_count >= event.max_capacity %}
+            <button class="btn btn-secondary" disabled>Event Full</button>
         {% else %}
             <button 
                 class="btn btn-success custom-attend-button"

@@ -56,6 +56,48 @@ def send_subscription_email(user_email):
     mail.send(msg)
     print("Email send attempt completed.") # <--- AND THIS LINE
 
+# Place this function in views.py, for example, after the send_subscription_email function
+
+def send_rsvp_confirmation_email(user, event, guest_count):
+    """Sends a confirmation email to a user after they RSVP for an event."""
+    try:
+        # Format date and time for readability
+        event_date_str = event.date.strftime('%A, %B %d, %Y')
+        start_time_str = event.start_time.strftime('%I:%M %p')
+
+        subject = f"Confirmation: You're signed up for {event.title}!"
+        
+        body = f"""
+        Hi {user.first_name},
+
+        This is a confirmation that you have successfully RSVP'd for an upcoming volleyball event. We're excited to see you there!
+
+        Here are the details of your registration:
+        - Event: {event.title}
+        - Date: {event_date_str}
+        - Time: {start_time_str}
+        - Location: {event.location}
+        - Address: {event.full_address or 'Not provided'}
+        - Your Guests: {guest_count}
+        - Total People in Your Party: {1 + guest_count}
+
+        Important Information:
+        - Please arrive a few minutes early to check in and warm up.
+        - Remember to bring water to stay hydrated.
+        - If you need to cancel your spot, please do so from the event details page. This helps open up your spot for others who may be on a waitlist.
+
+        See you on the court!
+
+        - The Pick Up Volleyball PDX Team
+        """
+        
+        msg = Message(subject=subject, recipients=[user.email], body=body.strip())
+        mail.send(msg)
+        print(f"RSVP Confirmation email sent to {user.email} for event {event.id}")
+    except Exception as e:
+        print(f"Failed to send RSVP confirmation email: {e}")
+        traceback.print_exc()
+
 @main.route('/')
 def home():
     return render_template('home.html', embedded=False)
@@ -454,8 +496,6 @@ def contactus():
     return render_template('contactus.html')
 
 
-
-
 def get_access_token():
     auth = (PAYPAL_CLIENT_ID, PAYPAL_SECRET)
     headers = { "Accept": "application/json", "Accept-Language": "en_US" }
@@ -617,6 +657,9 @@ def capture_order(order_id):
         # Add the message to the JSON response
         order_data['success_message'] = success_message
 
+        if not is_edit: # Only send for the initial RSVP
+            send_rsvp_confirmation_email(user, event, new_guest_count)
+
     except Exception as e:
         traceback.print_exc()
         print("--- END OF CRITICAL ERROR ---\n")
@@ -635,19 +678,34 @@ def subscriptions():
 
     if current_user.is_authenticated:
         # Fetch all of the user's subscriptions
-        user_subscriptions = Subscription.query.filter_by(user_id=current_user.id).order_by(Subscription.tier).all()
+        # After: Sorts 'active' before 'canceled' (alphabetically Z-A), then by tier
+        user_subscriptions = Subscription.query.filter_by(user_id=current_user.id).all()
+        user_subscriptions.sort(key=lambda sub: (0, sub.tier) if sub.status == 'active' else (1, sub.tier))
+
+        #Filter the list: Only keep active subscriptions or canceled ones that expire today or later.
+        filtered_subscriptions = []
+        for sub in user_subscriptions:
+            # ALWAYS keep active subscriptions
+            if sub.status == 'active':
+                filtered_subscriptions.append(sub)
+            # ONLY keep canceled subscriptions if their expiry_date is in the future or today
+            elif sub.status == 'canceled' and sub.expiry_date and sub.expiry_date >= today:
+                filtered_subscriptions.append(sub)
 
         # Determine which active tiers the user has
-        active_subs = [sub for sub in user_subscriptions if sub.status == 'active']
+        active_subs = [sub for sub in filtered_subscriptions if sub.status == 'active']
         has_tier_1 = any(sub.tier == 1 for sub in active_subs)
         has_tier_2 = any(sub.tier == 2 for sub in active_subs)
 
-        for sub in user_subscriptions:
+        #Populate the data for the template using the FILTERED list
+        for sub in filtered_subscriptions:
             subscriptions_data.append({
                 'id': sub.id,
+                'paypal_subscription_id': sub.paypal_subscription_id,
                 'tier': sub.tier,
                 'status': sub.status,
                 'credits': sub.credits_per_month,
+                # The dates passed to the template now only exist for relevant items
                 'renews_on': sub.expiry_date if sub.status == 'active' else None,
                 'expires_on': sub.expiry_date if sub.status == 'canceled' else None,
             })
@@ -770,11 +828,12 @@ def create_subscription():
 
 # In views.py, update the cancel_subscription route
 
-@main.route('/cancel_subscription/<int:subscription_id>', methods=['POST'])
+@main.route('/cancel_subscription/<string:subscription_id>', methods=['POST'])
 @login_required
 def cancel_subscription(subscription_id):
     # Find the subscription in our database
-    sub_to_cancel = Subscription.query.get(subscription_id)
+    sub_to_cancel = Subscription.query.filter_by(paypal_subscription_id=subscription_id).first()
+
 
     # Security check: ensure the sub belongs to the current user
     if not sub_to_cancel or sub_to_cancel.user_id != current_user.id:
@@ -957,6 +1016,8 @@ def rsvp_with_credit():
     new_attendee = EventAttendee(event_id=event.id, user_id=user.id, guest_count=0)
     db.session.add(new_attendee)
     db.session.commit()
+    send_rsvp_confirmation_email(user, event, 0) # guest_count is 0 for credit RSVPs
+
     
     session['flashMessage'] = message # Use session for flash messages
     session['flashEventId'] = event_id

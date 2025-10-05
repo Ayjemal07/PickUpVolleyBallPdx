@@ -40,6 +40,8 @@ class User(UserMixin, db.Model):
     token = db.Column(db.String(50))
     g_auth_verify = db.Column(db.Boolean, default=False, nullable=False)
     address = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow) 
+
 
     has_used_free_event = db.Column(db.Boolean, default=False, nullable=False)
     event_credits = db.Column(db.Integer, default=0, nullable=False)

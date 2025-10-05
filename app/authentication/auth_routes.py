@@ -159,7 +159,7 @@ def register():
                 image.save(upload_path)
                 profile_image_filename = filename
 
-        role = 'admin' if email == 'tester@gmail.com' else 'user'
+        role = 'admin' if email == 'hadenfranken1129@gmail.com' else 'user'
         user = User(
             first_name=first_name,
             last_name=last_name,
