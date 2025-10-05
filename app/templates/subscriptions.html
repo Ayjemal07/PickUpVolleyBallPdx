@@ -67,18 +67,28 @@
     }
 
     @media (max-width: 768px) {
-    .subscription-plans {
-        /* If using Flexbox, force stacking */
-        flex-direction: column;
-        /* Ensure plans take full width */
-        gap: 20px; 
-    }
+        .subscription-plans {
+            flex-direction: column;
+            gap: 20px; 
+        }
 
-    .plan {
-        width: 100%;
-        margin-bottom: 20px;
+        .plan {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        /* --- ADD THIS NEW CSS BLOCK --- */
+        .list-group-item.d-flex {
+            flex-direction: column; /* Stack items vertically */
+            align-items: flex-start !important; /* Align all items to the left */
+            gap: 10px; /* Add space between the stacked items */
+        }
+
+        .list-group-item .flex-grow-1 {
+            margin-left: 0 !important; /* Remove the large left margin */
+            width: 100%; /* Ensure it takes full width */
+        }
     }
-}
 </style>
 
 <div class="full-width-background-subscriptions">
