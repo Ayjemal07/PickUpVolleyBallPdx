@@ -591,6 +591,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (event.target == cancelModal) cancelModal.style.display = "none";
         if (event.target == rsvpModal) rsvpModal.style.display = "none";
         if (event.target == recurringModal) recurringModal.style.display = "none"; // Handle our new modal
+        if (event.target == confirmationModal) confirmationModal.style.display = "none"; 
     });
 
     // General event action handler (Admin functionality for delete/cancel) - moved inside admin block

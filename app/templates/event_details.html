@@ -150,5 +150,5 @@
         var userHasFreeEvent = {{ user_has_free_event|tojson }};
         var userEventCredits = {{ user_event_credits|tojson }};
         var hasActiveSubscription = {{ has_active_subscription|tojson }}; 
-        //var currentEventData = {{ event_data|tojson|safe }};
+        var currentEventData = {{ event_data|tojson|safe }};
 {% endblock %}
