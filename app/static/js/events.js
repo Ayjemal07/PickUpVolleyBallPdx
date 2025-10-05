@@ -584,6 +584,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const cancelModal = document.getElementById('cancelEventModal');
         const rsvpModal = document.getElementById('rsvpModal');
         const recurringModal = document.getElementById('createRecurringEventModal'); // Our new modal
+        const confirmationModal = document.getElementById('confirmationModal'); // Add this line
 
         if (event.target == createModal) createModal.style.display = "none";
         if (event.target == editModal) editModal.style.display = "none";
@@ -1240,7 +1241,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         const confirmationModal = document.getElementById('confirmationModal');
         const confirmationMessage = document.getElementById('confirmationMessage');
         const confirmBtn = document.getElementById('confirmBtn');
-        // const cancelBtn = document.getElementById('cancelBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
 
         let onConfirmCallback = null;
 
@@ -1265,12 +1266,12 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             });
         }
         
-        // if (cancelBtn) {
-        //     cancelBtn.addEventListener('click', () => {
-        //         if (confirmationModal) confirmationModal.style.display = 'none';
-        //         onConfirmCallback = null; // Clear callback
-        //     });
-        // }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                if (confirmationModal) confirmationModal.style.display = 'none';
+                onConfirmCallback = null; // Clear callback
+            });
+        }
 
         if (notGoingBtn) {
             notGoingBtn.addEventListener('click', function() {
