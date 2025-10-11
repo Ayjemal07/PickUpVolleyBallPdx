@@ -314,7 +314,7 @@ header {
   z-index: 2;
   padding: 0.8rem;
   background: white;
-  border-radius: 0.5rem;
+  border-radius: 4.5rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -901,7 +901,6 @@ html {
       padding: 15px;
   }
 }
-
 
 
 

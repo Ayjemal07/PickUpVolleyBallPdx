@@ -208,8 +208,9 @@ def events():
             past_events.append(event)
             
     # 3. Sort past events descending to get the most recent, and limit to 2
-    past_events.sort(key=lambda x: x.date, reverse=True)
-    past_events_display = past_events[:2]
+    past_events.sort(key=lambda x: datetime.combine(x.date, x.end_time), reverse=True)
+
+    past_events_display = past_events
 
     # 4. Process event data for the template
     user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)

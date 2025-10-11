@@ -452,7 +452,7 @@ def forgot_password():
         user = User.query.filter_by(email=email).first()
         if user:
             token = serializer.dumps(email, salt='password-reset-salt')
-            reset_url = url_for('auth.reset_password', token=token, _external=True)
+            reset_url = url_for('auth.reset_password', token=token, _external=True, _scheme='https')
             msg = Message(subject="Reset Your Password",
                           sender="noreply.pickupvbpdx@gmail.com",
                           recipients=[email],
