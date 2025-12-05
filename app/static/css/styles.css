@@ -1749,22 +1749,37 @@ html, body {
 
 /* Adds a darker green hover effect */
 #cancelEventModal #confirmCancelEvent:hover {
-  background-color: #218838;
+  background-color: #a3c7ab;
 }
 
 
-/* --- Styles for Tab Header and Add Event Button --- */
+/* --- Styles for Add Event Button --- */
 
+/* Base styling for tab-header to use Flexbox */
 .tab-header {
     display: flex;
-    justify-content: space-between; /* Aligns title to the left and button to the right */
+    justify-content: space-between; /* Space out the h1 and the buttons */
     align-items: center;
-    margin-bottom: 20px; /* Adds space below the header row */
+    flex-wrap: wrap; /* Allows wrapping on smaller screens */
+    margin-bottom: 20px;
 }
 
-.tab-header h1 {
-    margin: 0; /* Removes default heading margin */
-}
+/* Media Query for Mobile Devices */
+@media (max-width: 768px) {
+    .tab-header {
+        flex-direction: column; /* Stack the h1 and the buttons vertically */
+        align-items: flex-start; /* Align all items to the start (left) */
+        gap: 10px; /* Space between the h1 and the button group */
+    }
+
+    /* Target the admin buttons directly or wrap them in a container 
+       and style the container for better grouping/spacing. */
+    .tab-header button {
+        width: 100%; /* Make buttons full width */
+        margin-top: 5px; /* Add a little space between the buttons themselves */
+        /* You might need to adjust padding/margins if the buttons were styled
+           to be inline-block or had specific width */
+    }
 
 /* Style specifically for the Add Event button */
 #addEventButton.btn-green {

@@ -113,7 +113,7 @@
                 
                 <div class="card subscription-details-card {% if subscriptions|selectattr('status', 'equalto', 'active')|list|length > 0 %}border-success{% else %}border-secondary{% endif %}">
                     <div class="card-header">
-                        <strong>Total Credit Balance: {{ total_monthly_credits }}</strong>
+                        <strong>Current Available Event Credits: {{ total_monthly_credits }}</strong>
                     </div>
                     
                     <ul class="list-group list-group-flush">

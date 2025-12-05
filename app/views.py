@@ -833,7 +833,10 @@ def create_subscription():
 @login_required
 def cancel_subscription(subscription_id):
     # Find the subscription in our database
-    sub_to_cancel = Subscription.query.filter_by(paypal_subscription_id=subscription_id).first()
+    sub_to_cancel = Subscription.query.filter_by(
+        paypal_subscription_id=subscription_id, 
+        user_id=current_user.id
+    ).first()
 
 
     # Security check: ensure the sub belongs to the current user
@@ -888,7 +891,7 @@ def upgrade_subscription():
         return jsonify({'error': 'Upgrade path not supported.'}), 400
 
     try:
-        # Step 1: Find the user's active Tier 1 subscription to cancel it.
+        # Step 1: Find the user's active Tier 1 subscription
         old_subscription = Subscription.query.filter_by(
             user_id=current_user.id, 
             tier=1, 
@@ -898,25 +901,27 @@ def upgrade_subscription():
         if not old_subscription:
             return jsonify({'error': 'No active Tier 1 subscription found to upgrade.'}), 404
 
-        # Step 2: Cancel the old subscription in PayPal to stop future billing.
+        # Step 2: Cancel the old subscription in PayPal
         access_token = get_access_token()
         cancel_url = f"{PAYPAL_BASE}/v1/billing/subscriptions/{old_subscription.paypal_subscription_id}/cancel"
         headers = {"Authorization": f"Bearer {access_token}"}
+        
         cancel_response = requests.post(cancel_url, headers=headers, json={'reason': 'User upgraded to a new plan.'})
         
-        # We proceed even if cancellation fails, but we should log it.
-        if cancel_response.status_code != 204:
-            print(f"Warning: Failed to cancel old PayPal subscription {old_subscription.paypal_subscription_id} during upgrade.")
 
-        # Step 3: Update the old subscription's status in our database.
+        if cancel_response.status_code != 204:
+            # Log the full error for debugging
+            print(f"Upgrade Failed: PayPal cancel return {cancel_response.status_code} - {cancel_response.text}")
+            return jsonify({'error': 'Failed to cancel your current subscription. Upgrade aborted to prevent double billing.'}), 500
+
+        # Step 3: Only NOW do we mark it canceled in our DB
         old_subscription.status = 'canceled'
         db.session.commit()
 
-        # Step 4: Create a new PayPal subscription for Tier 2.
-        # This part is similar to your existing create_subscription route.
+        # Step 4: Create the new PayPal subscription for Tier 2
         create_url = f"{PAYPAL_BASE}/v1/billing/subscriptions"
         create_data = {
-            "plan_id": PAYPAL_PLAN_ID_TIER2, # Explicitly use Tier 2 plan
+            "plan_id": PAYPAL_PLAN_ID_TIER2, 
             "subscriber": {"email_address": current_user.email},
             "application_context": {
                 "return_url": url_for('main.subscriptions', _external=True),
@@ -924,7 +929,7 @@ def upgrade_subscription():
             }
         }
         create_response = requests.post(create_url, headers=headers, json=create_data)
-        create_response.raise_for_status() # Raise an error if this fails
+        create_response.raise_for_status() 
         
         new_paypal_sub = create_response.json()
         return jsonify({'id': new_paypal_sub['id']}), 201
@@ -944,36 +949,66 @@ def paypal_webhook():
     if not resource or not event_type:
         return jsonify(status="ignored", reason="Missing resource or event_type"), 200
 
-    subscription_id = resource.get('id')
-    if not subscription_id:
-        return jsonify(status="ignored", reason="Missing subscription ID in resource"), 200
+    # --- CRITICAL FIX START ---
+    # Determine the Subscription ID based on the event type.
+    # For subscription events, the ID is resource['id'].
+    # For payment events, the ID is resource['billing_agreement_id'].
+    subscription_id = None
+    
+    if "PAYMENT.SALE" in event_type:
+        subscription_id = resource.get('billing_agreement_id')
+    else:
+        subscription_id = resource.get('id')
 
-    # Find the subscription in our database, not the user
+    if not subscription_id:
+        return jsonify(status="ignored", reason="Could not determine Subscription ID"), 200
+    # --- CRITICAL FIX END ---
+
+    # Find the subscription in our database
     subscription = Subscription.query.filter_by(paypal_subscription_id=subscription_id).first()
+    
     if not subscription:
+        # If we can't find the subscription, we can't issue credits.
         print(f"Received webhook for unknown subscription ID: {subscription_id}")
-        return jsonify(status="ignored"), 200
+        return jsonify(status="ignored", reason="Subscription not found in DB"), 200
 
     user = subscription.user
 
-    if event_type == "BILLING.SUBSCRIPTION.UPDATED" or event_type == "BILLING.SUBSCRIPTION.RE-ACTIVATED":
-        # On renewal, add the subscription's credits to the user's balance
-        # and push the expiry date forward 30 days.
-        user.event_credits += subscription.credits_per_month
-        subscription.expiry_date = date.today() + timedelta(days=30)
-        subscription.status = 'active' # Ensure status is active on renewal
-        db.session.commit()
-        print(f"Webhook processed RENEWAL for {user.email}. Credits: {user.event_credits}")
+    # Handle Successful Payment (Renewal)
+    if event_type == "PAYMENT.SALE.COMPLETED":
+        # Check if the state is completed to be safe
+        if resource.get('state') == 'completed':
+            user.event_credits += subscription.credits_per_month
+            
+            # Extend expiry date by 30 days from today (or based on previous expiry if you want strict cycles)
+            subscription.expiry_date = date.today() + timedelta(days=30)
 
+            # 2. ONLY set status to 'active' if it's currently 'active', 'suspended', or 'expired'.
+            # This prevents an explicitly 'canceled' subscription from being revived.
+            if subscription.status in ('suspended', 'expired'):
+                subscription.status = 'active'
+            
+            db.session.commit()
+            print(f"Webhook: Payment received. Renewed credits for {user.email}. Total: {user.event_credits}")
+
+    # Handle Reactivation or Updates (Keep your existing logic if needed)
+    elif event_type == "BILLING.SUBSCRIPTION.RE-ACTIVATED":
+        subscription.status = 'active'
+        subscription.expiry_date = date.today() + timedelta(days=30)
+        db.session.commit()
+        print(f"Webhook: Subscription re-activated for {user.email}")
+
+    # Handle Cancellation
     elif event_type == "BILLING.SUBSCRIPTION.CANCELLED":
         subscription.status = 'canceled'
         db.session.commit()
-        print(f"Subscription {subscription_id} for user {user.email} was cancelled via webhook.")
+        print(f"Webhook: Subscription {subscription_id} for user {user.email} was cancelled.")
         
+    # Handle Expiry/Suspension
     elif event_type == "BILLING.SUBSCRIPTION.EXPIRED" or event_type == "BILLING.SUBSCRIPTION.SUSPENDED":
-        subscription.status = 'canceled' # Or another status like 'expired'
+        subscription.status = 'canceled'
         db.session.commit()
-        print(f"Subscription {subscription_id} for user {user.email} has expired or been suspended.")
+        print(f"Webhook: Subscription {subscription_id} for user {user.email} expired/suspended.")
 
     return jsonify(status="success"), 200
 
