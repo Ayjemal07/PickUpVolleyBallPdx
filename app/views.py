@@ -23,6 +23,9 @@ import os
 from dotenv import load_dotenv
 import requests
 
+import base64
+from .utils import generate_detailed_waiver
+
 
 load_dotenv() # Load variables from .env file
 
@@ -96,6 +99,48 @@ def send_rsvp_confirmation_email(user, event, guest_count):
         print(f"RSVP Confirmation email sent to {user.email} for event {event.id}")
     except Exception as e:
         print(f"Failed to send RSVP confirmation email: {e}")
+        traceback.print_exc()
+
+def send_guest_confirmation_email(guest_info, event, waiver_path):
+    """Sends a confirmation email to a guest with their signed waiver attached."""
+    try:
+        # Format date and time for readability
+        event_date_str = event.date.strftime('%A, %B %d, %Y')
+        start_time_str = event.start_time.strftime('%I:%M %p')
+
+        subject = f"Confirmation: You're signed up for {event.title}!"
+        
+        body = f"""
+        Hi {guest_info['first_name']},
+
+        This is a confirmation that you have successfully registered as a guest for an upcoming volleyball event.
+        
+        Here are the details:
+        - Event: {event.title}
+        - Date: {event_date_str}
+        - Time: {start_time_str}
+        - Location: {event.location}
+        - Address: {event.full_address or 'Not provided'}
+
+        Your signed liability waiver is attached to this email for your records.
+
+        See you on the court!
+
+        - The Pick Up Volleyball PDX Team
+        """
+        
+        msg = Message(subject=subject, recipients=[guest_info['email']], body=body.strip())
+        
+        # Attach the generated waiver PDF
+        # We use standard open() because waiver_path is already a full system path
+        if waiver_path and os.path.exists(waiver_path):
+            with open(waiver_path, 'rb') as fp:
+                msg.attach("Liability_Waiver.pdf", "application/pdf", fp.read())
+        
+        mail.send(msg)
+        print(f"Guest confirmation email sent to {guest_info['email']}")
+    except Exception as e:
+        print(f"Failed to send guest confirmation email: {e}")
         traceback.print_exc()
 
 @main.route('/')
@@ -406,6 +451,16 @@ def event_details(event_id):
     event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
     user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
     is_attending = any(a.user_id == user_id for a in attendees)
+    is_full = event.rsvp_count >= event.max_capacity
+
+    try:
+        # Combine the event's date and end_time into a single datetime object
+        event_end_datetime = datetime.combine(event.date, event.end_time)
+        now = datetime.now()
+        event_passed = event_end_datetime < now
+    except AttributeError:
+        # Safety fallback if date or time fields are somehow missing
+        event_passed = True
 
     maps_link = None
     if event.full_address:
@@ -459,6 +514,8 @@ def event_details(event_id):
         user_event_credits=user_credits,
         has_active_subscription=can_use_credits, # <-- Pass new variable
         paypal_client_id=PAYPAL_CLIENT_ID,
+        is_full=is_full,
+        event_passed=event_passed,
         is_authenticated=current_user.is_authenticated,
         user_role=current_user.role if current_user.is_authenticated else 'user'
     )
@@ -506,7 +563,6 @@ def get_access_token():
     return response.json()["access_token"]
 
 @main.route("/api/orders", methods=["POST"])
-@login_required # Ensure user is logged in
 def create_order():
     data = request.get_json()
     event_id = data.get("event_id")
@@ -515,6 +571,8 @@ def create_order():
     rsvp_id = data.get("rsvp_id")
     initial_guest_count = data.get("initial_guest_count", 0)
 
+    # Guest specific data
+    is_guest_checkout = data.get("is_guest_checkout", False)
 
     event = Event.query.get(event_id)
     if not event:
@@ -539,37 +597,45 @@ def create_order():
     # --- Bug Fix End ---
 
     ticket_price = event.ticket_price
-    user = current_user
-
     # Calculate the amount to charge based on whether it's an edit or initial RSVP
     amount_to_charge = 0.0
-    if is_edit:
-        # For edits, calculate the difference in guests (this logic remains the same)
-        initial_quantity = 1 + initial_guest_count
-        guest_difference = requested_quantity - initial_quantity
-        amount_to_charge = guest_difference * ticket_price
-        
-        if amount_to_charge <= 0:
-            return jsonify({"error": "No payment required for this change."}), 400
-            
+
+    if is_guest_checkout:
+        # Guests NEVER get free credits. Charge for every spot (themself + guests)
+        amount_to_charge = requested_quantity * ticket_price
+        user_id_for_paypal = "GUEST"
     else:
-        # --- NEW LOGIC FOR INITIAL RSVP ---
-        # By default, we assume everyone needs to be paid for.
-        payable_attendees = requested_quantity
+        # ... [Keep existing logged-in user calculation logic] ...
+        user = current_user
+        user_id_for_paypal = current_user.id
 
-        # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
-        valid_sub_for_credits = Subscription.query.filter(
-            Subscription.user_id == user.id,
-            Subscription.expiry_date >= date.today()
-        ).first()
-
-        if not user.has_used_free_event:
-            payable_attendees -= 1
-        elif valid_sub_for_credits and user.event_credits > 0: # Check if a valid sub exists
-            payable_attendees -= 1
+        if is_edit:
+            # For edits, calculate the difference in guests (this logic remains the same)
+            initial_quantity = 1 + initial_guest_count
+            guest_difference = requested_quantity - initial_quantity
+            amount_to_charge = guest_difference * ticket_price
             
-        payable_attendees = max(0, payable_attendees)
-        amount_to_charge = payable_attendees * ticket_price
+            if amount_to_charge <= 0:
+                return jsonify({"error": "No payment required for this change."}), 400
+                
+        else:
+            # --- NEW LOGIC FOR INITIAL RSVP ---
+            # By default, we assume everyone needs to be paid for.
+            payable_attendees = requested_quantity
+
+            # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
+            valid_sub_for_credits = Subscription.query.filter(
+                Subscription.user_id == user.id,
+                Subscription.expiry_date >= date.today()
+            ).first()
+
+            if not user.has_used_free_event:
+                payable_attendees -= 1
+            elif valid_sub_for_credits and user.event_credits > 0: # Check if a valid sub exists
+                payable_attendees -= 1
+                
+            payable_attendees = max(0, payable_attendees)
+            amount_to_charge = payable_attendees * ticket_price
 
     if amount_to_charge <= 0:
         # This case should now only be hit if a free/credit user has no guests,
@@ -591,7 +657,8 @@ def create_order():
                 "currency_code": "USD",
                 "value": f"{amount_to_charge:.2f}"
             },
-            "custom_id": f"{event_id}-{current_user.id}-{is_edit}-{rsvp_id if rsvp_id else ''}-{initial_guest_count}" # Pass custom data
+            # Pass "GUEST" in the custom_id if it's a guest
+            "custom_id": f"{event_id}-{user_id_for_paypal}-{is_edit}-{rsvp_id if rsvp_id else ''}-{initial_guest_count}"
         }]
     }
     response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders", headers=headers, json=body)
@@ -599,23 +666,22 @@ def create_order():
     return jsonify(response.json())
 
 @main.route("/api/orders/<order_id>/capture", methods=["POST"])
-@login_required # Ensure user is logged in
+# REMOVE @login_required
 def capture_order(order_id):
     try:
-        user = current_user
         data = request.get_json()
-
         event_id = data.get("event_id")
         new_guest_count = int(data.get("guest_count", 0))
         is_edit = data.get("is_edit", False)
         rsvp_id = data.get("rsvp_id")
-
+        is_guest_checkout = data.get("is_guest_checkout", False)
+        guest_info = data.get("guest_info", {})
 
         event = Event.query.get(event_id)
         if not event:
             return jsonify({"error": "Event not found"}), 404
 
-        # PayPal capture logic
+        # --- PayPal Capture ---
         access_token = get_access_token()
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
         capture_response = requests.post(f"{PAYPAL_BASE}/v2/checkout/orders/{order_id}/capture", headers=headers)
@@ -624,46 +690,82 @@ def capture_order(order_id):
 
         if order_data.get("status") != "COMPLETED":
             return jsonify({"error": f"PayPal transaction not completed: {order_data.get('status')}"}), 400
+        
+        # --- RSVP Creation ---
+        if is_guest_checkout:
+            # === PATH A: GUEST ===
+            signature_data = guest_info.get('signature_data')
+            if not signature_data:
+                return jsonify({"error": "Signature required"}), 400
 
-        if is_edit:
-            attendee = EventAttendee.query.get(rsvp_id)
-            if not attendee:
-                return jsonify({"error": "Existing RSVP not found"}), 404
+            # Generate Waiver
+            header, encoded = signature_data.split(",", 1)
+            signature_image_data = base64.b64decode(encoded)
+            waiver_filename = f"guest_waiver_{uuid.uuid4()}.pdf"
+            waiver_path = os.path.join(current_app.root_path, 'static', 'waivers', waiver_filename)
             
-            attendee.guest_count = new_guest_count
-            success_message = f'Your RSVP for {event.title} has been updated!'
+            waiver_data_dict = {
+                "name": f"{guest_info['first_name']} {guest_info['last_name']}",
+                "address": guest_info['address'],
+                "dob": guest_info['dob'],
+                "emergency_name": guest_info['emergency_contact_name'],
+                "emergency_phone": guest_info['emergency_contact_phone']
+            }
+            generate_detailed_waiver(waiver_data_dict, signature_image_data, waiver_path)
 
-        else: # Initial RSVP
-            attendee = EventAttendee(event_id=event_id, user_id=user.id, guest_count=new_guest_count)
+            # Create Guest Record
+            attendee = EventAttendee(
+                event_id=event_id,
+                user_id=None, # Explicitly None for guests
+                guest_count=new_guest_count,
+                first_name=guest_info['first_name'],
+                last_name=guest_info['last_name'],
+                email=guest_info['email'],
+                waiver_pdf=waiver_filename
+            )
             db.session.add(attendee)
+            send_guest_confirmation_email(guest_info, event, waiver_path)
+            success_message = f"You're confirmed for {event.title}!An email with your waiver has been sent."
 
-            # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
-            valid_sub_for_credits = Subscription.query.filter(
-                Subscription.user_id == user.id,
-                Subscription.expiry_date >= date.today()
-            ).first()
+        else:
+            # === PATH B: LOGGED IN USER ===
+            user = current_user
+            
+            if is_edit:
+                attendee = EventAttendee.query.get(rsvp_id)
+                if not attendee:
+                    return jsonify({"error": "Existing RSVP not found"}), 404
+                attendee.guest_count = new_guest_count
+                success_message = f'Your RSVP for {event.title} has been updated!'
+            else:
+                # Initial RSVP for User
+                attendee = EventAttendee(event_id=event_id, user_id=user.id, guest_count=new_guest_count)
+                db.session.add(attendee)
 
-            if not user.has_used_free_event:
-                user.has_used_free_event = True
-            elif valid_sub_for_credits and user.event_credits > 0: # Check if a valid sub exists
-                user.event_credits -= 1
+                # Handle Credits
+                valid_sub_for_credits = Subscription.query.filter(
+                    Subscription.user_id == user.id,
+                    Subscription.expiry_date >= date.today()
+                ).first()
 
-            success_message = f"You're confirmed for {event.title}! See you there!"
-        # Recalculate total RSVP count for the event
+                if not user.has_used_free_event:
+                    user.has_used_free_event = True
+                elif valid_sub_for_credits and user.event_credits > 0:
+                    user.event_credits -= 1
+                
+                success_message = f"You're confirmed for {event.title}! See you there!"
+                send_rsvp_confirmation_email(user, event, new_guest_count)
+
+        # --- Finalize ---
+        # Recalculate total RSVP count
         all_attendees_for_event = EventAttendee.query.filter_by(event_id=event_id).all()
         event.rsvp_count = sum(1 + (a.guest_count or 0) for a in all_attendees_for_event)
 
         db.session.commit()
-
-        # Add the message to the JSON response
         order_data['success_message'] = success_message
-
-        if not is_edit: # Only send for the initial RSVP
-            send_rsvp_confirmation_email(user, event, new_guest_count)
 
     except Exception as e:
         traceback.print_exc()
-        print("--- END OF CRITICAL ERROR ---\n")
         db.session.rollback()
         return jsonify({"error": "An internal server error occurred."}), 500
 
@@ -1199,3 +1301,48 @@ def add_recurring_events():
         db.session.rollback()
         traceback.print_exc() # Log the full error to your console
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+    
+
+
+@main.route('/execute-guest-payment', methods=['POST'])
+def execute_guest_payment():
+    data = request.json
+    guest_info = data.get('guest_info', {})
+    event_id = data.get('event_id')
+    guest_dob_str = guest_info.get('dob') # 'YYYY-MM-DD'
+
+    # -----------------------------------------------
+    # START: AGE VALIDATION FIX
+    # -----------------------------------------------
+    if not guest_dob_str:
+        return jsonify({'error': 'Date of Birth is required.'}), 400
+
+    try:
+        # Convert DOB string to date object
+        dob = datetime.strptime(guest_dob_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid Date of Birth format.'}), 400
+
+    today = date.today()
+    # Calculate age: today's year - birth year - (if birthday hasn't passed this year)
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+    if age < 18:
+        # Return an error if the guest is under 18
+        return jsonify({'error': 'You must be 18 years or older to register for an event.'}), 400
+    
+
+    guest_first_name = guest_info.get('first_name')
+    guest_last_name = guest_info.get('last_name')
+
+    if not guest_first_name or not guest_last_name:
+        # This shouldn't happen if frontend validation works, but is a safe guard
+        return jsonify({'error': 'Guest first and last name are required.'}), 400
+    # -----------------------------------------------
+    # END: GUEST NAME EXTRACTION FIX
+    # -----------------------------------------------
+
+    # Get the event (ensure it exists)
+    event = Event.query.get(event_id)
+    if not event:
+        return jsonify({'error': 'Event not found.'}), 404

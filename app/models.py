@@ -108,7 +108,16 @@ class Event(db.Model):
 class EventAttendee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
-    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    
+    # Allow user_id to be nullable for guests
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=True) 
+    
+    # Add Guest specific fields
+    first_name = db.Column(db.String(150), nullable=True)
+    last_name = db.Column(db.String(150), nullable=True)
+    email = db.Column(db.String(150), nullable=True)
+    waiver_pdf = db.Column(db.String(255), nullable=True) # To store the filename of the signed waiver
+
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     guest_count = db.Column(db.Integer, nullable=False, default=0)
 

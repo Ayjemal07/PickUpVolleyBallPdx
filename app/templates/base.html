@@ -86,11 +86,27 @@
         <div id="authPromptModal" class="modal">
             <div class="modal-content" style="max-width: 450px; text-align: center;">
                 <button type="button" id="closeAuthPrompt" class="close-button" aria-label="Close">&times;</button>
-                <h2>Please Login or Register</h2>
-                <p>You need an account to sign up for events or subscriptions.</p>
+                
+                <h2>You are not logged in</h2>
+                <p id="authModalBodyText">
+                    <strong>Sign in</strong> or <strong>register</strong> for faster event checkout, or check out as a guest below. 
+                </p>
+                
                 <div class="auth-prompt-buttons">
                     <a href="{{ url_for('auth.signin') }}" class="btn btn-login">Login</a>
                     <a href="{{ url_for('auth.register') }}" class="btn btn-register">Register</a>
+                </div>
+
+                <div id="guestCheckoutSection" style="display: none;">
+                    <div style="border-top: 1px solid #ccc; margin: 15px 0; position: relative;">
+                        <span style="background: white; padding: 0 10px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: #777;">OR</span>
+                    </div>
+                    
+                    <button id="btnContinueGuest" class="btn" style="background-color: #6c757d; color: white; margin-top: 10px; width: 100%;">
+                        Continue as Guest
+                    </button>
+                    <p style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+                    </p>
                 </div>
             </div>
         </div>

@@ -295,7 +295,6 @@
             const authModal = document.getElementById('authPromptModal');
             const closeAuthModal = document.getElementById('closeAuthModal');
 
-            // This new version is more reliable
             if (authModal) {
                 const closeAuthModalButton = authModal.querySelector('.close-button');
                 if (closeAuthModalButton) {
@@ -308,8 +307,15 @@
             document.querySelectorAll('.btn-signup, .btn-add, .btn-upgrade').forEach(button => {
                 button.addEventListener('click', (e) => {
                     if (!isUserAuthenticated) {
-                        if(authModal) authModal.style.display = 'block';
-                        return; // Stop the function here
+                        if(authModal) {
+                            const authBody = document.getElementById('authModalBodyText');
+                            if (authBody) {
+                                authBody.innerHTML = "You must have an account to use <strong>Subscriptions</strong>. <br><strong>Sign in</strong> or <strong>register</strong> for an account below.";
+                            }
+                            
+                            authModal.style.display = 'block';
+                        }
+                        return; 
                     }
                     selectedTier = e.target.getAttribute('data-tier');
                     const isUpgradeOrAdd = e.target.classList.contains('btn-upgrade') || e.target.classList.contains('btn-add');

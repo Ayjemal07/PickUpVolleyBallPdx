@@ -1780,6 +1780,7 @@ html, body {
         /* You might need to adjust padding/margins if the buttons were styled
            to be inline-block or had specific width */
     }
+}
 
 /* Style specifically for the Add Event button */
 #addEventButton.btn-green {

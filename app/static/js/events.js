@@ -16,6 +16,48 @@ function isSubscriptionActive() {
 }
 
 
+// Function to calculate age from DOB string (YYYY-MM-DD)
+function calculateAge(dobString) {
+    const dob = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    // Adjust age if birthday hasn't occurred yet this year
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+// Validation function to check if the guest is 18+
+function validateGuestAge() {
+    const dobInput = document.getElementById('guestDob');
+    const ageErrorDiv = document.getElementById('guestAgeError');
+    
+    // Reset error message
+    if(ageErrorDiv) ageErrorDiv.style.display = 'none';
+
+    if (!dobInput || !dobInput.value) {
+        // DOB is required, but let the 'required' attribute handle this
+        return false; 
+    }
+
+    const dob = dobInput.value;
+    const age = calculateAge(dob);
+
+    if (age < 18) {
+        const errorMessage = 'You must be 18 years or older to register for an event.';
+        if(ageErrorDiv) {
+            ageErrorDiv.textContent = errorMessage;
+            ageErrorDiv.style.display = 'block';
+        } else {
+            alert(errorMessage);
+        }
+        return false;
+    }
+    return true;
+}
+
 /**
  * Formats the date for an event card with special labels for Today and Tomorrow.
  * @param {string} dateString - The ISO date string for the event (e.g., event.start).
@@ -235,6 +277,41 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // --- Waiver Check for Guest Checkout FIX ---
+    // This logic ensures the waiver checkbox is disabled until the link is clicked.
+    const waiverLink = document.getElementById('guestWaiverLink');
+    const waiverCheckbox = document.getElementById('guestWaiverCheckbox');
+    const waiverError = document.getElementById('waiverViewError');
+    if (waiverLink) {
+            // 1. When the link is clicked, set the viewed flag to true
+            waiverLink.addEventListener('click', function() {
+                this.setAttribute('data-waiver-viewed', 'true');
+                // If the error is showing, hide it, as the user is now viewing the waiver
+                if (waiverError) {
+                    waiverError.style.display = 'none';
+                }
+            });
+        }
+
+    if (waiverCheckbox) {
+        // 2. When the checkbox state changes, check if the waiver was viewed
+        waiverCheckbox.addEventListener('change', function() {
+            // Check the status from the custom HTML attribute
+            const hasViewed = waiverLink ? waiverLink.getAttribute('data-waiver-viewed') === 'true' : false;
+
+            if (this.checked && !hasViewed) {
+                // User is trying to check the box but hasn't viewed the link
+                this.checked = false; // Prevent the box from being checked
+                if (waiverError) {
+                    waiverError.style.display = 'block'; // Show the red error message
+                }
+            } else if (waiverError) {
+                // The check was successful (or user is unchecking), hide the error
+                waiverError.style.display = 'none'; 
+            }
+        });
+    }
+
     document.querySelectorAll('.dropdown-toggle').forEach(button => {
         button.addEventListener('click', function(event) {
             event.preventDefault();
@@ -292,6 +369,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (closeAuthPromptButton) {
         closeAuthPromptButton.addEventListener('click', function() {
             document.getElementById('authPromptModal').style.display = 'none';
+            // Reset the guest section to hidden when closing
+            const guestSection = document.getElementById('guestCheckoutSection');
+            const authText = document.getElementById('authModalBodyText');
+            
+            if (guestSection) guestSection.style.display = 'none'; // <--- Reset
+            if (authText) authText.textContent = "You need an account to sign up for events or subscriptions."; // <--- Reset text
         });
     }
 
@@ -902,76 +985,6 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     }
                 });
             }
-            // else if (isEditingRsvp && totalAmount <= 0) {
-            //     const saveChangesBtn = document.createElement('button');
-            //     saveChangesBtn.textContent = 'Update Guest Count';
-            //     saveChangesBtn.className = 'btn btn-success';
-
-            //     // --- NEW: Redesign the modal footer for a cleaner UI ---
-            //     const notGoingBtn = document.getElementById('notGoingBtn');
-            //     const footerContainer = document.getElementById('notGoingContainer');
-
-            //     // Clear the original paypal container since we are moving the button.
-            //     paypalContainer.innerHTML = ''; 
-                
-            //     if (footerContainer && notGoingBtn) {
-            //         // 1. Clear any existing content (like "No longer able to make it?" text).
-            //         footerContainer.innerHTML = '';
-
-            //         // 2. Style it as a proper modal footer.
-            //         footerContainer.style.display = 'flex';
-            //         footerContainer.style.justifyContent = 'space-between';
-            //         footerContainer.style.alignItems = 'center';
-            //         footerContainer.style.marginTop = '20px';
-            //         footerContainer.style.paddingTop = '15px';
-            //         footerContainer.style.borderTop = '1px solid #dee2e6';
-                    
-            //         // 3. Add the "Not Going" button (destructive action) to the left.
-            //         footerContainer.appendChild(notGoingBtn);
-
-            //         // 4. Add the "Update" button (primary action) to the right.
-            //         footerContainer.appendChild(saveChangesBtn);
-            //     } else {
-            //         // Fallback to original behavior if containers aren't found
-            //         paypalContainer.appendChild(saveChangesBtn);
-            //     }
-            //     // --- End of UI Redesign ---
-
-            //     saveChangesBtn.addEventListener('click', async () => {
-            //         saveChangesBtn.disabled = true;
-            //         saveChangesBtn.textContent = 'Saving...';
-
-            //         const newGuestCount = parseInt(guestCountSpan.textContent);
-
-            //         try {
-            //             const response = await fetch('/api/rsvp/update', {
-            //                 method: 'POST',
-            //                 headers: { 'Content-Type': 'application/json' },
-            //                 body: JSON.stringify({ 
-            //                     event_id: eventId,
-            //                     new_guest_count: newGuestCount
-            //                 })
-            //             });
-
-            //             const result = await response.json();
-            //             if (response.ok) {
-            //                 sessionStorage.setItem('flashMessage', result.message);
-            //                 sessionStorage.setItem('flashEventId', eventId);
-            //                 window.location.reload();
-            //             } else {
-            //                 alert(`Error: ${result.error || 'Could not update RSVP.'}`);
-            //                 saveChangesBtn.disabled = false;
-            //                 saveChangesBtn.textContent = 'Update Guest Count';
-            //             }
-            //         } catch (error) {
-            //             console.error('Error updating RSVP:', error);
-            //             alert('An unexpected network error occurred.');
-            //             saveChangesBtn.disabled = false;
-            //             saveChangesBtn.textContent = 'Save Changes';
-            //         }
-            //     });
-            // }
-            // Handle cases like removing guests during an edit, where the cost becomes $0
             else {
                 paypalContainer.innerHTML = '<p style="text-align: center; font-weight: bold; color: #333;">No payment required for this change.</p>';
             }
@@ -1067,8 +1080,17 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             button.addEventListener("click", function () {
 
                 if (!isUserAuthenticated) {
-                    document.getElementById('authPromptModal').style.display = 'block';
-                    return; // Stop the function here if the user is not logged in
+                    const authModal = document.getElementById('authPromptModal');
+                    const guestSection = document.getElementById('guestCheckoutSection'); // <--- ADD THIS
+                    // 2. Show the modal
+                    if (authModal) authModal.style.display = 'block';
+
+                    // 3. REVEAL the Guest Section & Update Text (Crucial Step)
+                    if (guestSection) guestSection.style.display = 'block'; // <--- THIS WAS MISSING
+                    // 4. Capture event data for guest checkout
+                    window.pendingGuestEventId = this.getAttribute("data-event-id");
+                    window.pendingGuestTicketPrice = this.getAttribute("data-ticket-price");
+                    return;
                 }
                 currentEventId = this.getAttribute("data-event-id");
                 const eventTitle = this.getAttribute("data-title");
@@ -1311,14 +1333,43 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             });
         }
 
-
-        // Close RSVP modal
-        // document.getElementById('closeRsvpModal').addEventListener('click', function () {
-        //     rsvpModal.style.display = 'none';
-        // });
         document.getElementById('closeRsvpX').addEventListener('click', function () {
             rsvpModal.style.display = 'none';
         });
+
+        // 1. Auth Selection Modal Logic
+        const authModal = document.getElementById('authPromptModal');
+        const guestModal = document.getElementById('guestCheckoutModal');
+        const btnContinueGuest = document.getElementById('btnContinueGuest');
+
+        // Close buttons for new modals
+        document.querySelectorAll('.close-auth-modal').forEach(btn => {
+            btn.addEventListener('click', () => { if(authModal) authModal.style.display = 'none'; });
+        });
+        document.querySelectorAll('.close-guest-modal').forEach(btn => {
+            btn.addEventListener('click', () => { if(guestModal) guestModal.style.display = 'none'; });
+        });
+
+        // "Continue as Guest" Click Handler
+        if (btnContinueGuest) {
+            btnContinueGuest.addEventListener('click', function() {
+                if(authModal) authModal.style.display = 'none';
+                if(guestModal) guestModal.style.display = 'block';
+                // Start the guest checkout process using the data we saved in step 1
+                initGuestCheckout(window.pendingGuestEventId, window.pendingGuestTicketPrice);
+            });
+        }
+
+        // Guest Waiver Checkbox Logic
+        const guestWaiverLink = document.getElementById('guestWaiverLink');
+        const guestWaiverCheckbox = document.getElementById('guestWaiverAgree');
+        if (guestWaiverLink && guestWaiverCheckbox) {
+            guestWaiverLink.addEventListener('click', () => {
+                guestWaiverCheckbox.disabled = false;
+                // Optional: automatically check it when they click the link
+                // guestWaiverCheckbox.checked = true; 
+            });
+        }
     }
 
 
@@ -1332,3 +1383,122 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
 
     attachAllEventListeners(); 
 });
+
+
+// Guest Checkout Function
+
+function initGuestCheckout(eventId, ticketPrice) {
+    let guestCount = 0;
+    const priceDisplay = document.getElementById('guestTotalPrice');
+    const countDisplay = document.getElementById('guestGuestCount');
+    
+    // Helper to update UI
+    const updatePrice = () => {
+        const total = (1 + guestCount) * parseFloat(ticketPrice);
+        if(priceDisplay) priceDisplay.textContent = '$' + total.toFixed(2);
+        if(countDisplay) countDisplay.textContent = guestCount;
+    };
+    updatePrice(); // Run once on init
+
+    // Guest Counter Click Handlers
+    const decBtn = document.getElementById('guestGuestDecrement');
+    const incBtn = document.getElementById('guestGuestIncrement');
+    
+    if(decBtn) decBtn.onclick = () => {
+        if (guestCount > 0) { guestCount--; updatePrice(); }
+    };
+    if(incBtn) incBtn.onclick = () => {
+        guestCount++; updatePrice();
+    };
+
+    // Signature Pad Initialization
+    // Note: Ensure you have included signature_pad.js in your HTML templates
+    const canvas = document.getElementById('guestSignaturePad');
+    let signaturePad;
+    
+    if (canvas) {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+        signaturePad = new SignaturePad(canvas);
+        
+        const clearBtn = document.getElementById('clearGuestSignature');
+        if(clearBtn) clearBtn.onclick = () => signaturePad.clear();
+    }
+
+    // Render PayPal Buttons
+    const container = document.getElementById('guest-paypal-container');
+    if (container) {
+        container.innerHTML = ''; // Clear any existing buttons
+
+        paypal.Buttons({
+            onClick: function(data, actions) {
+                // Validation before opening PayPal
+                const form = document.getElementById('guestCheckoutForm');
+                const waiver = document.getElementById('guestWaiverCheckbox');
+                
+                if (!form.checkValidity()) {
+                    form.reportValidity(); // Shows browser validation errors
+                    return actions.reject();
+                }
+
+                if (!validateGuestAge()) {
+                    // validateGuestAge handles the error message display itself
+                    return actions.reject();
+                }
+
+                if (!waiver.checked) {
+                    alert("You must agree to the waiver.");
+                    return actions.reject();
+                }
+                if (signaturePad && signaturePad.isEmpty()) {
+                    alert("Please sign the waiver.");
+                    return actions.reject();
+                }
+                return actions.resolve();
+            },
+            createOrder: function(data, actions) {
+                return fetch('/api/orders', {
+                    method: 'post',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        event_id: eventId,
+                        quantity: 1 + guestCount, // You + Guests
+                        is_guest_checkout: true
+                    })
+                }).then(res => res.json()).then(orderData => orderData.id);
+            },
+            onApprove: function(data, actions) {
+                return fetch(`/api/orders/${data.orderID}/capture`, {
+                    method: 'post',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        event_id: eventId,
+                        guest_count: guestCount,
+                        is_guest_checkout: true,
+                        guest_info: {
+                            first_name: document.getElementById('guestFirstName').value,
+                            last_name: document.getElementById('guestLastName').value,
+                            email: document.getElementById('guestEmail').value,
+                            address: document.getElementById('guestAddress').value,
+                            dob: document.getElementById('guestDob').value,
+                            emergency_contact_name: document.getElementById('guestEmergName').value,
+                            emergency_contact_phone: document.getElementById('guestEmergPhone').value,
+                            signature_data: signaturePad ? signaturePad.toDataURL() : null
+                        }
+                    })
+                }).then(res => res.json()).then(orderData => {
+                    if (orderData.error) {
+                        alert('Error: ' + orderData.error);
+                    } else {
+                        const guestModal = document.getElementById('guestCheckoutModal');
+                        if(guestModal) guestModal.style.display = 'none';
+                        alert(orderData.success_message);
+                        location.reload();
+                    }
+                });
+            }
+        }).render('#guest-paypal-container');
+    }
+}
