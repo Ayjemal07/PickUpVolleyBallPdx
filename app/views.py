@@ -270,6 +270,10 @@ def events():
                 attendees = EventAttendee.query.filter_by(event_id=event.id).all()
                 event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
                 event.is_attending = any(a.user_id == user_id for a in attendees)
+                if user_id:
+                    event.is_attending = any(a.user_id == user_id for a in attendees)
+                else:
+                    event.is_attending = False
     
     
     process_event_list(upcoming_events)
@@ -450,7 +454,10 @@ def event_details(event_id):
     attendees = EventAttendee.query.filter_by(event_id=event.id).all()
     event.rsvp_count = sum(1 + (a.guest_count or 0) for a in attendees)
     user_id = session.get('user_id') or (current_user.id if current_user.is_authenticated else None)
-    is_attending = any(a.user_id == user_id for a in attendees)
+    if user_id:
+        is_attending = any(a.user_id == user_id for a in attendees)
+    else:
+        is_attending = False
     is_full = event.rsvp_count >= event.max_capacity
 
     try:
