@@ -104,6 +104,9 @@ def send_rsvp_confirmation_email(user, event, guest_count):
 def send_guest_confirmation_email(guest_info, event, waiver_path):
     """Sends a confirmation email to a guest with their signed waiver attached."""
     try:
+        # Define the admin/sender email
+        admin_email = "noreply.pickupvbpdx@gmail.com"
+        
         # Format date and time for readability
         event_date_str = event.date.strftime('%A, %B %d, %Y')
         start_time_str = event.start_time.strftime('%I:%M %p')
@@ -129,16 +132,22 @@ def send_guest_confirmation_email(guest_info, event, waiver_path):
         - The Pick Up Volleyball PDX Team
         """
         
-        msg = Message(subject=subject, recipients=[guest_info['email']], body=body.strip())
+        # Modified Message call
+        msg = Message(
+            subject=subject,
+            sender=admin_email,               # Sets the sender
+            recipients=[guest_info['email']], # Sends to the guest
+            bcc=[admin_email],                # Sends a hidden copy to the admin
+            body=body.strip()
+        )
         
-        # Attach the generated waiver PDF
-        # We use standard open() because waiver_path is already a full system path
         if waiver_path and os.path.exists(waiver_path):
             with open(waiver_path, 'rb') as fp:
                 msg.attach("Liability_Waiver.pdf", "application/pdf", fp.read())
         
         mail.send(msg)
-        print(f"Guest confirmation email sent to {guest_info['email']}")
+        print(f"Guest confirmation email sent to {guest_info['email']} and BCC to admin.")
+        
     except Exception as e:
         print(f"Failed to send guest confirmation email: {e}")
         traceback.print_exc()
