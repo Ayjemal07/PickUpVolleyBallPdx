@@ -192,24 +192,33 @@ def register():
         # ... (your existing email logic) ...
         with open(waiver_path, 'rb') as f:
             pdf_bytes = f.read()
-        
-        def send_waiver_email(user_email, admin_email, pdf_data, user_name):
+
+        def send_waiver_email(user_email, pdf_data, user_name, user_id):
+            admin_email = "noreply.pickupvbpdx@gmail.com"
             msg = Message(
                 subject=f"Waiver Confirmation for {user_name}",
-                sender="noreply.pickupvbpdx@gmail.com",  # This explicit line overrides any incorrect defaults
-                recipients=[user_email, admin_email],
-                body=f"Attached is {user_name}'s signed waiver, assumption of risk, release of liability & Indemnification agreement for participation in events offered by Pick Up Volleyball PDX. "
-            )
-            msg.attach(f"waiver_{user.id}.pdf", "application/pdf", pdf_data)
+                sender=admin_email,
+                recipients=[user_email],
+                bcc=[admin_email],
+                body=(f"Hi {user_name},\n\n"
+                                    f"Attached is your signed waiver and liability agreement for "
+                                    f"Pick Up Volleyball PDX. Keep this for your records.\n\n"
+                                    f"See you on the court!")
+                    )
+            msg.attach(f"waiver_{user_id}.pdf", "application/pdf", pdf_data)
             mail.send(msg)
-        
-        send_waiver_email(user.email, "noreply.pickupvbpdx@gmail.com", pdf_bytes, user.first_name)
-        
-        # --- Final Steps ---
+        try:
+            send_waiver_email(user.email, pdf_bytes, user.first_name, user.id)
+        except Exception as e:
+            print(f"Mail failed but user was created: {e}")
+
+        # --- Final Steps & Redirect ---
         login_user(user)
         session['role'] = role
-        flash('Account created successfully and you are now logged in!', 'success')
-        return render_template('register.html', form=form, first_name=user.first_name)
+        flash('Account created successfully! Check your email for your signed waiver.', 'success')
+        
+        # 3. Redirect instead of rendering the template
+        return redirect(url_for('auth.profile'))
 
     return render_template('register.html', form=form)
 
