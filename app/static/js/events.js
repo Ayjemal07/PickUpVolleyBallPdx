@@ -906,30 +906,22 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             }
             // SCENARIO 2: This is a brand new RSVP.
             else {
-                // Now, for this new RSVP, check if the user gets it for free.
-                if (userHasFreeEvent) {
-                    // User's spot is free, so they only pay for guests.
+                // CHECK CENTRALIZED CREDITS
+                if (userEventCredits > 0) {
+                    // Passed from backend via render_template
+                    let expiryMsg = soonestCreditExpiry ? `(Expires: ${soonestCreditExpiry})` : "";
+                    
+                    message = `
+                        <div class="alert alert-success">
+                            <strong>Credit Available!</strong><br>
+                            We will automatically use your credit expiring soonest.<br>
+                            <small>Next Expiration: ${expiryMsg}</small>
+                        </div>
+                    `;
+                    // Set total to 0 for the user (pay only for guests)
+                    // Logic: User uses 1 credit, pays for guests
                     totalAmount = currentTicketPrice * guestsSelected;
-                    message = (guestsSelected > 0)
-                        ? `Your spot is free! You are only paying for your guest(s).`
-                        : `Congratulations! Your first event is on us!`;
-                }
-
-                else if (userEventCredits > 0 && isSubscriptionActive()) {
-                    totalAmount = currentTicketPrice * guestsSelected; // Only pay for guests
-                       const remainingBalance = userEventCredits - 1;
-                        message = `
-                            <div style="text-align: left; line-height: 1.4; width: 100%;">
-                                <p style="margin-bottom: 5px;">Your spot will be covered by 1 Subscription Credit.</p>
-                                <p style="margin: 0; font-size: 0.9em; color: #333;">
-                                    <strong> Subscription Balance:</strong> ${userEventCredits} → ${remainingBalance} | <strong>Guests:</strong> Additional Charge
-                                </p>
-                            </div>
-                        `;
-
-                }
-
-                else {
+                } else {
                     totalAmount = currentTicketPrice * (1 + guestsSelected);
                 }
             }
@@ -957,9 +949,9 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 renderPayPalButtons(eventId, totalAmount);
             }
             // If it's a free event redemption (new RSVP with 0 guests)
-            else if (!isEditingRsvp && (userHasFreeEvent || (userEventCredits > 0 && isSubscriptionActive()))) {
+            else if (!isEditingRsvp && userEventCredits > 0) {
                 const freeRsvpButton = document.createElement('button');
-                freeRsvpButton.textContent = userHasFreeEvent ? 'Confirm Free RSVP' : `Confirm & Use Credit `;
+                freeRsvpButton.textContent = `Confirm & Use 1 Credit`;
                 freeRsvpButton.className = 'btn btn-success';
                 paypalContainer.appendChild(freeRsvpButton);
 
@@ -1379,8 +1371,6 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         userRole = 'user';
     }
     console.log("Updated User Role:", userRole);
-    console.log(userHasFreeEvent);
-
     attachAllEventListeners(); 
 });
 

@@ -6,7 +6,7 @@
 import uuid 
 
 #imports date and time
-from datetime import datetime
+from datetime import datetime, date
 
 
 #Werkzeug is a security package. This allows us to make the password data that we store in our 
@@ -43,8 +43,75 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow) 
 
 
-    has_used_free_event = db.Column(db.Boolean, default=False, nullable=False)
-    event_credits = db.Column(db.Integer, default=0, nullable=False)
+    @property
+    def event_credits(self):
+        """
+        Calculates total available credits dynamically from the ledger.
+        This is the Single Source of Truth.
+        """
+        today = date.today()
+        # Sum balances of all grants that are not expired
+        total = db.session.query(db.func.sum(CreditGrant.balance)).filter(
+            CreditGrant.user_id == self.id,
+            CreditGrant.balance > 0,
+            CreditGrant.expiry_date >= today
+        ).scalar()
+        return total or 0
+
+    @property
+    def next_credit_expiry(self):
+        """Returns the date of the credit that expires soonest."""
+        today = date.today()
+        next_grant = CreditGrant.query.filter(
+            CreditGrant.user_id == self.id,
+            CreditGrant.balance > 0,
+            CreditGrant.expiry_date >= today
+        ).order_by(CreditGrant.expiry_date.asc()).first()
+        
+        if next_grant:
+            return next_grant.expiry_date.strftime('%b %d, %Y')
+        return None
+
+    def spend_credits(self, amount_needed):
+        """
+        FIFO Logic: Deducts credits from grants expiring soonest.
+        Returns True if successful, False if insufficient funds.
+        """
+        today = date.today()
+        
+        # 1. Check total balance first
+        if self.event_credits < amount_needed:
+            return False
+
+        # 2. Get active grants sorted by expiry (Soonest first)
+        active_grants = CreditGrant.query.filter(
+            CreditGrant.user_id == self.id,
+            CreditGrant.balance > 0,
+            CreditGrant.expiry_date >= today
+        ).order_by(CreditGrant.expiry_date.asc()).all()
+
+        remaining_to_pay = amount_needed
+
+        for grant in active_grants:
+            if remaining_to_pay <= 0:
+                break
+            
+            if grant.balance >= remaining_to_pay:
+                # This grant covers the rest
+                grant.balance -= remaining_to_pay
+                remaining_to_pay = 0
+            else:
+                # Take all from this grant and move to next
+                remaining_to_pay -= grant.balance
+                grant.balance = 0
+        
+        # If we successfully deducted everything
+        if remaining_to_pay == 0:
+            db.session.commit()
+            return True
+        else:
+            db.session.rollback() # Should not happen if step 1 passed
+            return False
 
     subscriptions = db.relationship('Subscription', back_populates='user', lazy=True, cascade="all, delete-orphan")
 
@@ -57,9 +124,7 @@ class User(UserMixin, db.Model):
         self.last_name = last_name
         self.role = role
         self.token = self.set_token(24)
-        # New users start with eligibility for one free event
-        self.has_used_free_event = False
-        self.event_credits = 0
+
 
     def set_token(self, length):
         return secrets.token_hex(length)
@@ -141,3 +206,23 @@ class Subscription(db.Model):
 
     def __repr__(self):
         return f'<Subscription {self.id} - Tier {self.tier} for User {self.user_id}>'
+
+
+
+class CreditGrant(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    
+    # "balance" allows us to deduct partially from a grant (e.g. Sub gives 4, user uses 1, balance becomes 3)
+    balance = db.Column(db.Integer, nullable=False, default=1) 
+    
+    # Labels: 'promo' (free first event), 'subscription', 'cancellation'
+    source_type = db.Column(db.String(50), nullable=False) 
+    
+    # Optional: keeps track of original reason e.g. "Nov Subscription" or "Canceled Game 11/12"
+    description = db.Column(db.String(255), nullable=True) 
+    
+    issued_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expiry_date = db.Column(db.Date, nullable=False)
+
+    user = db.relationship('User', backref='credit_grants')

@@ -31,7 +31,6 @@ def password_strength_check(form, field):
         raise ValidationError('Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.')
 
 class UserLoginForm(FlaskForm):
-    # email, password, submit
     email = StringField('Email', validators = [DataRequired(), Email()])
     password = PasswordField('Password', validators = [DataRequired()])
     submit = SubmitField('Sign In')
@@ -69,7 +68,7 @@ class ProfileUpdateForm(FlaskForm):
     ])
     
     current_password = PasswordField('Current Password', validators=[Optional()])
-    new_password = PasswordField('New Password', validators=[Optional()])
+    new_password = PasswordField('New Password', validators=[Optional(), password_strength_check])
     confirm_password = PasswordField('Confirm Password', validators=[
         Optional(), EqualTo('new_password', message='Passwords must match')
     ])

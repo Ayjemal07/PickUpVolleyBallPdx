@@ -2,13 +2,13 @@
 
 from flask import Blueprint, render_template, redirect, url_for, flash, session
 from app.forms import UserLoginForm, UserRegistrationForm
-from ..models import User, Subscription, db
+from ..models import User, Subscription, db, CreditGrant
 from flask_login import login_user, logout_user, login_required
 from flask import request
 from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Mail, Message
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
@@ -17,19 +17,58 @@ import io
 from reportlab.lib.utils import ImageReader
 from app.utils import generate_detailed_waiver
 
-
+from app.forms import ProfileUpdateForm
 import uuid
 from werkzeug.utils import secure_filename
 import os
 from flask import current_app
 from flask_login import current_user
 mail = Mail()
-serializer = URLSafeTimedSerializer('your-secret-key')  # Replace with your secret key
+serializer = URLSafeTimedSerializer('your-secret-key') 
 
 
 auth = Blueprint('auth', __name__, template_folder='auth_templates')
 
+def add_user_credit(user, amount, source_type, description, days_valid=30):
+    """Creates a new credit record in the ledger."""
+    expiry = date.today() + timedelta(days=days_valid)
+    grant = CreditGrant(
+        user_id=user.id,
+        balance=amount,
+        source_type=source_type,
+        description=description,
+        expiry_date=expiry
+    )
+    db.session.add(grant)
+    db.session.commit()
 
+def cleanup_user_expired_credits(user):
+    """
+    Removes expired credit grants from the database.
+    We DO NOT subtract from event_credits because it is calculated dynamically.
+    """
+    if not user.is_authenticated:
+        return
+
+    today = date.today()
+    # Find grants that have expired
+    expired_grants = CreditGrant.query.filter(
+        CreditGrant.user_id == user.id, 
+        CreditGrant.expiry_date < today
+    ).all()
+
+    if expired_grants:
+        count = len(expired_grants)
+        for grant in expired_grants:
+            db.session.delete(grant)
+        
+        try:
+            db.session.commit()
+            if count > 0:
+                print(f"Cleaned up {count} expired credit records for {user.email}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error cleaning credits: {e}")
 def send_underage_rejection_email(user_email):
     """Sends an email to users who are not old enough to register."""
     msg = Message(
@@ -172,6 +211,14 @@ def register():
         user.set_password(password)
         db.session.add(user)
         db.session.commit() # Commit here to get the user.id
+        # GIVE THE FREE CREDIT IMMEDIATELY
+        add_user_credit(
+            user=user, 
+            amount=1, 
+            source_type='promo', 
+            description='New Member Welcome Gift', 
+            days_valid=365
+        )
 
         try:
             header, encoded = signature_data.split(",", 1)
@@ -234,7 +281,17 @@ def signout():
 @auth.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    from app.forms import ProfileUpdateForm
+    cleanup_user_expired_credits(current_user)
+
+    # Fetch active grants for the ledger view
+    active_credits = CreditGrant.query.filter(
+        CreditGrant.user_id == current_user.id,
+        CreditGrant.balance > 0,
+        CreditGrant.expiry_date >= date.today()
+    ).order_by(CreditGrant.expiry_date.asc()).all()
+
+    # Calculate Total
+    total_credits = sum(c.balance for c in active_credits)
     form = ProfileUpdateForm(obj=current_user)
 
     if request.method == 'POST':
@@ -297,7 +354,10 @@ def profile():
     form.last_name.data = current_user.last_name
     today = date.today()
 
-    return render_template('profile.html', form=form, today=today, active_subscriptions=active_subscriptions)
+    return render_template('profile.html', form=form, today=today, 
+                           active_subscriptions=active_subscriptions, 
+                           active_credits=active_credits,
+                           total_credits=total_credits,)
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])

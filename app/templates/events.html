@@ -470,7 +470,6 @@
 {% block page_variables %}
     var isUserAuthenticated = {{ is_authenticated|tojson }};
     var userRole = {{ user_role|default('user')|tojson }};
-    var userHasFreeEvent = {{ user_has_free_event|tojson }};
     var userEventCredits = {{ user_event_credits|tojson }};
     var hasActiveSubscription = {{ has_active_subscription|tojson }}; 
     var upcomingEventsData = {{ upcoming_events_data|tojson|safe }};

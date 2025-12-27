@@ -95,43 +95,50 @@
                 </form>
             </div>
         <hr>
-        <div class="benefits-container" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-top: 20px; background-color: #f9f9f9;">
-            <h4 style="margin-top: 0;">Your Benefits</h4>
-
-            {% if active_subscriptions %}
-                {# THIS IS THE MODIFIED LINE #}
-                <p><i class="bi bi-ticket-perforated-fill" style="color: #0d6efd;"></i> 
-                <strong>Status:</strong> <span style="color: green; font-weight: bold;">
-                    Active Subscription ({% for sub in active_subscriptions %}Tier {{ sub.tier }}{% if not loop.last %}, {% endif %}{% endfor %})
-                </span>
-                </p>
-                <p><i class="bi bi-bar-chart-steps"></i> 
-                <strong>Total Remaining Credits:</strong> <span style="font-weight: bold;">{{ current_user.event_credits }}</span>
-                </p>
-                {% for sub in active_subscriptions %}
-                <div style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
-                    <p style="margin-bottom: 5px;">
-                        <strong>Tier {{ sub.tier }} Plan</strong> ({{ sub.credits_per_month }} credits/mo)
-                    </p>
-                    <p style="margin-bottom: 5px; font-size: 0.9em;">
-                        <i class="bi bi-calendar-check"></i> 
-                        Renews On: {{ sub.expiry_date.strftime('%B %d, %Y') }}
-                    </p>
-                </div>
-                {% endfor %}
-
-            {% elif not current_user.has_used_free_event %}
-                <p><i class="bi bi-star-fill" style="color: #ffc107;"></i> 
-                <strong>Status:</strong> <span style="color: green; font-weight: bold;">New Member Benefit Available</span>
-                </p>
-                <p>Your first event is free! This benefit will be automatically applied when you sign up for your first event.</p>
-
+        <div class="benefits-container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h4 style="color: teal; margin: 0;">Total Credit Balance: {{ total_credits }} Events</h4>
+            </div>
+            
+            <hr>
+            
+            <h5>Credit History</h5>
+            {% if active_credits %}
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th>Description</th>
+                            <th>Balance</th>
+                            <th>Expires On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for credit in active_credits %}
+                        <tr>
+                            <td>
+                                {% if credit.source_type == 'promo' %}
+                                    <span class="badge bg-info text-dark">Promo</span>
+                                {% elif credit.source_type == 'cancellation' %}
+                                    <span class="badge bg-warning text-dark">Cancellation</span>
+                                {% elif credit.source_type == 'subscription' %}
+                                    <span class="badge bg-success">Subscription</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Other</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ credit.description }}</td>
+                            <td><strong>{{ credit.balance }}</strong></td>
+                            {% set days_left = (credit.expiry_date - today).days %}
+                            <td style="{{ 'color: red; font-weight: bold;' if days_left < 7 else '' }}">
+                                {{ credit.expiry_date.strftime('%b %d, %Y') }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             {% else %}
-                <p><i class="bi bi-emoji-frown"></i> 
-                <strong>Status:</strong> No active benefits.
-                </p>
-                <p>Check out our plans to save on events!</p>
-                <a href="{{ url_for('main.subscriptions') }}" class="btn btn-primary" style="margin-top: 10px;">View Subscriptions</a>
+                <p class="text-muted">You currently have no active event credits.</p>
             {% endif %}
         </div>
 

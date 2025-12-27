@@ -3,7 +3,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, session 
 import urllib.parse
 
-from .models import Event, User, db
 import traceback
 from flask import request, jsonify # Import jsonify
 from datetime import datetime, timedelta, date
@@ -12,10 +11,10 @@ import os
 from flask import current_app
 from werkzeug.utils import secure_filename
 import uuid 
-from flask_login import current_user
+from flask_login import current_user, login_required
 
-from .models import EventAttendee, Subscription
-from flask_login import current_user, login_required # Import login_required
+
+from .models import Event, User, db, EventAttendee, Subscription, CreditGrant
 from flask_mail import Mail, Message
 mail = Mail()
 
@@ -39,6 +38,133 @@ PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
 PAYPAL_BASE = "https://api-m.paypal.com"
 PAYPAL_PLAN_ID_TIER1 = os.getenv("PAYPAL_PLAN_ID_TIER1")
 PAYPAL_PLAN_ID_TIER2 = os.getenv("PAYPAL_PLAN_ID_TIER2")
+
+
+def add_user_credit(user, amount, source_type, description, days_valid=30):
+    """Creates a new credit record in the ledger."""
+    expiry = date.today() + timedelta(days=days_valid)
+    
+    # Special handling for Subscription credits (usually valid for 30 days)
+    if source_type == 'subscription':
+        # You might want to match the subscription cycle here
+        pass 
+        
+    grant = CreditGrant(
+        user_id=user.id,
+        balance=amount,
+        source_type=source_type,
+        description=description,
+        expiry_date=expiry
+    )
+    db.session.add(grant)
+    db.session.commit()
+
+def spend_user_credit(user, amount_needed=1):
+    """
+    FIFO Logic: Finds the credits expiring SOONEST and deducts from them.
+    Returns True if successful, False if insufficient balance.
+    """
+    # 1. Get all active grants with positive balance, sorted by expiry date (ASC)
+    active_grants = CreditGrant.query.filter(
+        CreditGrant.user_id == user.id,
+        CreditGrant.balance > 0,
+        CreditGrant.expiry_date >= date.today()
+    ).order_by(CreditGrant.expiry_date.asc()).all()
+
+    # 2. Check if total available is enough
+    total_available = sum(g.balance for g in active_grants)
+    if total_available < amount_needed:
+        return False, "Insufficient credits"
+
+    # 3. Deduct from grants FIFO
+    remaining_to_pay = amount_needed
+    
+    for grant in active_grants:
+        if remaining_to_pay <= 0:
+            break
+            
+        if grant.balance >= remaining_to_pay:
+            # This grant covers the rest
+            grant.balance -= remaining_to_pay
+            remaining_to_pay = 0
+        else:
+            # Take everything from this grant and move to the next
+            remaining_to_pay -= grant.balance
+            grant.balance = 0
+            
+    db.session.commit()
+    return True, "Success"
+
+def cleanup_user_expired_credits(user):
+    """
+    Removes expired credit grants from the database.
+    Because event_credits is a computed property, we DO NOT need to 
+    manually subtract from it. We just remove the old rows.
+    """
+    if not user.is_authenticated:
+        return
+
+    today = date.today()
+    # Find grants that have expired
+    expired_grants = CreditGrant.query.filter(
+        CreditGrant.user_id == user.id, 
+        CreditGrant.expiry_date < today
+    ).all()
+
+    if expired_grants:
+        count = len(expired_grants)
+        for grant in expired_grants:
+            db.session.delete(grant)
+        
+        try:
+            db.session.commit()
+            print(f"Cleaned up {count} expired credit records for {user.email}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error cleaning credits: {e}")
+
+def send_cancellation_credit_email(user, event, credits_num, expiry_date):
+    """Sends email with specific wording required."""
+    try:
+        subject = "PUVB Event Cancellation"
+        
+        # Format: "Thursday 11/19 7:30pm"
+        event_datetime_str = f"{event.date.strftime('%A %m/%d')} {event.start_time.strftime('%I:%M%p').lstrip('0').lower()}"
+        
+        body = f"""
+        Cancellation details: '{event_datetime_str} {event.title} in {event.location}' has been canceled and will no longer be happening. 
+        
+        You will automatically receive credit(s) for the canceled event. 
+        You will receive 1 credit for each spot you registered (Total: {credits_num}). 
+        
+        Credits will be valid for 30 days (Expires: {expiry_date.strftime('%m/%d/%Y')}). 
+        
+        We’re sorry for any inconvenience and look forward to having you join an event soon!
+        """
+        
+        msg = Message(subject=subject, recipients=[user.email], body=body.strip())
+        mail.send(msg)
+    except Exception as e:
+        print(f"Failed to send cancellation email: {e}")
+
+def send_guest_cancellation_only_email(email, event):
+    """Sends simple cancellation email to non-registered guests (no credits possible)."""
+    try:
+        subject = "PUVB Event Cancellation"
+        event_date_str = event.date.strftime('%A %m/%d')
+        event_time_str = event.start_time.strftime('%I:%M%p').lstrip("0").lower()
+        
+        body = f"""
+        Cancellation details: '{event_date_str} {event_time_str} {event.title} in {event.location}' has been canceled and will no longer be happening.
+        
+        If you paid for this event, please reply to this email to coordinate a refund, or create an account to receive credits.
+        
+        We’re sorry for any inconvenience.
+        """
+        msg = Message(subject=subject, recipients=[email], body=body.strip())
+        mail.send(msg)
+    except Exception as e:
+        print(f"Failed to send guest cancellation email: {e}")
 
 def send_subscription_email(user_email):
     body = """
@@ -231,9 +357,8 @@ def events():
         db.session.commit()
         flash('Event added successfully!', 'success')
         return redirect(url_for('main.events'))
-    
-    # --- NEW LOGIC for sorting, auto-deleting, and preparing events ---
-    now = now = datetime.now()
+
+    now = datetime.now()
     two_months_ago = now.date() - timedelta(days=60)
 
     # 1. Automatically delete events older than two months
@@ -316,22 +441,29 @@ def events():
     # Combine data for the FullCalendar view
     all_events_for_calendar = upcoming_events_data + past_events_data
 
-    user_has_free_event = False
-    user_credits = 0
-    can_use_credits = False # Renamed for clarity
-
+    user_event_credits = 0
+    soonest_expiry = None
+    
     if current_user.is_authenticated:
-        user_credits = current_user.event_credits
-        if not current_user.has_used_free_event:
-            user_has_free_event = True
+        # 1. Clean up old credits first to ensure accuracy
+        cleanup_user_expired_credits(current_user)
         
-        # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
-        valid_sub_for_credits = Subscription.query.filter(
+        # 2. Get the total valid credits (Sums up CreditGrant table)
+        user_event_credits = current_user.event_credits
+
+        # 3. Get the expiry date for display
+        soonest_expiry = current_user.next_credit_expiry
+
+    # Note: We pass has_active_subscription just for UI/Badge purposes, 
+    # NOT for permission to use credits. Credits are valid if > 0.
+    has_active_subscription = False
+    if current_user.is_authenticated:
+        active_sub = Subscription.query.filter(
             Subscription.user_id == current_user.id,
-            Subscription.expiry_date >= date.today()
+            Subscription.status == 'active'
         ).first()
-        if valid_sub_for_credits:
-            can_use_credits = True
+        if active_sub:
+            has_active_subscription = True
 
     print("PayPal Client ID:", PAYPAL_CLIENT_ID)
     return render_template('events.html', 
@@ -339,12 +471,12 @@ def events():
                            past_events_data=past_events_data,
                            all_events_for_calendar=all_events_for_calendar,
                            user_role=user_role,
-                           user_has_free_event=user_has_free_event,
-                           user_event_credits=user_credits,
-                           has_active_subscription=can_use_credits,
+                           user_event_credits=user_event_credits,
+                           has_active_subscription=has_active_subscription,
                            image_files=image_files,
                            is_authenticated=is_authenticated,
-                           paypal_client_id=PAYPAL_CLIENT_ID)
+                           paypal_client_id=PAYPAL_CLIENT_ID,
+                           soonest_credit_expiry=soonest_expiry)
 
 
 #Route to add an event
@@ -446,13 +578,56 @@ def delete_event(event_id):
 
 @main.route('/events/cancel/<int:event_id>', methods=['POST'])
 def cancel_event(event_id):
+    if session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
     event = Event.query.get_or_404(event_id)
-    data = request.get_json()
-    event.status = 'canceled'
-    event.cancellation_reason = data.get('cancellation_reason', 'Cancelled Event, contact event organizer')
     
-    db.session.commit()
-    return jsonify({'message': 'Event canceled successfully'}), 200
+    # --- SAFETY CHECK: Prevent double-crediting ---
+    if event.status == 'canceled':
+        return jsonify({'error': 'This event is already canceled.'}), 400
+
+    data = request.get_json()
+    
+    # *** CRITICAL FIX: Update the status to canceled ***
+    event.status = 'canceled' 
+    event.cancellation_reason = data.get('cancellation_reason', 'Cancelled Event')
+    
+    attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+    
+    credits_issued_count = 0
+    expiry = date.today() + timedelta(days=30)
+    for attendee in attendees:
+        # Calculate spots (User + Guests)
+        spots_registered = 1 + (attendee.guest_count or 0)
+        
+        if attendee.user_id:
+            user = User.query.get(attendee.user_id)
+            if user:
+                new_grant = CreditGrant(
+                    user_id=user.id,
+                    balance=spots_registered,
+                    source_type='cancellation',
+                    description=f"Refund: {event.title}",
+                    expiry_date=expiry
+                )
+                db.session.add(new_grant)
+                credits_issued_count += 1
+                
+                # 2. Send the Email
+                send_cancellation_credit_email(user, event, spots_registered, expiry)
+        
+        elif attendee.email:
+             # Guest checkout (no account) - Just notify them
+             send_guest_cancellation_only_email(attendee.email, event)
+
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Event canceled, credits issued, and emails sent successfully.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        return jsonify({'error': f'Error canceling event: {str(e)}'}), 500
 
 
 #event details page
@@ -502,22 +677,20 @@ def event_details(event_id):
         "is_attending": is_attending
     }
 
-    user_has_free_event = False
-    user_credits = 0
-    can_use_credits = False # Renamed for clarity
+    user_event_credits = 0
+    has_active_subscription = False
 
     if current_user.is_authenticated:
-        user_credits = current_user.event_credits
-        if not current_user.has_used_free_event:
-            user_has_free_event = True
+        cleanup_user_expired_credits(current_user)
+        user_event_credits = current_user.event_credits
         
-        # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
-        valid_sub_for_credits = Subscription.query.filter(
+        # Optional: Check subscription purely for UI purposes
+        active_sub = Subscription.query.filter(
             Subscription.user_id == current_user.id,
-            Subscription.expiry_date >= date.today()
+            Subscription.status == 'active'
         ).first()
-        if valid_sub_for_credits:
-            can_use_credits = True
+        if active_sub:
+            has_active_subscription = True
 
     return render_template(
         'event_details.html', 
@@ -526,9 +699,8 @@ def event_details(event_id):
         attendees=attendees,
         is_attending=is_attending,
         maps_link=maps_link,
-        user_has_free_event=user_has_free_event,
-        user_event_credits=user_credits,
-        has_active_subscription=can_use_credits, # <-- Pass new variable
+        user_event_credits=user_event_credits,
+        has_active_subscription=has_active_subscription, 
         paypal_client_id=PAYPAL_CLIENT_ID,
         is_full=is_full,
         event_passed=event_passed,
@@ -635,28 +807,15 @@ def create_order():
                 return jsonify({"error": "No payment required for this change."}), 400
                 
         else:
-            # --- NEW LOGIC FOR INITIAL RSVP ---
-            # By default, we assume everyone needs to be paid for.
             payable_attendees = requested_quantity
 
-            # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
-            valid_sub_for_credits = Subscription.query.filter(
-                Subscription.user_id == user.id,
-                Subscription.expiry_date >= date.today()
-            ).first()
-
-            if not user.has_used_free_event:
-                payable_attendees -= 1
-            elif valid_sub_for_credits and user.event_credits > 0: # Check if a valid sub exists
+            if user.event_credits > 0:
                 payable_attendees -= 1
                 
             payable_attendees = max(0, payable_attendees)
             amount_to_charge = payable_attendees * ticket_price
 
     if amount_to_charge <= 0:
-        # This case should now only be hit if a free/credit user has no guests,
-        # which is handled by the non-payment flow on the frontend.
-        # This check is a safeguard.
         return jsonify({"error": "No payment is required for this RSVP."}), 400
 
 
@@ -682,7 +841,6 @@ def create_order():
     return jsonify(response.json())
 
 @main.route("/api/orders/<order_id>/capture", methods=["POST"])
-# REMOVE @login_required
 def capture_order(order_id):
     try:
         data = request.get_json()
@@ -744,7 +902,6 @@ def capture_order(order_id):
             success_message = f"You're confirmed for {event.title}!An email with your waiver has been sent."
 
         else:
-            # === PATH B: LOGGED IN USER ===
             user = current_user
             
             if is_edit:
@@ -759,20 +916,13 @@ def capture_order(order_id):
                 db.session.add(attendee)
 
                 # Handle Credits
-                valid_sub_for_credits = Subscription.query.filter(
-                    Subscription.user_id == user.id,
-                    Subscription.expiry_date >= date.today()
-                ).first()
+                cleanup_user_expired_credits(current_user)
+                if user.event_credits > 0:
+                    user.spend_credits(1)
 
-                if not user.has_used_free_event:
-                    user.has_used_free_event = True
-                elif valid_sub_for_credits and user.event_credits > 0:
-                    user.event_credits -= 1
-                
                 success_message = f"You're confirmed for {event.title}! See you there!"
                 send_rsvp_confirmation_email(user, event, new_guest_count)
 
-        # --- Finalize ---
         # Recalculate total RSVP count
         all_attendees_for_event = EventAttendee.query.filter_by(event_id=event_id).all()
         event.rsvp_count = sum(1 + (a.guest_count or 0) for a in all_attendees_for_event)
@@ -887,8 +1037,12 @@ def confirm_subscription():
         )
         db.session.add(new_sub)
 
-        # Add credits to the user's central balance
-        current_user.event_credits += credits_to_add
+        add_user_credit(
+            user=current_user, 
+            amount=credits_to_add, 
+            source_type='subscription', 
+            description=f'Subscription Tier {tier} Credits'
+        )
         
         db.session.commit()
         
@@ -1096,10 +1250,17 @@ def paypal_webhook():
     if event_type == "PAYMENT.SALE.COMPLETED":
         # Check if the state is completed to be safe
         if resource.get('state') == 'completed':
-            user.event_credits += subscription.credits_per_month
-            
-            # Extend expiry date by 30 days from today (or based on previous expiry if you want strict cycles)
+            add_user_credit(
+                user=user,
+                amount=subscription.credits_per_month,
+                source_type='subscription',
+                description='Subscription Renewal'
+            )
+            # ----------------------
+
             subscription.expiry_date = date.today() + timedelta(days=30)
+            if subscription.status in ('suspended', 'expired'):
+                subscription.status = 'active'
 
             # 2. ONLY set status to 'active' if it's currently 'active', 'suspended', or 'expired'.
             # This prevents an explicitly 'canceled' subscription from being revived.
@@ -1145,37 +1306,26 @@ def rsvp_with_credit():
     current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
     current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
 
-    # This flow assumes the user is RSVPing for just themselves (1 person).
     if current_rsvp_count + 1 > event.max_capacity:
         return jsonify({'error': 'Sorry, this event is now full.'}), 400
     
-    # CORRECT LOGIC: Can the user USE credits? Check expiry date only.
-    valid_sub_for_credits = Subscription.query.filter(
-        Subscription.user_id == user.id,
-        Subscription.expiry_date >= date.today()
-    ).first()
+    # Try to spend credit
+    success = user.spend_credits(1)
 
-    if not user.has_used_free_event:
-        user.has_used_free_event = True
-        message = "Your first free event has been successfully claimed!"
+    if success:
+        new_attendee = EventAttendee(event_id=event.id, user_id=user.id, guest_count=0)
+        db.session.add(new_attendee)
+        db.session.commit()
         
-    elif user.event_credits > 0 and valid_sub_for_credits: # Check if a valid sub exists
-        user.event_credits -= 1
-        message = f"Successfully RSVP'd using one credit! You have {user.event_credits} credits remaining."
+        send_rsvp_confirmation_email(user, event, 0)
         
+        remaining = user.event_credits 
+        message = f"Successfully RSVP'd! Used 1 credit. {remaining} remaining."
+        session['flashMessage'] = message
+        session['flashEventId'] = event_id
+        return jsonify({'success': True, 'message': message}), 200
     else:
-        return jsonify({'error': 'No free event or credits available.'}), 400
-
-    # Create the attendee record
-    new_attendee = EventAttendee(event_id=event.id, user_id=user.id, guest_count=0)
-    db.session.add(new_attendee)
-    db.session.commit()
-    send_rsvp_confirmation_email(user, event, 0) # guest_count is 0 for credit RSVPs
-
-    
-    session['flashMessage'] = message # Use session for flash messages
-    session['flashEventId'] = event_id
-    return jsonify({'success': True, 'message': message}), 200
+        return jsonify({'error': 'Insufficient credits.'}), 400
 
 
 @main.route('/api/rsvp/delete/<int:event_id>', methods=['POST'])
@@ -1326,25 +1476,18 @@ def execute_guest_payment():
     guest_info = data.get('guest_info', {})
     event_id = data.get('event_id')
     guest_dob_str = guest_info.get('dob') # 'YYYY-MM-DD'
-
-    # -----------------------------------------------
-    # START: AGE VALIDATION FIX
-    # -----------------------------------------------
     if not guest_dob_str:
         return jsonify({'error': 'Date of Birth is required.'}), 400
 
     try:
-        # Convert DOB string to date object
         dob = datetime.strptime(guest_dob_str, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({'error': 'Invalid Date of Birth format.'}), 400
 
     today = date.today()
-    # Calculate age: today's year - birth year - (if birthday hasn't passed this year)
     age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
     if age < 18:
-        # Return an error if the guest is under 18
         return jsonify({'error': 'You must be 18 years or older to register for an event.'}), 400
     
 
@@ -1354,11 +1497,8 @@ def execute_guest_payment():
     if not guest_first_name or not guest_last_name:
         # This shouldn't happen if frontend validation works, but is a safe guard
         return jsonify({'error': 'Guest first and last name are required.'}), 400
-    # -----------------------------------------------
-    # END: GUEST NAME EXTRACTION FIX
-    # -----------------------------------------------
 
-    # Get the event (ensure it exists)
     event = Event.query.get(event_id)
     if not event:
         return jsonify({'error': 'Event not found.'}), 404
+    
