@@ -679,10 +679,12 @@ def event_details(event_id):
 
     user_event_credits = 0
     has_active_subscription = False
+    soonest_expiry = None
 
     if current_user.is_authenticated:
         cleanup_user_expired_credits(current_user)
         user_event_credits = current_user.event_credits
+        soonest_expiry = current_user.next_credit_expiry
         
         # Optional: Check subscription purely for UI purposes
         active_sub = Subscription.query.filter(
@@ -700,6 +702,7 @@ def event_details(event_id):
         is_attending=is_attending,
         maps_link=maps_link,
         user_event_credits=user_event_credits,
+        soonest_credit_expiry=soonest_expiry,
         has_active_subscription=has_active_subscription, 
         paypal_client_id=PAYPAL_CLIENT_ID,
         is_full=is_full,

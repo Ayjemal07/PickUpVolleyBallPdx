@@ -235,6 +235,7 @@
         var isUserAuthenticated = {{ is_authenticated|tojson }};
         var userRole = {{ user_role|default('user')|tojson }};
         var userEventCredits = {{ user_event_credits|tojson }};
+        var soonestCreditExpiry = {{ soonest_credit_expiry|default(None)|tojson }};
         var hasActiveSubscription = {{ has_active_subscription|tojson }}; 
         var currentEventData = {{ event_data|tojson|safe }};
 {% endblock %}
