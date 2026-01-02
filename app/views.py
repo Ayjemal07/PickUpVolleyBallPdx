@@ -858,6 +858,40 @@ def capture_order(order_id):
         if not event:
             return jsonify({"error": "Event not found"}), 404
 
+        # --- 1. PRE-VALIDATION (Check BEFORE charging money) ---
+        if is_guest_checkout:
+            if not guest_info.get('signature_data'):
+                return jsonify({"error": "Signature required"}), 400
+        elif is_edit:
+            # If editing, ensure the RSVP actually exists before proceeding
+            existing_rsvp_check = EventAttendee.query.get(rsvp_id)
+            if not existing_rsvp_check:
+                return jsonify({"error": "Existing RSVP not found"}), 404
+        
+        # 1. Calculate how many spots are currently taken in the DB
+        current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+        current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
+
+        spots_needed = 0
+        
+        if is_edit:
+            # If editing an existing RSVP, we only care if they are INCREASING the count
+            existing_rsvp = EventAttendee.query.get(rsvp_id)
+            if existing_rsvp:
+                # Calculate the difference (New Guest Count - Old Guest Count)
+                # The primary user spot cancels out, so we just check guests
+                additional_spots = new_guest_count - (existing_rsvp.guest_count or 0)
+                spots_needed = max(0, additional_spots)
+        else:
+            # New Booking: 1 spot for the user + N spots for guests
+            spots_needed = 1 + new_guest_count
+
+        # 2. Check if there is enough room
+        if spots_needed > 0 and (current_rsvp_count + spots_needed > event.max_capacity):
+            return jsonify({
+                "error": "We're sorry, but the event filled up while you were processing payment. You have not been charged."
+            }), 400
+
         # --- PayPal Capture ---
         access_token = get_access_token()
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
@@ -872,8 +906,6 @@ def capture_order(order_id):
         if is_guest_checkout:
             # === PATH A: GUEST ===
             signature_data = guest_info.get('signature_data')
-            if not signature_data:
-                return jsonify({"error": "Signature required"}), 400
 
             # Generate Waiver
             header, encoded = signature_data.split(",", 1)
@@ -909,8 +941,6 @@ def capture_order(order_id):
             
             if is_edit:
                 attendee = EventAttendee.query.get(rsvp_id)
-                if not attendee:
-                    return jsonify({"error": "Existing RSVP not found"}), 404
                 attendee.guest_count = new_guest_count
                 success_message = f'Your RSVP for {event.title} has been updated!'
             else:
@@ -926,7 +956,6 @@ def capture_order(order_id):
                 success_message = f"You're confirmed for {event.title}! See you there!"
                 send_rsvp_confirmation_email(user, event, new_guest_count)
 
-        # Recalculate total RSVP count
         all_attendees_for_event = EventAttendee.query.filter_by(event_id=event_id).all()
         event.rsvp_count = sum(1 + (a.guest_count or 0) for a in all_attendees_for_event)
 
@@ -1215,7 +1244,7 @@ def upgrade_subscription():
         return jsonify({'error': f'An error occurred during the upgrade process: {str(e)}'}), 500
 
 
-@main.route('/paypal_webhook', methods=['POST'])
+@main.route('/api/paypal/webhook', methods=['POST'])
 def paypal_webhook():
     data = request.get_json()
     event_type = data.get('event_type')
@@ -1257,7 +1286,8 @@ def paypal_webhook():
                 user=user,
                 amount=subscription.credits_per_month,
                 source_type='subscription',
-                description='Subscription Renewal'
+                description='Subscription Renewal',
+                days_valid=35
             )
             # ----------------------
 
@@ -1272,7 +1302,8 @@ def paypal_webhook():
             
             db.session.commit()
             print(f"Webhook: Payment received. Renewed credits for {user.email}. Total: {user.event_credits}")
-
+        else:
+            print(f"WARNING: Payment received but state is '{state}'. Credits NOT issued.")
     # Handle Reactivation or Updates (Keep your existing logic if needed)
     elif event_type == "BILLING.SUBSCRIPTION.RE-ACTIVATED":
         subscription.status = 'active'
@@ -1312,10 +1343,20 @@ def rsvp_with_credit():
     if current_rsvp_count + 1 > event.max_capacity:
         return jsonify({'error': 'Sorry, this event is now full.'}), 400
     
-    # Try to spend credit
     success = user.spend_credits(1)
 
     if success:
+        updated_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+        updated_rsvp_count = sum(1 + (a.guest_count or 0) for a in updated_attendees)
+        
+        if updated_rsvp_count + 1 > event.max_capacity:
+            # EVENT FULL! We must REFUND the credit we just spent.
+            add_user_credit(user, 1, 'system', 'Refund: Event Full - Auto Reversal')
+            return jsonify({
+                'error': 'The event filled up at the exact moment you clicked. Your credit has been refunded.'
+            }), 400
+
+        # 4. If safe, book the spot
         new_attendee = EventAttendee(event_id=event.id, user_id=user.id, guest_count=0)
         db.session.add(new_attendee)
         db.session.commit()
@@ -1505,3 +1546,8 @@ def execute_guest_payment():
     if not event:
         return jsonify({'error': 'Event not found.'}), 404
     
+
+
+
+    
+

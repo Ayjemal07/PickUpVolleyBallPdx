@@ -215,8 +215,8 @@ class CreditGrant(db.Model):
     
     # "balance" allows us to deduct partially from a grant (e.g. Sub gives 4, user uses 1, balance becomes 3)
     balance = db.Column(db.Integer, nullable=False, default=1) 
-    
-    # Labels: 'promo' (free first event), 'subscription', 'cancellation'
+
+    # Labels: 'promo' (free first event), 'subscription', 'cancellation', 'rsvp change 48+ hrs in advance'
     source_type = db.Column(db.String(50), nullable=False) 
     
     # Optional: keeps track of original reason e.g. "Nov Subscription" or "Canceled Game 11/12"

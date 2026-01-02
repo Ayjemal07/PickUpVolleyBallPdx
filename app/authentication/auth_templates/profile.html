@@ -16,7 +16,7 @@
         {% endif %}
         {% endwith %}
 
-        <form method="POST" enctype="multipart/form-data">
+        <form id="profileForm" method="POST" enctype="multipart/form-data">
             {{ form.hidden_tag() }}
 
             <div class="form-group">
@@ -233,6 +233,17 @@
     });
 
     document.addEventListener('DOMContentLoaded', function() {
+
+        const profileForm = document.getElementById('profileForm');
+        profileForm.addEventListener('submit', function(e) {
+            const hiddenInput = document.getElementById('croppedImageData');
+            
+            // If the hidden input is empty, no image has been cropped
+            if (!hiddenInput.value) {
+                e.preventDefault(); // Stop the form from sending
+                alert("Please select and crop an image before updating.");
+            }
+        });
         // --- Logic to toggle the password form visibility ---
         document.getElementById('changePasswordBtn').addEventListener('click', function() {
             const passwordForm = document.getElementById('passwordFormContainer');

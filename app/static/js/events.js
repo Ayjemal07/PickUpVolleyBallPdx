@@ -908,14 +908,15 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             else {
                 // CHECK CENTRALIZED CREDITS
                 if (userEventCredits > 0) {
-                    // Passed from backend via render_template
-                    let expiryMsg = soonestCreditExpiry ? `(Expires: ${soonestCreditExpiry})` : "";
-                    
+                    const remainingBalance = userEventCredits - 1;
+
+                    // Restored Messaging: Shows exact balance deduction
                     message = `
-                        <div class="alert alert-success">
-                            <strong>Credit Available!</strong><br>
-                            We will automatically use your credit expiring soonest.<br>
-                            <small>Next Expiration: ${expiryMsg}</small>
+                        <div style="text-align: left; line-height: 1.4; width: 100%;">
+                            <p style="margin-bottom: 5px;">Your spot will be covered by 1 Event Credit.</p>
+                            <p style="margin: 0; font-size: 0.9em; color: #333;">
+                                <strong>Credit Balance:</strong> ${userEventCredits} &rarr; ${remainingBalance}
+                            </p>
                         </div>
                     `;
                     // Set total to 0 for the user (pay only for guests)
