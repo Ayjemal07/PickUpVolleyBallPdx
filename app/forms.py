@@ -13,6 +13,7 @@ from wtforms.validators import DataRequired, Email, Length
 from wtforms.validators import DataRequired, Optional, EqualTo
 from flask_wtf.file import FileAllowed
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from wtforms import DateField
 import re
 
 # Password complexity check
@@ -42,7 +43,7 @@ class UserRegistrationForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired("First name is required.")])
     last_name = StringField('Last Name', validators=[DataRequired("Last name is required.")])
     profileImage = FileField('Upload Profile Image (Optional)')
-    dob = StringField('Date of Birth', validators=[DataRequired("Date of birth is required.")]) # Use StringField for 'date' input type
+    dob = DateField('Date of Birth', format='%Y-%m-%d', validators=[DataRequired("Date of birth is required.")])
     email = StringField('Email', validators=[DataRequired("Email is required."), Email()])
     address = StringField('Mailing Address', validators=[DataRequired("Mailing address is required.")])
     emergency_contact_name = StringField('Emergency Contact Name', validators=[DataRequired("Emergency contact name is required.")])

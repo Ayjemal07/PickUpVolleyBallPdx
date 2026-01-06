@@ -15,7 +15,7 @@ from reportlab.lib.units import inch
 import base64
 import io
 from reportlab.lib.utils import ImageReader
-from app.utils import generate_detailed_waiver
+from app.utils import generate_detailed_waiver, add_user_credit, cleanup_user_expired_credits
 
 from app.forms import ProfileUpdateForm
 import uuid
@@ -24,51 +24,11 @@ import os
 from flask import current_app
 from flask_login import current_user
 mail = Mail()
-serializer = URLSafeTimedSerializer('your-secret-key') 
+serializer = URLSafeTimedSerializer(os.getenv('SECRET_KEY', 'fallback-secret-key-change-this'))
 
 
 auth = Blueprint('auth', __name__, template_folder='auth_templates')
 
-def add_user_credit(user, amount, source_type, description, days_valid=30):
-    """Creates a new credit record in the ledger."""
-    expiry = date.today() + timedelta(days=days_valid)
-    grant = CreditGrant(
-        user_id=user.id,
-        balance=amount,
-        source_type=source_type,
-        description=description,
-        expiry_date=expiry
-    )
-    db.session.add(grant)
-    db.session.commit()
-
-def cleanup_user_expired_credits(user):
-    """
-    Removes expired credit grants from the database.
-    We DO NOT subtract from event_credits because it is calculated dynamically.
-    """
-    if not user.is_authenticated:
-        return
-
-    today = date.today()
-    # Find grants that have expired
-    expired_grants = CreditGrant.query.filter(
-        CreditGrant.user_id == user.id, 
-        CreditGrant.expiry_date < today
-    ).all()
-
-    if expired_grants:
-        count = len(expired_grants)
-        for grant in expired_grants:
-            db.session.delete(grant)
-        
-        try:
-            db.session.commit()
-            if count > 0:
-                print(f"Cleaned up {count} expired credit records for {user.email}")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error cleaning credits: {e}")
 def send_underage_rejection_email(user_email):
     """Sends an email to users who are not old enough to register."""
     msg = Message(
@@ -199,7 +159,9 @@ def register():
                 image.save(upload_path)
                 profile_image_filename = filename
 
-        role = 'admin' if email == 'hadenfranken1129@gmail.com' else 'user'
+        # Checks a comma-separated list of admins from your .env file
+        admin_emails = os.getenv('ADMIN_EMAILS', '').split(',')
+        role = 'admin' if email in admin_emails else 'user'
         user = User(
             first_name=first_name,
             last_name=last_name,

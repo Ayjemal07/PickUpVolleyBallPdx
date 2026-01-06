@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 import requests
 
 import base64
-from .utils import generate_detailed_waiver
+from .utils import generate_detailed_waiver, add_user_credit, cleanup_user_expired_credits
 
 
 load_dotenv() # Load variables from .env file
@@ -38,26 +38,6 @@ PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
 PAYPAL_BASE = "https://api-m.paypal.com"
 PAYPAL_PLAN_ID_TIER1 = os.getenv("PAYPAL_PLAN_ID_TIER1")
 PAYPAL_PLAN_ID_TIER2 = os.getenv("PAYPAL_PLAN_ID_TIER2")
-
-
-def add_user_credit(user, amount, source_type, description, days_valid=30):
-    """Creates a new credit record in the ledger."""
-    expiry = date.today() + timedelta(days=days_valid)
-    
-    # Special handling for Subscription credits (usually valid for 30 days)
-    if source_type == 'subscription':
-        # You might want to match the subscription cycle here
-        pass 
-        
-    grant = CreditGrant(
-        user_id=user.id,
-        balance=amount,
-        source_type=source_type,
-        description=description,
-        expiry_date=expiry
-    )
-    db.session.add(grant)
-    db.session.commit()
 
 def spend_user_credit(user, amount_needed=1):
     """
@@ -94,34 +74,6 @@ def spend_user_credit(user, amount_needed=1):
             
     db.session.commit()
     return True, "Success"
-
-def cleanup_user_expired_credits(user):
-    """
-    Removes expired credit grants from the database.
-    Because event_credits is a computed property, we DO NOT need to 
-    manually subtract from it. We just remove the old rows.
-    """
-    if not user.is_authenticated:
-        return
-
-    today = date.today()
-    # Find grants that have expired
-    expired_grants = CreditGrant.query.filter(
-        CreditGrant.user_id == user.id, 
-        CreditGrant.expiry_date < today
-    ).all()
-
-    if expired_grants:
-        count = len(expired_grants)
-        for grant in expired_grants:
-            db.session.delete(grant)
-        
-        try:
-            db.session.commit()
-            print(f"Cleaned up {count} expired credit records for {user.email}")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error cleaning credits: {e}")
 
 def send_cancellation_credit_email(user, event, credits_num, expiry_date):
     """Sends email with specific wording required."""
@@ -520,7 +472,11 @@ def add_event():
 
 #Route to edit an event
 @main.route('/events/edit/<int:event_id>', methods=['POST'])
+@login_required
 def edit_event(event_id):
+    if session.get('role') != 'admin':
+        flash('Unauthorized access.', 'error')
+        return redirect(url_for('main.events'))
     event = Event.query.get_or_404(event_id)
 
     try:
@@ -1253,10 +1209,6 @@ def paypal_webhook():
     if not resource or not event_type:
         return jsonify(status="ignored", reason="Missing resource or event_type"), 200
 
-    # --- CRITICAL FIX START ---
-    # Determine the Subscription ID based on the event type.
-    # For subscription events, the ID is resource['id'].
-    # For payment events, the ID is resource['billing_agreement_id'].
     subscription_id = None
     
     if "PAYMENT.SALE" in event_type:
@@ -1303,7 +1255,7 @@ def paypal_webhook():
             db.session.commit()
             print(f"Webhook: Payment received. Renewed credits for {user.email}. Total: {user.event_credits}")
         else:
-            print(f"WARNING: Payment received but state is '{state}'. Credits NOT issued.")
+            print(f"WARNING: Payment received but state is '{resource.get('state')}'. Credits NOT issued.")
     # Handle Reactivation or Updates (Keep your existing logic if needed)
     elif event_type == "BILLING.SUBSCRIPTION.RE-ACTIVATED":
         subscription.status = 'active'
@@ -1333,30 +1285,24 @@ def rsvp_with_credit():
     event_id = data.get('event_id')
     user = current_user
 
-    event = Event.query.get(event_id)
-    if not event:
-        return jsonify({'error': 'Event not found.'}), 404
-    
-    current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
-    current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
-
-    if current_rsvp_count + 1 > event.max_capacity:
-        return jsonify({'error': 'Sorry, this event is now full.'}), 400
-    
-    success = user.spend_credits(1)
-
-    if success:
-        updated_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
-        updated_rsvp_count = sum(1 + (a.guest_count or 0) for a in updated_attendees)
+    try:
+        event = Event.query.with_for_update().get(event_id)
         
-        if updated_rsvp_count + 1 > event.max_capacity:
-            # EVENT FULL! We must REFUND the credit we just spent.
-            add_user_credit(user, 1, 'system', 'Refund: Event Full - Auto Reversal')
-            return jsonify({
-                'error': 'The event filled up at the exact moment you clicked. Your credit has been refunded.'
-            }), 400
+        if not event:
+            return jsonify({'error': 'Event not found.'}), 404
+        
+        current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
+        current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
 
-        # 4. If safe, book the spot
+        if current_rsvp_count + 1 > event.max_capacity:
+            # Rollback acts as the "Unlock" here
+            db.session.rollback()
+            return jsonify({'error': 'Sorry, this event is now full.'}), 400
+        if user.event_credits < 1:
+             db.session.rollback()
+             return jsonify({'error': 'Insufficient credits.'}), 400
+        user.spend_credits(1) 
+
         new_attendee = EventAttendee(event_id=event.id, user_id=user.id, guest_count=0)
         db.session.add(new_attendee)
         db.session.commit()
@@ -1368,8 +1314,11 @@ def rsvp_with_credit():
         session['flashMessage'] = message
         session['flashEventId'] = event_id
         return jsonify({'success': True, 'message': message}), 200
-    else:
-        return jsonify({'error': 'Insufficient credits.'}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in RSVP: {e}") # specific error logging
+        return jsonify({'error': 'An error occurred processing your request.'}), 500
 
 
 @main.route('/api/rsvp/delete/<int:event_id>', methods=['POST'])

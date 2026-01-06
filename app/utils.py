@@ -6,6 +6,44 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from datetime import datetime
 import io
+from datetime import date, timedelta
+from .models import db, CreditGrant
+
+def add_user_credit(user, amount, source_type, description, days_valid=30):
+    """Creates a new credit record in the ledger."""
+    expiry = date.today() + timedelta(days=days_valid)
+    grant = CreditGrant(
+        user_id=user.id,
+        balance=amount,
+        source_type=source_type,
+        description=description,
+        expiry_date=expiry
+    )
+    db.session.add(grant)
+    db.session.commit()
+
+def cleanup_user_expired_credits(user):
+    """Removes expired credit grants from the database."""
+    if not user.is_authenticated:
+        return
+
+    today = date.today()
+    expired_grants = CreditGrant.query.filter(
+        CreditGrant.user_id == user.id, 
+        CreditGrant.expiry_date < today
+    ).all()
+
+    if expired_grants:
+        count = len(expired_grants)
+        for grant in expired_grants:
+            db.session.delete(grant)
+
+        try:
+            db.session.commit()
+            print(f"Cleaned up {count} expired credit records for {user.email}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error cleaning credits: {e}")
 
 # --- Detailed PDF Waiver Generation 
 def generate_detailed_waiver(user_data, signature_image, path):
