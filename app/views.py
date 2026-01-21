@@ -15,8 +15,8 @@ from flask_login import current_user, login_required
 
 
 from .models import Event, User, db, EventAttendee, Subscription, CreditGrant
-from flask_mail import Mail, Message
-mail = Mail()
+from flask_mail import Message
+from . import mail  
 
 import os
 from dotenv import load_dotenv
@@ -137,23 +137,37 @@ def send_subscription_email(user_email):
     mail.send(msg)
     print("Email send attempt completed.") # <--- AND THIS LINE
 
-# Place this function in views.py, for example, after the send_subscription_email function
 
 def send_rsvp_confirmation_email(user, event, guest_count):
-    """Sends an HTML confirmation email with inline images and updated wording."""
+    """Sends a confirmation email. (Fixed: Headers are now a dictionary)"""
     try:
-        # Format date and time for readability
+        # --- 1. SETUP ---
         event_date_str = event.date.strftime('%A, %B %d, %Y')
         start_time_str = event.start_time.strftime('%I:%M %p')
-
         subject = f"Confirmation: You're signed up for {event.title}!"
+
+        # --- 2. PLAIN TEXT BODY ---
+        text_body = f"""
+        Hi {user.first_name},
+
+        You have successfully RSVP'd for an upcoming volleyball event. We're excited to see you there!
+
+        Details:
+        - Event: {event.title}
+        - Date: {event_date_str}
+        - Time: {start_time_str}
+        - Location: {event.location}
         
-        # 1. Build the HTML Body with your NEW wording
+        (Please view this email in an HTML-compatible viewer to see the map and full details.)
+        
+        - The Pick Up Volleyball PDX Team
+        """
+
+        # --- 3. HTML BODY ---
         html_body = f"""
         <html>
             <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <p>Hi {user.first_name},</p>
-
                 <p>You have successfully RSVP'd for an upcoming volleyball event. We're excited to see you there!</p>
 
                 <p><strong>Registration details:</strong></p>
@@ -167,113 +181,111 @@ def send_rsvp_confirmation_email(user, event, guest_count):
                 <p><strong>Important Information:</strong></p>
                 <ul>
                     <li>Remember to bring water, court shoes (shoes not worn outside), and any gear you may need!</li>
-                    <li>If you need to cancel your spot or edit your guests, please do so from the event details page. This helps open up your spot for others on the waitlist.</li>
+                    <li>If you need to cancel your spot or edit your guests, please do so from the event details page.</li>
                     <li>Use the map below if you have any trouble finding the gym!</li>
                 </ul>
 
                 <p>See you on the court!</p>
-
                 <p>- The Pick Up Volleyball PDX Team</p>
                 <br>
         """
 
-        # 2. Check if we need the Directions Guide
+        # Check for Guide Image (FUMC)
         has_guide = False
         if (event.location == "First United Methodist Church") or \
            (event.full_address == "1838 SW Jefferson St, Portland, OR 97201"):
-            # Insert the placeholder for the guide image
             html_body += '<img src="cid:fumc_guide" style="max-width: 100%; height: auto; display: block; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;"><br>'
             has_guide = True
 
-        # 3. Add the Logo Image placeholder
+        # Add Logo Placeholder
         html_body += '<img src="cid:voll_logo" style="max-width: 150px; height: auto;">'
-        
-        # Close HTML
-        html_body += """
-            </body>
-        </html>
-        """
+        html_body += "</body></html>"
 
-        # Create the message object using 'html' instead of 'body'
-        msg = Message(subject=subject, recipients=[user.email], html=html_body)
+        # --- 4. CONSTRUCT MESSAGE ---
+        msg = Message(
+            subject=subject, 
+            recipients=[user.email],
+            bcc=["noreply.pickupvbpdx@gmail.com"],
+            body=text_body.strip(), 
+            html=html_body
+        )
 
-        # 4. Attach the FUMC Guide (if applicable)
+        # --- 5. ATTACH IMAGES (Fixed Headers) ---
+        # Guide
         if has_guide:
             guide_path = os.path.join(current_app.root_path, 'static', 'images', 'FUMC.Directions.Guide.jpeg')
             if os.path.exists(guide_path):
-                with current_app.open_resource(guide_path) as fp:
-                    msg.attach(
-                        "FUMC.Directions.Guide.jpeg", 
-                        "image/jpeg", 
-                        fp.read(), 
-                        'inline', 
-                        headers=[['Content-ID', '<fumc_guide>']]
-                    )
-            else:
-                print(f"Warning: Guide not found at {guide_path}")
-
-        # 5. Attach the Main Logo
+                with open(guide_path, 'rb') as fp:
+                    # FIX: headers must be a dict {}
+                    msg.attach("FUMC.Directions.Guide.jpeg", "image/jpeg", fp.read(), 'inline', headers={'Content-ID': '<fumc_guide>'})
+        
+        # Logo
         logo_path = os.path.join(current_app.root_path, 'static', 'images', 'voll-logo.png')
         if os.path.exists(logo_path):
-            with current_app.open_resource(logo_path) as fp:
-                msg.attach(
-                    "voll-logo.png", 
-                    "image/png", 
-                    fp.read(), 
-                    'inline', 
-                    headers=[['Content-ID', '<voll_logo>']]
-                )
-        else:
-             print(f"Warning: Logo not found at {logo_path}")
+            with open(logo_path, 'rb') as fp:
+                # FIX: headers must be a dict {}
+                msg.attach("voll-logo.png", "image/png", fp.read(), 'inline', headers={'Content-ID': '<voll_logo>'})
 
         mail.send(msg)
         print(f"RSVP Confirmation email sent to {user.email} for event {event.id}")
-        
+
     except Exception as e:
         print(f"Failed to send RSVP confirmation email: {e}")
         traceback.print_exc()
 
+
 def send_guest_confirmation_email(guest_info, event, waiver_path):
-    """Sends an HTML confirmation email to a guest with their signed waiver and inline images."""
+    """Sends a confirmation email to a guest. (Fixed: Headers are now a dictionary)"""
     try:
-        # Define the admin/sender email
+        # --- 1. SETUP ---
         admin_email = "noreply.pickupvbpdx@gmail.com"
-        
-        # Format date and time for readability
         event_date_str = event.date.strftime('%A, %B %d, %Y')
         start_time_str = event.start_time.strftime('%I:%M %p')
-
         subject = f"Confirmation: You're signed up for {event.title}!"
+
+        # --- 2. PLAIN TEXT BODY ---
+        text_body = f"""
+        Hi {guest_info['first_name']},
         
-        # 1. Build the HTML Body
+        This is a confirmation that you have successfully registered as a guest.
+        
+        Details:
+        - Event: {event.title}
+        - Date: {event_date_str}
+        - Time: {start_time_str}
+        - Location: {event.location}
+        
+        Your signed waiver is attached.
+        
+        - The Pick Up Volleyball PDX Team
+        """
+
+        # --- 3. HTML BODY ---
         html_body = f"""
         <html>
             <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <p>Hi {guest_info['first_name']},</p>
-
-                <p>This is a confirmation that you have successfully registered as an attendee for an upcoming volleyball event.</p>
+                <p>This is a confirmation that you have successfully registered as a guest for an upcoming volleyball event.</p>
 
                 <p><strong>Here are the details:</strong></p>
                 <ul>
                     <li><strong>Event:</strong> {event.title}</li>
                     <li><strong>Date:</strong> {event_date_str}</li>
                     <li><strong>Time:</strong> {start_time_str}</li>
-                    <li><strong>Location:</strong> {event.location}{event.full_address or 'Not provided'}</li>
+                    <li><strong>Location:</strong> {event.location}, {event.full_address or 'Not provided'}</li>
                 </ul>
-
                 <p>Your signed liability waiver is attached to this email for your records.</p>
         """
 
-        # 2. Check if we need the Directions Guide (FUMC)
+        # Check for Guide Image (FUMC)
         has_guide = False
         if (event.location == "First United Methodist Church") or \
            (event.full_address == "1838 SW Jefferson St, Portland, OR 97201"):
-            # Add text and image placeholder
             html_body += '<p>Use the map below if you have any trouble finding the gym!</p>'
             html_body += '<img src="cid:fumc_guide" style="max-width: 100%; height: auto; display: block; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;"><br>'
             has_guide = True
 
-        # 3. Add closing and Logo placeholder
+        # Add Logo Placeholder
         html_body += """
                 <p>See you on the court!</p>
                 <p>- The Pick Up Volleyball PDX Team</p>
@@ -283,56 +295,40 @@ def send_guest_confirmation_email(guest_info, event, waiver_path):
         </html>
         """
 
-        # 4. Create Message
+        # --- 4. CONSTRUCT MESSAGE ---
         msg = Message(
             subject=subject,
             sender=admin_email,
             recipients=[guest_info['email']],
             bcc=[admin_email],
-            body="You have successfully registered as a guest! Please view this email in an HTML-compatible client to see the full details and map.",
+            body=text_body.strip(),
             html=html_body
         )
 
-        # 5. Attach the Signed Waiver (PDF) - Standard Attachment
+        # --- 5. ATTACHMENTS ---
+        # Waiver
         if waiver_path and os.path.exists(waiver_path):
             with open(waiver_path, 'rb') as fp:
                 msg.attach("Liability_Waiver.pdf", "application/pdf", fp.read())
-        else:
-             print(f"Warning: Waiver file not found at {waiver_path}")
 
-        # 6. Attach FUMC Guide (Inline Image) - If applicable
+        # Guide Image (Fixed Headers)
         if has_guide:
             guide_path = os.path.join(current_app.root_path, 'static', 'images', 'FUMC.Directions.Guide.jpeg')
             if os.path.exists(guide_path):
-                with current_app.open_resource(guide_path) as fp:
-                    msg.attach(
-                        "FUMC.Directions.Guide.jpeg", 
-                        "image/jpeg", 
-                        fp.read(), 
-                        'inline', 
-                        headers=[['Content-ID', '<fumc_guide>']]
-                    )
-            else:
-                print(f"Warning: Guide not found at {guide_path}")
-
-        # 7. Attach Logo (Inline Image) - Always
+                with open(guide_path, 'rb') as fp:
+                    # FIX: headers must be a dict {}
+                    msg.attach("FUMC.Directions.Guide.jpeg", "image/jpeg", fp.read(), 'inline', headers={'Content-ID': '<fumc_guide>'})
+        
+        # Logo Image (Fixed Headers)
         logo_path = os.path.join(current_app.root_path, 'static', 'images', 'voll-logo.png')
         if os.path.exists(logo_path):
-            with current_app.open_resource(logo_path) as fp:
-                msg.attach(
-                    "voll-logo.png", 
-                    "image/png", 
-                    fp.read(), 
-                    'inline', 
-                    headers=[['Content-ID', '<voll_logo>']]
-                )
-        else:
-             print(f"Warning: Logo not found at {logo_path}")
+            with open(logo_path, 'rb') as fp:
+                # FIX: headers must be a dict {}
+                msg.attach("voll-logo.png", "image/png", fp.read(), 'inline', headers={'Content-ID': '<voll_logo>'})
 
-        # 8. Send
         mail.send(msg)
         print(f"Guest confirmation email sent to {guest_info['email']} (BCC: {admin_email})")
-        
+
     except Exception as e:
         print(f"Failed to send guest confirmation email: {e}")
         traceback.print_exc()
