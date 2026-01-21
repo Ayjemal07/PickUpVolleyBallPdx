@@ -140,7 +140,7 @@ def send_subscription_email(user_email):
 # Place this function in views.py, for example, after the send_subscription_email function
 
 def send_rsvp_confirmation_email(user, event, guest_count):
-    """Sends a confirmation email to a user after they RSVP for an event."""
+    """Sends an HTML confirmation email with inline images and updated wording."""
     try:
         # Format date and time for readability
         event_date_str = event.date.strftime('%A, %B %d, %Y')
@@ -148,39 +148,93 @@ def send_rsvp_confirmation_email(user, event, guest_count):
 
         subject = f"Confirmation: You're signed up for {event.title}!"
         
-        body = f"""
-        Hi {user.first_name},
+        # 1. Build the HTML Body with your NEW wording
+        html_body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <p>Hi {user.first_name},</p>
 
-        This is a confirmation that you have successfully RSVP'd for an upcoming volleyball event. We're excited to see you there!
+                <p>You have successfully RSVP'd for an upcoming volleyball event. We're excited to see you there!</p>
 
-        Here are the details of your registration:
-        - Event: {event.title}
-        - Date: {event_date_str}
-        - Time: {start_time_str}
-        - Location: {event.location}
-        - Address: {event.full_address or 'Not provided'}
-        - Your Guests: {guest_count}
-        - Total People in Your Party: {1 + guest_count}
+                <p><strong>Registration details:</strong></p>
+                <ul>
+                    <li><strong>Date:</strong> {event_date_str}</li>
+                    <li><strong>Time:</strong> {start_time_str}</li>
+                    <li><strong>Location:</strong> {event.location}, {event.full_address or 'Not provided'}</li>
+                    <li><strong>Total People in Your Party:</strong> {1 + guest_count}</li>
+                </ul>
 
-        Important Information:
-        - Please arrive a few minutes early to check in and warm up.
-        - Remember to bring water to stay hydrated.
-        - If you need to cancel your spot, please do so from the event details page. This helps open up your spot for others who may be on a waitlist.
+                <p><strong>Important Information:</strong></p>
+                <ul>
+                    <li>Remember to bring water, court shoes (shoes not worn outside), and any gear you may need!</li>
+                    <li>If you need to cancel your spot or edit your guests, please do so from the event details page. This helps open up your spot for others on the waitlist.</li>
+                    <li>Use the map below if you have any trouble finding the gym!</li>
+                </ul>
 
-        See you on the court!
+                <p>See you on the court!</p>
 
-        - The Pick Up Volleyball PDX Team
+                <p>- The Pick Up Volleyball PDX Team</p>
+                <br>
         """
+
+        # 2. Check if we need the Directions Guide
+        has_guide = False
+        if (event.location == "First United Methodist Church") or \
+           (event.full_address == "1838 SW Jefferson St, Portland, OR 97201"):
+            # Insert the placeholder for the guide image
+            html_body += '<img src="cid:fumc_guide" style="max-width: 100%; height: auto; display: block; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;"><br>'
+            has_guide = True
+
+        # 3. Add the Logo Image placeholder
+        html_body += '<img src="cid:voll_logo" style="max-width: 150px; height: auto;">'
         
-        msg = Message(subject=subject, recipients=[user.email], body=body.strip())
+        # Close HTML
+        html_body += """
+            </body>
+        </html>
+        """
+
+        # Create the message object using 'html' instead of 'body'
+        msg = Message(subject=subject, recipients=[user.email], html=html_body)
+
+        # 4. Attach the FUMC Guide (if applicable)
+        if has_guide:
+            guide_path = os.path.join(current_app.root_path, 'static', 'images', 'FUMC.Directions.Guide.jpeg')
+            if os.path.exists(guide_path):
+                with current_app.open_resource(guide_path) as fp:
+                    msg.attach(
+                        "FUMC.Directions.Guide.jpeg", 
+                        "image/jpeg", 
+                        fp.read(), 
+                        'inline', 
+                        headers=[['Content-ID', '<fumc_guide>']]
+                    )
+            else:
+                print(f"Warning: Guide not found at {guide_path}")
+
+        # 5. Attach the Main Logo
+        logo_path = os.path.join(current_app.root_path, 'static', 'images', 'voll-logo.png')
+        if os.path.exists(logo_path):
+            with current_app.open_resource(logo_path) as fp:
+                msg.attach(
+                    "voll-logo.png", 
+                    "image/png", 
+                    fp.read(), 
+                    'inline', 
+                    headers=[['Content-ID', '<voll_logo>']]
+                )
+        else:
+             print(f"Warning: Logo not found at {logo_path}")
+
         mail.send(msg)
         print(f"RSVP Confirmation email sent to {user.email} for event {event.id}")
+        
     except Exception as e:
         print(f"Failed to send RSVP confirmation email: {e}")
         traceback.print_exc()
 
 def send_guest_confirmation_email(guest_info, event, waiver_path):
-    """Sends a confirmation email to a guest with their signed waiver attached."""
+    """Sends an HTML confirmation email to a guest with their signed waiver and inline images."""
     try:
         # Define the admin/sender email
         admin_email = "noreply.pickupvbpdx@gmail.com"
@@ -191,40 +245,93 @@ def send_guest_confirmation_email(guest_info, event, waiver_path):
 
         subject = f"Confirmation: You're signed up for {event.title}!"
         
-        body = f"""
-        Hi {guest_info['first_name']},
+        # 1. Build the HTML Body
+        html_body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <p>Hi {guest_info['first_name']},</p>
 
-        This is a confirmation that you have successfully registered as a guest for an upcoming volleyball event.
-        
-        Here are the details:
-        - Event: {event.title}
-        - Date: {event_date_str}
-        - Time: {start_time_str}
-        - Location: {event.location}
-        - Address: {event.full_address or 'Not provided'}
+                <p>This is a confirmation that you have successfully registered as an attendee for an upcoming volleyball event.</p>
 
-        Your signed liability waiver is attached to this email for your records.
+                <p><strong>Here are the details:</strong></p>
+                <ul>
+                    <li><strong>Event:</strong> {event.title}</li>
+                    <li><strong>Date:</strong> {event_date_str}</li>
+                    <li><strong>Time:</strong> {start_time_str}</li>
+                    <li><strong>Location:</strong> {event.location}{event.full_address or 'Not provided'}</li>
+                </ul>
 
-        See you on the court!
-
-        - The Pick Up Volleyball PDX Team
+                <p>Your signed liability waiver is attached to this email for your records.</p>
         """
-        
-        # Modified Message call
+
+        # 2. Check if we need the Directions Guide (FUMC)
+        has_guide = False
+        if (event.location == "First United Methodist Church") or \
+           (event.full_address == "1838 SW Jefferson St, Portland, OR 97201"):
+            # Add text and image placeholder
+            html_body += '<p>Use the map below if you have any trouble finding the gym!</p>'
+            html_body += '<img src="cid:fumc_guide" style="max-width: 100%; height: auto; display: block; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;"><br>'
+            has_guide = True
+
+        # 3. Add closing and Logo placeholder
+        html_body += """
+                <p>See you on the court!</p>
+                <p>- The Pick Up Volleyball PDX Team</p>
+                <br>
+                <img src="cid:voll_logo" style="max-width: 150px; height: auto;">
+            </body>
+        </html>
+        """
+
+        # 4. Create Message
         msg = Message(
             subject=subject,
-            sender=admin_email,               # Sets the sender
-            recipients=[guest_info['email']], # Sends to the guest
-            bcc=[admin_email],                # Sends a hidden copy to the admin
-            body=body.strip()
+            sender=admin_email,
+            recipients=[guest_info['email']],
+            bcc=[admin_email],
+            body="You have successfully registered as a guest! Please view this email in an HTML-compatible client to see the full details and map.",
+            html=html_body
         )
-        
+
+        # 5. Attach the Signed Waiver (PDF) - Standard Attachment
         if waiver_path and os.path.exists(waiver_path):
             with open(waiver_path, 'rb') as fp:
                 msg.attach("Liability_Waiver.pdf", "application/pdf", fp.read())
-        
+        else:
+             print(f"Warning: Waiver file not found at {waiver_path}")
+
+        # 6. Attach FUMC Guide (Inline Image) - If applicable
+        if has_guide:
+            guide_path = os.path.join(current_app.root_path, 'static', 'images', 'FUMC.Directions.Guide.jpeg')
+            if os.path.exists(guide_path):
+                with current_app.open_resource(guide_path) as fp:
+                    msg.attach(
+                        "FUMC.Directions.Guide.jpeg", 
+                        "image/jpeg", 
+                        fp.read(), 
+                        'inline', 
+                        headers=[['Content-ID', '<fumc_guide>']]
+                    )
+            else:
+                print(f"Warning: Guide not found at {guide_path}")
+
+        # 7. Attach Logo (Inline Image) - Always
+        logo_path = os.path.join(current_app.root_path, 'static', 'images', 'voll-logo.png')
+        if os.path.exists(logo_path):
+            with current_app.open_resource(logo_path) as fp:
+                msg.attach(
+                    "voll-logo.png", 
+                    "image/png", 
+                    fp.read(), 
+                    'inline', 
+                    headers=[['Content-ID', '<voll_logo>']]
+                )
+        else:
+             print(f"Warning: Logo not found at {logo_path}")
+
+        # 8. Send
         mail.send(msg)
-        print(f"Guest confirmation email sent to {guest_info['email']} and BCC to admin.")
+        print(f"Guest confirmation email sent to {guest_info['email']} (BCC: {admin_email})")
         
     except Exception as e:
         print(f"Failed to send guest confirmation email: {e}")
@@ -373,6 +480,7 @@ def events():
             "start": datetime.combine(event.date, event.start_time).isoformat(),
             "end": datetime.combine(event.date, event.end_time).isoformat(),
             "location": event.location,
+            "full_address": event.full_address,
             "description": event.description,
             "formatted_date": event.formatted_date,
             "status": event.status,
@@ -484,7 +592,7 @@ def edit_event(event_id):
         event.title = request.form.get('title', event.title)
         event.description = request.form.get('description', event.description)
         event.location = request.form.get('location', event.location)
-        event.full_address = request.form.get('full_address', event.full_address) # Add this line
+        event.full_address = request.form.get('full_address', event.full_address) 
 
         
         date_str = request.form.get('date')

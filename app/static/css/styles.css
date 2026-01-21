@@ -248,7 +248,7 @@ header {
 .centered-wrapper {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 0.3rem 0.3rem;
   text-align: center;
 }
 
@@ -256,12 +256,14 @@ header {
   font-size: 2.8rem;
   color: #7DB3B0;
   margin-bottom: 0.5rem;
+  font-weight: bold;
+  background-color: white;
 }
 
 .homepage p {
   font-size: 1.4rem;
   color: #444;
-  margin-bottom: 2.5rem;
+  font-weight: bold;
 }
 
 /* Card container style */
@@ -1401,13 +1403,13 @@ html, body {
 .event-card.canceled {
   background-color: #f0f0f0;
   color: #a9a9a9;
-  text-decoration: line-through;
 }
 
 .event-card.canceled .event-date {
   color: red;
   font-weight: bold;
   text-decoration: none;
+  display: inline-block;
 }
 
 .event-card.canceled .custom-attend-button {
