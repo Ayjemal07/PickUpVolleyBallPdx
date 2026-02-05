@@ -9,20 +9,7 @@
             <p>Join the community, find events, and play volleyball!</p>
         </div>
     </div>
-    <div class="card-container">
-        <div class="card" id="about">
-            <a href="{{ url_for('main.about') }}" class="card-link">
-                <img src="/static/images/aboutus.jpeg" alt="About Us" class="card-image">
-                <div class="card-content">
-                    <h3>About Us</h3>
-                </div>
-                <div class="card-overlay">
-                    <p>Learn more about our community and mission to promote volleyball.</p>
-                    <a href="{{ url_for('main.about') }}" class="overlay-button">Find out more</a>
-                </div>
-            </a>
-        </div>
-    
+    <div class="card-container">    
         <div class="card" id="events">
             <a href="{{ url_for('main.events') }}" class="card-link">
                 <img src="/static/images/Events.jpeg" alt="Events" class="card-image">
@@ -36,15 +23,28 @@
             </a>
         </div>
     
-        <div class="card" id="hosting">
-            <a href="{{ url_for('main.hosting') }}" class="card-link">
-                <img src="/static/images/Hosting.jpeg" alt="Hosting" class="card-image">
+        <div class="card" id="subscriptions">
+            <a href="{{ url_for('main.subscriptions') }}" class="card-link">
+                <img src="/static/images/VolleyPasses.jpeg" alt="Volley Passes" class="card-image">
                 <div class="card-content">
-                    <h3>Hosting</h3>
+                    <h3>Volley Passes</h3>
                 </div>
                 <div class="card-overlay">
-                    <p>Intered in Hosting volleyball games? </p>
-                    <a href="{{ url_for('main.hosting') }}" class="overlay-button">Find out more</a>
+                    <p>Get a Volley Pass to play with discounted rates!</p>
+                    <a href="{{ url_for('main.subscriptions') }}" class="overlay-button">Find out more</a>
+                </div>
+            </a>
+        </div>
+
+        <div class="card" id="about">
+            <a href="{{ url_for('main.about') }}" class="card-link">
+                <img src="/static/images/aboutus.jpeg" alt="About Us" class="card-image">
+                <div class="card-content">
+                    <h3>About Us</h3>
+                </div>
+                <div class="card-overlay">
+                    <p>Learn more about our community and mission to promote volleyball.</p>
+                    <a href="{{ url_for('main.about') }}" class="overlay-button">Find out more</a>
                 </div>
             </a>
         </div>
