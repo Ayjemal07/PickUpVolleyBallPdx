@@ -54,10 +54,15 @@
         <ul class="attendees-list">
         {% for person in attendees %}
             <li style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                {% set avatar = person.user.profile_image if person.user and person.user.profile_image else 'default-avatar.jpeg' %}
-                <img src="{{ url_for('static', filename='profile_images/' ~ avatar) }}"
-                        alt="User Image"
-                        style="width: 40px; height: 40px; border-radius: 50%;">
+                {% if person.user and person.user.profile_image and person.user.profile_image != 'default.png' %}
+                    <img src="{{ url_for('static', filename='profile_images/' ~ person.user.profile_image) }}"
+                         alt="User Image"
+                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                    <img src="{{ url_for('static', filename='images/default-avatar.jpeg') }}"
+                         alt="Default Image"
+                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                {% endif %}
                 {% if person.user %}
                     {{ person.user.first_name }} {{ person.user.last_name }}
                 {% else %}
