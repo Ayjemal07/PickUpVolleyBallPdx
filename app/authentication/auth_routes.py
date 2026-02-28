@@ -130,7 +130,7 @@ def register():
     
 
         #  Profile Image Handling ---
-        profile_image_filename = 'default.png'  # Default image
+        profile_image_filename = 'default-avatar.jpeg'  # Default image
         cropped_image_data = request.form.get('cropped_image_data')
 
         if cropped_image_data:
@@ -169,7 +169,7 @@ def register():
             role=role
         )
         user.address=address
-        user.profile_image = profile_image_filename or 'default.png' # Set the profile image here instead
+        user.profile_image = profile_image_filename or 'default-avatar.jpeg' # Set the profile image here instead
         user.set_password(password)
         db.session.add(user)
         db.session.commit() # Commit here to get the user.id

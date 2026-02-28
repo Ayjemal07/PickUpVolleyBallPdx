@@ -54,7 +54,7 @@
         <ul class="attendees-list">
         {% for person in attendees %}
             <li style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <img src="{{ url_for('static', filename='profile_images/' + (person.user.profile_image or 'default.png')) }}"
+                <img src="{{ url_for('static', filename='profile_images/' + (person.user.profile_image or 'default-avatar.jpeg')) }}"
                         alt="User Image"
                         style="width: 40px; height: 40px; border-radius: 50%;">
                 {% if person.user %}
