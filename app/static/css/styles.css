@@ -9,7 +9,9 @@
 
 
 body {
-  background-color: #EBE9E3;
+  background-color: #EBE9E3; /* Fallback color */
+  background-repeat: repeat; /* Ensures the pattern covers the whole page */
+  background-attachment: fixed;
   font-family: 'Poppins', sans-serif;
   display: flex;
   flex-direction: column;
@@ -22,6 +24,7 @@ body {
 main {
   flex-grow: 1; /* Ensures the main content area grows to fill available space */
   padding-bottom: 10px; /* Adds space at the bottom of content */
+  background-color: #EBE9E3;
 }
 
 /* Media Queries for mobile devices */
@@ -110,13 +113,6 @@ nav a, .right-menu a, .dropdown-toggle {
 .top-bar nav a:hover, .right-menu a:hover, .dropdown-toggle:hover {
   color: #5A8E8C; /* Slightly darker shade for hover effect */
 }
-
-
-main{
-    background-color: #EBE9E3;
-}
-
-
 
 /* Sticky Header and Footer */
 header {
