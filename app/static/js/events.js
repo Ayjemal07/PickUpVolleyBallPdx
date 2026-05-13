@@ -1295,59 +1295,48 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         }
 
         if (notGoingBtn) {
-            notGoingBtn.addEventListener('click', async function() {
+            notGoingBtn.addEventListener('click', async function () {
                 if (!currentEventId) {
-                    alert('Error: Event ID not found.');
+                    alert('Could not find the event ID.');
                     return;
                 }
 
                 try {
                     const policyResponse = await fetch(`/api/rsvp/cancel-policy/${currentEventId}`);
-                    const policyData = await policyResponse.json();
 
                     if (!policyResponse.ok) {
-                        alert('Error: ' + (policyData.error || 'Could not check RSVP cancellation policy.'));
+                        const policyError = await policyResponse.json();
+                        alert(policyError.error || 'Could not check cancellation policy.');
                         return;
                     }
 
-                    const message = policyData.confirmation_message;
+                    const policy = await policyResponse.json();
 
-                    showConfirmationModal(message, () => {
-                        fetch(`/api/rsvp/delete/${currentEventId}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                sessionStorage.setItem('flashMessage', data.message);
-                                sessionStorage.setItem('flashEventId', currentEventId);
-                                window.location.reload();
-                            } else {
-                                alert('Error: ' + (data.error || 'Could not cancel RSVP.'));
-                                if (confirmationModal) confirmationModal.style.display = 'none';
+                    const confirmed = confirm(policy.confirmation_message + '\n\nDo you want to continue?');
 
-                                if (confirmBtn) {
-                                    confirmBtn.disabled = false;
-                                    confirmBtn.innerHTML = 'Confirm';
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error canceling RSVP:', error);
-                            alert('An unexpected error occurred. Please try again.');
-                            if (confirmationModal) confirmationModal.style.display = 'none';
+                    if (!confirmed) {
+                        return;
+                    }
 
-                            if (confirmBtn) {
-                                confirmBtn.disabled = false;
-                                confirmBtn.innerHTML = 'Confirm';
-                            }
-                        });
+                    const response = await fetch(`/api/rsvp/delete/${currentEventId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
                     });
 
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        alert(data.message || 'Your RSVP has been canceled.');
+                        window.location.reload();
+                    } else {
+                        alert(data.error || 'Failed to cancel RSVP.');
+                    }
+
                 } catch (error) {
-                    console.error('Error checking RSVP cancellation policy:', error);
-                    alert('Could not check cancellation policy. Please try again.');
+                    console.error('Error canceling RSVP:', error);
+                    alert('An error occurred while canceling your RSVP.');
                 }
             });
         }
