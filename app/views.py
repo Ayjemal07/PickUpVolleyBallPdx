@@ -1701,7 +1701,7 @@ def paypal_webhook():
             amount=subscription.credits_per_month,
             source_type='subscription',
             description=f'Subscription Tier {subscription.tier} Renewal',
-            days_valid=35
+            days_valid=30
         )
 
         payment = PaymentTransaction(
@@ -1796,25 +1796,121 @@ def delete_rsvp(event_id):
     user = current_user
     event = Event.query.get_or_404(event_id)
 
-    # Check if the event is in the past
-    event_end_datetime = datetime.combine(event.date, event.end_time)
-    if event_end_datetime < datetime.now():
-        return jsonify({'error': 'Cannot cancel RSVP for an event that has already passed.'}), 400
+    event_start_datetime = datetime.combine(event.date, event.start_time)
+    now = datetime.now()
 
-    # Find the user's RSVP
-    rsvp = EventAttendee.query.filter_by(event_id=event.id, user_id=user.id).first()
+    if event_start_datetime <= now:
+        return jsonify({'error': 'Cannot cancel RSVP after the event has started.'}), 400
+
+    if event.status == 'canceled':
+        return jsonify({'error': 'This event is already canceled.'}), 400
+
+    rsvp = EventAttendee.query.filter_by(
+        event_id=event.id,
+        user_id=user.id
+    ).first()
 
     if not rsvp:
         return jsonify({'error': 'You are not currently RSVP\'d to this event.'}), 404
 
     try:
+        hours_until_event = (event_start_datetime - now).total_seconds() / 3600
+        credit_eligible = hours_until_event >= 72
+
+        spots_to_credit = 1 + (rsvp.guest_count or 0)
+        credits_issued = 0
+        expiry = date.today() + timedelta(days=30)
+
+        if credit_eligible:
+            credit_grant = CreditGrant(
+                user_id=user.id,
+                balance=spots_to_credit,
+                source_type='rsvp_cancellation',
+                description=f"Credit for canceling RSVP: {event.title}",
+                expiry_date=expiry
+            )
+            db.session.add(credit_grant)
+
+            # Keep this if your CreditTransaction model supports these fields.
+            credit_transaction = CreditTransaction(
+                user_id=user.id,
+                amount=spots_to_credit,
+                transaction_type='rsvp_cancellation',
+                description=f"Credit issued after canceling RSVP for {event.title}"
+            )
+            db.session.add(credit_transaction)
+
+            credits_issued = spots_to_credit
+
         db.session.delete(rsvp)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Your RSVP has been successfully canceled.'}), 200
+
+        if credit_eligible:
+            message = (
+                f'Your RSVP has been canceled. '
+                f'{credits_issued} event credit(s) were added to your account '
+                f'and will expire on {expiry.strftime("%m/%d/%Y")}.'
+            )
+        else:
+            message = (
+                'Your RSVP has been canceled. '
+                'Because this cancellation was made less than 72 hours before the event, '
+                'event credits were not issued.'
+            )
+
+        return jsonify({
+            'success': True,
+            'message': message,
+            'credit_eligible': credit_eligible,
+            'credits_issued': credits_issued,
+            'new_credit_balance': user.event_credits
+        }), 200
+
     except Exception as e:
         db.session.rollback()
         traceback.print_exc()
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+
+
+@main.route('/api/rsvp/cancel-policy/<int:event_id>', methods=['GET'])
+@login_required
+def get_rsvp_cancel_policy(event_id):
+    event = Event.query.get_or_404(event_id)
+
+    rsvp = EventAttendee.query.filter_by(
+        event_id=event.id,
+        user_id=current_user.id
+    ).first()
+
+    if not rsvp:
+        return jsonify({'error': 'You are not currently RSVP\'d to this event.'}), 404
+
+    event_start_datetime = datetime.combine(event.date, event.start_time)
+    now = datetime.now()
+
+    hours_until_event = (event_start_datetime - now).total_seconds() / 3600
+    credit_eligible = hours_until_event >= 72
+    spots_to_credit = 1 + (rsvp.guest_count or 0)
+
+    if credit_eligible:
+        confirmation_message = (
+            f'This will remove everyone in your RSVP. '
+            f'Because you are updating your RSVP at least 72 hours before the event, '
+            f'you will receive {spots_to_credit} event credit(s) for you and your guests, if any.'
+        )
+    else:
+        confirmation_message = (
+            'This will remove everyone in your RSVP. '
+            'Because this RSVP is being canceled less than 72 hours before the event, '
+            'event credits will not be issued.'
+        )
+
+    return jsonify({
+        'credit_eligible': credit_eligible,
+        'credits_to_issue': spots_to_credit if credit_eligible else 0,
+        'hours_until_event': round(hours_until_event, 1),
+        'confirmation_message': confirmation_message
+    }), 200
     
 
 @main.route('/api/rsvp/update', methods=['POST'])
