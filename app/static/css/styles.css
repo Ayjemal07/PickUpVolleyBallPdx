@@ -1279,13 +1279,14 @@ html {
   padding: 10px;
 }
 
-
+/* Event Card */
 .events-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
 }
 
+/* Force more columns on big screens */
 @media (min-width: 1200px) {
   .events-container {
     grid-template-columns: repeat(3, 1fr);
@@ -1296,6 +1297,7 @@ html {
   .events-container {
     grid-template-columns: repeat(4, 1fr);
   }
+}
 
 /* 2. Make each card a flex container to control its internal layout */
 .event-card {
@@ -2519,7 +2521,7 @@ header, .top-bar {
   }
 
   .title-chip h2 {
-    font-size: 1.24rem;
+    font-size: 1.35rem;
   }
 
   .subtitle-chip p {
