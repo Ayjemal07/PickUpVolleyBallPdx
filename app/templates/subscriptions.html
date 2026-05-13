@@ -91,7 +91,7 @@
     }
 </style>
 
-<div class="full-width-background-subscriptions">
+<div class="full-width-background-subscriptions white-card large">
     <section class="subscriptions">
         <h1>Join the Fun!</h1>
         <p class="intro-text">Volley Passes are the best bang for your buck. More options to come!</p>
@@ -258,6 +258,7 @@
             const paypalButtonContainer = document.getElementById('paypal-button-container');
 
             let selectedTier = null;
+            let actionType = null;
             let isPayPalRendered = false;
 
             // --- Define the messages for each action ---
@@ -413,8 +414,7 @@
                 paypal.Buttons({
                     createSubscription: function(data, actions) {
                         let fetchUrl;
-                        // Check the planId to determine the correct backend route
-                        if (planId === '{{ paypal_plan_id_tier2 }}' && document.querySelector('.btn-upgrade[data-tier="2"]:not([style*="display: none"])')) {
+                        if (actionType === 'upgrade') {
                             fetchUrl = '/api/subscription/upgrade';
                         } else {
                             fetchUrl = '/api/paypal/create-subscription';
