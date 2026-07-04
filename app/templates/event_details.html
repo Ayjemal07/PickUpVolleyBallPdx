@@ -35,6 +35,21 @@
             <i class="bi bi-geo-alt"></i> <strong>Location:</strong> {{ event.location }}
         </p>
 
+        <p>
+            <i class="bi bi-ticket-perforated"></i>
+            <strong>Pricing:</strong>
+
+            {% if event.ticket_price <= 0 %}
+                <span style="color: teal; font-weight: 700;">
+                    FREE
+                </span>
+                — Payment is not required.
+                Courtesy of Pickup Volleyball.
+            {% else %}
+                ${{ "%.2f"|format(event.ticket_price) }}
+            {% endif %}
+        </p>
+
         {% if event.full_address %}
         <div class="address-section" style="margin-bottom: 20px;">
             <p style="margin-bottom: 10px;">
@@ -88,7 +103,19 @@
         </div>
     {% else %}
         <div class="price-info">
-            <span class="price">${{ "%.2f"|format(event.ticket_price) }}</span>
+            {% if event.ticket_price <= 0 %}
+                <span class="price">
+                    FREE
+                </span>
+
+                <span style="font-size: 0.85rem;">
+                    Courtesy of Pickup Volleyball
+                </span>
+            {% else %}
+                <span class="price">
+                    ${{ "%.2f"|format(event.ticket_price) }}
+                </span>
+            {% endif %}
             <span class="spots-left">{{ event.max_capacity - event.rsvp_count }} spots left</span>
         </div>
         <div class="action-buttons">
@@ -140,7 +167,18 @@
         <p id="capacityInfo" style="text-align: center; color: #555; font-style: italic; font-size: 0.9em; margin-top: 5px;"></p>
 
         <p>Total Price: <strong id="totalPrice">$<span id="totalPriceSpan">0.00</span></strong></p>
-        
+        <p
+            id="freeEventCourtesy"
+            style="
+                display: none;
+                color: green;
+                font-weight: 700;
+                text-align: center;
+            "
+        >
+            Payment is not required for this event.
+            Courtesy of Pickup Volleyball.
+        </p>
         <div id="updateGuestContainer" style="display: none; margin-top: 15px; text-align: center;">
              <button type="button" id="updateGuestsBtn" class="btn btn-green"> <i class="bi bi-person-plus"></i> Update Guests
              </button>
@@ -175,7 +213,29 @@
                     <span id="guestGuestCount">0</span>
                     <button type="button" id="guestGuestIncrement">+</button>
                 </div>
+                <p
+                    id="guestCapacityInfo"
+                    aria-live="polite"
+                    style="
+                        text-align: center;
+                        color: #555;
+                        font-size: 0.9em;
+                        margin-top: 6px;
+                    "
+                ></p>
                 <p>Total to Pay: <strong id="guestTotalPrice">$0.00</strong></p>
+                <p
+                    id="guestFreeEventCourtesy"
+                    style="
+                        display: none;
+                        color: green;
+                        font-weight: 700;
+                        margin-bottom: 0;
+                    "
+                >
+                    Payment is not required for this event.
+                    Courtesy of Pickup Volleyball.
+                </p>
             </div>
 
             <div class="form-row">
@@ -229,10 +289,13 @@
 
 
 {% block page_scripts %}
-    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=capture"
+    {% if event.ticket_price > 0 %}
+        <script
+            src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&intent=capture"
             onload="console.log('PayPal SDK loaded successfully')"
-            onerror="console.error('Failed to load PayPal SDK')">
-    </script>
+            onerror="console.error('Failed to load PayPal SDK')"
+        ></script>
+    {% endif %}
     <script src="/static/js/events.js"></script>
 {% endblock %}
 

@@ -16,6 +16,68 @@ function isSubscriptionActive() {
 }
 
 
+function isFreeEventPrice(ticketPrice) {
+    const parsedPrice = Number.parseFloat(ticketPrice);
+
+    return (
+        Number.isFinite(parsedPrice) &&
+        parsedPrice <= 0
+    );
+}
+
+
+function configurePricingTypeSelector(
+    selectId,
+    priceInputId,
+    helpId
+) {
+    const select = document.getElementById(selectId);
+    const priceInput = document.getElementById(priceInputId);
+    const helpText = document.getElementById(helpId);
+
+    if (!select || !priceInput) return;
+
+    const applyPricingType = () => {
+        const isFree = select.value === "free";
+
+        if (isFree) {
+            if (!isFreeEventPrice(priceInput.value)) {
+                priceInput.dataset.lastPaidPrice =
+                    priceInput.value || "12";
+            }
+
+            priceInput.value = "0.00";
+            priceInput.readOnly = true;
+
+            if (helpText) {
+                helpText.textContent =
+                    "FREE events do not use PayPal " +
+                    "or event credits.";
+            }
+        } else {
+            priceInput.readOnly = false;
+
+            if (isFreeEventPrice(priceInput.value)) {
+                priceInput.value =
+                    priceInput.dataset.lastPaidPrice ||
+                    "12.00";
+            }
+
+            if (helpText) {
+                helpText.textContent = "";
+            }
+        }
+    };
+
+    select.addEventListener(
+        "change",
+        applyPricingType
+    );
+
+    applyPricingType();
+}
+
+
 // Function to calculate age from DOB string (YYYY-MM-DD)
 function calculateAge(dobString) {
     const dob = new Date(dobString);
@@ -207,6 +269,24 @@ function getActionButtonHTML(event) {
         </button>`;
 }
 
+
+configurePricingTypeSelector(
+    "pricingType",
+    "ticketPrice",
+    "ticketPriceHelp"
+);
+
+configurePricingTypeSelector(
+    "recurringPricingType",
+    "recurringTicketPrice",
+    "recurringTicketPriceHelp"
+);
+
+configurePricingTypeSelector(
+    "editPricingType",
+    "editTicketPrice",
+    "editTicketPriceHelp"
+);
 
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof subStatus !== 'undefined' && subStatus === 'pending') {
@@ -586,7 +666,15 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById("editFullAddress").value = event.full_address || '';
             document.getElementById("editAllowGuests").checked = event.allow_guests;
             document.getElementById("editGuestLimit").value = event.guest_limit;
-            document.getElementById("editTicketPrice").value = event.ticket_price;
+            document.getElementById("editPricingType").value =
+                event.is_free ? "free" : "paid";
+
+            document.getElementById("editTicketPrice").value =
+                event.ticket_price;
+
+            document
+                .getElementById("editPricingType")
+                .dispatchEvent(new Event("change"));
             document.getElementById("editMaxCapacity").value = event.max_capacity;
 
             // Show a preview of the current image
@@ -786,6 +874,19 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                         <a href="/events/${event.id}" class="see-more-button">See More</a>
                     </p>
                     <p class="event-going"><strong>Who's Going:</strong> ${event.rsvp_count || 0} going</p>
+                    ${event.is_free ? `
+                        <p
+                            class="event-price-free"
+                            style="
+                                color: teal;
+                                font-weight: 700;
+                                margin-bottom: 8px;
+                            "
+                        >
+                            FREE — Payment is not required.
+                            Courtesy of Pickup Volleyball.
+                        </p>
+                    ` : ""}
                     ${actionButtonHTML}
                 </div>
             </div>`;
@@ -890,14 +991,96 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         // New function to enable/disable the guest buttons based on capacity ---
         function updateGuestButtonsState(currentGuestCount, spotsLeft, guestLimit) {
             const userAndGuests = 1 + currentGuestCount;
-            // Disable '+' if adding a guest would exceed total spots OR the user's guest limit.
-            guestIncrementBtn.disabled = userAndGuests >= spotsLeft || (guestLimit > 0 && currentGuestCount >= guestLimit);
-            // Disable '-' if guest count is 0.
-            guestDecrementBtn.disabled = currentGuestCount <= 0;
+
+            const reachedGuestLimit =
+                guestLimit > 0 &&
+                currentGuestCount >= guestLimit;
+
+            const reachedCapacity =
+                userAndGuests >= spotsLeft;
+
+            guestIncrementBtn.disabled =
+                reachedGuestLimit || reachedCapacity;
+
+            guestDecrementBtn.disabled =
+                currentGuestCount <= 0;
+
+            if (capacityInfo) {
+                if (reachedGuestLimit) {
+                    capacityInfo.textContent =
+                        `You have reached the guest limit of ${guestLimit}.`;
+                } else if (reachedCapacity) {
+                    capacityInfo.textContent =
+                        'No additional spots are available for guests.';
+                } else {
+                    const remainingByCapacity =
+                        spotsLeft - userAndGuests;
+
+                    const remainingAllowed =
+                        guestLimit > 0
+                            ? Math.min(
+                                guestLimit - currentGuestCount,
+                                remainingByCapacity
+                            )
+                            : remainingByCapacity;
+
+                    capacityInfo.textContent =
+                        `${remainingAllowed} more guest${
+                            remainingAllowed === 1 ? '' : 's'
+                        } ${
+                            remainingAllowed === 1 ? 'is' : 'are'
+                        } allowed.`;
+                }
+            }
         }
 
         // Function to update total price and re-render PayPal buttons
         function updatePriceAndPayPal(eventId, guestsSelected) {
+            const freeEvent = isFreeEventPrice(
+                currentTicketPrice
+            );
+
+            const courtesy = document.getElementById(
+                "freeEventCourtesy"
+            );
+
+            if (freeEvent) {
+                document.getElementById(
+                    "totalPriceSpan"
+                ).textContent = "0.00";
+
+                document.getElementById(
+                    "rsvp-action-container"
+                ).innerHTML = `
+                    <p
+                        style="
+                            margin: 0;
+                            text-align: center;
+                            font-size: 0.9em;
+                            color: #333;
+                        "
+                    >
+                        No PayPal payment or event credit will be used.
+                    </p>
+                `;
+
+                if (courtesy) {
+                    courtesy.style.display = "block";
+                }
+
+                renderActionButtons(
+                    eventId,
+                    0,
+                    guestsSelected
+                );
+
+                return;
+            }
+
+            if (courtesy) {
+                courtesy.style.display = "none";
+            }
+
             let totalAmount;
             let message = ''; // This will hold user-facing messages
 
@@ -940,52 +1123,198 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             document.getElementById('rsvp-action-container').innerHTML = message;
             
             // This new function decides whether to show PayPal or a "Confirm Free RSVP" button.
-            renderActionButtons(eventId, totalAmount);
+            renderActionButtons(eventId, totalAmount,guestsSelected);
         }
 
 
-        // You still need this function from the previous answer in events.js
-        function renderActionButtons(eventId, totalAmount) {
-            const paypalContainer = document.getElementById('paypal-container');
-            paypalContainer.innerHTML = ''; // Clear previous buttons
+        function renderActionButtons(
+            eventId,
+            totalAmount,
+            guestsSelected
+        ) {
+            const paypalContainer =
+                document.getElementById('paypal-container');
 
-            // If there is a cost, render the PayPal buttons
-            if (totalAmount > 0) {
-                // The message is already set, so we just call your existing PayPal button renderer
-                renderPayPalButtons(eventId, totalAmount);
-            }
-            // If it's a free event redemption (new RSVP with 0 guests)
-            else if (!isEditingRsvp && userEventCredits > 0) {
-                const freeRsvpButton = document.createElement('button');
-                freeRsvpButton.textContent = `Confirm & Use 1 Credit`;
-                freeRsvpButton.className = 'btn btn-success';
-                paypalContainer.appendChild(freeRsvpButton);
+            if (!paypalContainer) return;
 
-                freeRsvpButton.addEventListener('click', async () => {
-                    freeRsvpButton.disabled = true;
-                    freeRsvpButton.textContent = 'Processing...';
+            paypalContainer.innerHTML = '';
 
-                    const response = await fetch('/api/rsvp/credit', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ event_id: eventId })
-                    });
+            // FREE event: never use PayPal or credits.
+            if (isFreeEventPrice(currentTicketPrice)) {
+                if (
+                    isEditingRsvp &&
+                    guestsSelected === initialGuestCount
+                ) {
+                    paypalContainer.innerHTML = `
+                        <p style="text-align: center; font-weight: bold;">
+                            No changes to save.
+                        </p>
+                    `;
+                    return;
+                }
 
-                    if (response.ok) {
-                        const result = await response.json();
-                        sessionStorage.setItem('flashMessage', result.message);
-                        sessionStorage.setItem('flashEventId', eventId);
-                        window.location.reload();
-                    } else {
-                        const result = await response.json();
-                        alert(`Error: ${result.error || 'Could not complete registration.'}`);
-                        freeRsvpButton.disabled = false; // Re-enable on error
+                const confirmButton =
+                    document.createElement('button');
+
+                confirmButton.type = 'button';
+                confirmButton.className = 'btn btn-success';
+
+                confirmButton.textContent = isEditingRsvp
+                    ? 'Update Free RSVP'
+                    : 'Confirm Free RSVP';
+
+                paypalContainer.appendChild(confirmButton);
+
+                confirmButton.addEventListener(
+                    'click',
+                    async function () {
+                        confirmButton.disabled = true;
+                        confirmButton.textContent = 'Processing...';
+
+                        const endpoint = isEditingRsvp
+                            ? '/api/rsvp/update'
+                            : '/api/rsvp/free';
+
+                        const payload = isEditingRsvp
+                            ? {
+                                event_id: eventId,
+                                new_guest_count: guestsSelected
+                            }
+                            : {
+                                event_id: eventId,
+                                guest_count: guestsSelected
+                            };
+
+                        try {
+                            const response = await fetch(endpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(payload)
+                            });
+
+                            const result = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(
+                                    result.error ||
+                                    'Could not complete registration.'
+                                );
+                            }
+
+                            sessionStorage.setItem(
+                                'flashMessage',
+                                result.message
+                            );
+
+                            sessionStorage.setItem(
+                                'flashEventId',
+                                eventId
+                            );
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            alert(`Error: ${error.message}`);
+
+                            confirmButton.disabled = false;
+
+                            confirmButton.textContent =
+                                isEditingRsvp
+                                    ? 'Update Free RSVP'
+                                    : 'Confirm Free RSVP';
+                        }
                     }
-                });
+                );
+
+                // Critical: do not continue into PayPal/credit logic.
+                return;
             }
-            else {
-                paypalContainer.innerHTML = '<p style="text-align: center; font-weight: bold; color: #333;">No payment required for this change.</p>';
+
+            // Paid event requiring payment.
+            if (totalAmount > 0) {
+                renderPayPalButtons(eventId, totalAmount);
+                return;
             }
+
+            // Paid event covered entirely by one event credit.
+            if (!isEditingRsvp && userEventCredits > 0) {
+                const creditButton =
+                    document.createElement('button');
+
+                creditButton.type = 'button';
+                creditButton.textContent =
+                    'Confirm & Use 1 Credit';
+
+                creditButton.className = 'btn btn-success';
+
+                paypalContainer.appendChild(creditButton);
+
+                creditButton.addEventListener(
+                    'click',
+                    async function () {
+                        creditButton.disabled = true;
+                        creditButton.textContent = 'Processing...';
+
+                        try {
+                            const response = await fetch(
+                                '/api/rsvp/credit',
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type':
+                                            'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        event_id: eventId
+                                    })
+                                }
+                            );
+
+                            const result = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(
+                                    result.error ||
+                                    'Could not complete registration.'
+                                );
+                            }
+
+                            sessionStorage.setItem(
+                                'flashMessage',
+                                result.message
+                            );
+
+                            sessionStorage.setItem(
+                                'flashEventId',
+                                eventId
+                            );
+
+                            window.location.reload();
+
+                        } catch (error) {
+                            alert(`Error: ${error.message}`);
+
+                            creditButton.disabled = false;
+                            creditButton.textContent =
+                                'Confirm & Use 1 Credit';
+                        }
+                    }
+                );
+
+                return;
+            }
+
+            paypalContainer.innerHTML = `
+                <p style="
+                    text-align: center;
+                    font-weight: bold;
+                    color: #333;
+                ">
+                    No payment required for this change.
+                </p>
+            `;
         }
 
         // Function to render PayPal buttons
@@ -1086,8 +1415,21 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                     // 3. REVEAL the Guest Section & Update Text (Crucial Step)
                     if (guestSection) guestSection.style.display = 'block'; // <--- THIS WAS MISSING
                     // 4. Capture event data for guest checkout
-                    window.pendingGuestEventId = this.getAttribute("data-event-id");
-                    window.pendingGuestTicketPrice = this.getAttribute("data-ticket-price");
+                    window.pendingGuestEventId =
+                        this.getAttribute("data-event-id");
+
+                    window.pendingGuestTicketPrice =
+                        this.getAttribute("data-ticket-price");
+
+                    window.pendingGuestLimit =
+                        this.getAttribute("data-guest-limit");
+
+                    window.pendingGuestMaxCapacity =
+                        this.getAttribute("data-max-capacity");
+
+                    window.pendingGuestRsvpCount =
+                        this.getAttribute("data-rsvp-count");
+
                     return;
                 }
                 currentEventId = this.getAttribute("data-event-id");
@@ -1375,7 +1717,13 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 if(authModal) authModal.style.display = 'none';
                 if(guestModal) guestModal.style.display = 'block';
                 // Start the guest checkout process using the data we saved in step 1
-                initGuestCheckout(window.pendingGuestEventId, window.pendingGuestTicketPrice);
+                initGuestCheckout(
+                    window.pendingGuestEventId,
+                    window.pendingGuestTicketPrice,
+                    window.pendingGuestLimit,
+                    window.pendingGuestMaxCapacity,
+                    window.pendingGuestRsvpCount
+                );
             });
         }
 
@@ -1404,29 +1752,125 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
 
 // Guest Checkout Function
 
-function initGuestCheckout(eventId, ticketPrice) {
+function initGuestCheckout(eventId, ticketPrice,guestLimit, maxCapacity, rsvpCount) {
     let guestCount = 0;
+    const parsedGuestLimit = Math.max(0, parseInt(guestLimit, 10) || 0 );
+
+    const parsedMaxCapacity = Math.max(
+        0,
+        parseInt(maxCapacity, 10) || 0
+    );
+
+    const parsedRsvpCount = Math.max(
+        0,
+        parseInt(rsvpCount, 10) || 0
+    );
+
+    // Remaining capacity includes the person registering.
+    // Reserve one spot for that person before allowing guests.
+    const remainingSpots = Math.max(
+        0,
+        parsedMaxCapacity - parsedRsvpCount
+    );
+
+    const guestSpotsAvailable = Math.max(
+        0,
+        remainingSpots - 1
+    );
+
+    const maxGuestsAllowed = Math.min(
+        parsedGuestLimit,
+        guestSpotsAvailable
+    );
+    const freeEvent = isFreeEventPrice(ticketPrice);
     const priceDisplay = document.getElementById('guestTotalPrice');
     const countDisplay = document.getElementById('guestGuestCount');
+
+
+    const courtesy = document.getElementById(
+        'guestFreeEventCourtesy'
+    );
+
+    if (courtesy) {
+        courtesy.style.display =
+            freeEvent ? 'block' : 'none';
+    }
     
     // Helper to update UI
     const updatePrice = () => {
-        const total = (1 + guestCount) * parseFloat(ticketPrice);
-        if(priceDisplay) priceDisplay.textContent = '$' + total.toFixed(2);
+        const total = freeEvent
+            ? 0
+            : (1 + guestCount) * parseFloat(ticketPrice);
+
+        if (priceDisplay) {
+            priceDisplay.textContent = freeEvent
+                ? "FREE"
+                : "$" + total.toFixed(2);
+        }
         if(countDisplay) countDisplay.textContent = guestCount;
     };
     updatePrice(); // Run once on init
 
-    // Guest Counter Click Handlers
     const decBtn = document.getElementById('guestGuestDecrement');
     const incBtn = document.getElementById('guestGuestIncrement');
-    
-    if(decBtn) decBtn.onclick = () => {
-        if (guestCount > 0) { guestCount--; updatePrice(); }
+    const guestCapacityInfo =
+        document.getElementById('guestCapacityInfo');
+
+    const updateGuestButtonState = () => {
+        if (decBtn) {
+            decBtn.disabled = guestCount <= 0;
+        }
+
+        if (incBtn) {
+            incBtn.disabled =
+                guestCount >= maxGuestsAllowed;
+        }
+
+        if (guestCapacityInfo) {
+            if (maxGuestsAllowed === 0) {
+                guestCapacityInfo.textContent =
+                    'No guests can be added to this registration.';
+            } else if (guestCount >= maxGuestsAllowed) {
+                guestCapacityInfo.textContent =
+                    `You have reached the maximum of ${maxGuestsAllowed} guest${
+                        maxGuestsAllowed === 1 ? '' : 's'
+                    }.`;
+            } else {
+                const remainingGuests =
+                    maxGuestsAllowed - guestCount;
+
+                guestCapacityInfo.textContent =
+                    `${remainingGuests} more guest${
+                        remainingGuests === 1 ? '' : 's'
+                    } ${
+                        remainingGuests === 1 ? 'is' : 'are'
+                    } allowed.`;
+            }
+        }
     };
-    if(incBtn) incBtn.onclick = () => {
-        guestCount++; updatePrice();
+
+    if (decBtn) {
+    decBtn.onclick = () => {
+        if (guestCount > 0) {
+            guestCount--;
+            updatePrice();
+            updateGuestButtonState();
+        }
     };
+    }
+
+    if (incBtn) {
+        incBtn.onclick = () => {
+            if (guestCount < maxGuestsAllowed) {
+                guestCount++;
+                updatePrice();
+                updateGuestButtonState();
+            }
+        };
+    }
+
+    updateGuestButtonState();
+
 
     // Signature Pad Initialization
     // Note: Ensure you have included signature_pad.js in your HTML templates
@@ -1445,9 +1889,140 @@ function initGuestCheckout(eventId, ticketPrice) {
     }
 
     // Render PayPal Buttons
-    const container = document.getElementById('guest-paypal-container');
-    if (container) {
-        container.innerHTML = ''; // Clear any existing buttons
+    const container = document.getElementById(
+        'guest-paypal-container'
+    );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = '';
+
+    if (freeEvent) {
+        container.innerHTML = "";
+
+        const confirmButton =
+            document.createElement("button");
+
+        confirmButton.type = "button";
+        confirmButton.className = "btn btn-success";
+        confirmButton.textContent = "Confirm Free RSVP";
+
+        container.appendChild(confirmButton);
+
+        confirmButton.addEventListener(
+            "click",
+            async () => {
+                // Run the same form, age, waiver,
+                // and signature validation currently used
+                // by your PayPal onClick callback.
+
+                const form =
+                    document.getElementById('guestCheckoutForm');
+
+                const waiver =
+                    document.getElementById('guestWaiverCheckbox');
+
+                if (!form || !form.checkValidity()) {
+                    if (form) {
+                        form.reportValidity();
+                    }
+                    return;
+                }
+
+                if (!validateGuestAge()) {
+                    return;
+                }
+
+                if (!waiver || !waiver.checked) {
+                    alert('You must agree to the waiver.');
+                    return;
+                }
+
+                if (!signaturePad || signaturePad.isEmpty()) {
+                    alert('Please sign the waiver.');
+                    return;
+                }
+
+                confirmButton.disabled = true;
+                confirmButton.textContent = 'Processing...';
+
+                const response = await fetch(
+                    "/api/rsvp/free/guest",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            event_id: eventId,
+                            guest_count: guestCount,
+                            guest_info: {
+                                first_name:
+                                    document.getElementById(
+                                        "guestFirstName"
+                                    ).value,
+                                last_name:
+                                    document.getElementById(
+                                        "guestLastName"
+                                    ).value,
+                                email:
+                                    document.getElementById(
+                                        "guestEmail"
+                                    ).value,
+                                address:
+                                    document.getElementById(
+                                        "guestAddress"
+                                    ).value,
+                                dob:
+                                    document.getElementById(
+                                        "guestDob"
+                                    ).value,
+                                emergency_contact_name:
+                                    document.getElementById(
+                                        "guestEmergName"
+                                    ).value,
+                                emergency_contact_phone:
+                                    document.getElementById(
+                                        "guestEmergPhone"
+                                    ).value,
+                                signature_data:
+                                    signaturePad.toDataURL()
+                            }
+                        })
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    alert(
+                        result.error ||
+                        "Could not complete registration."
+                    );
+
+                    confirmButton.disabled = false;
+                    confirmButton.textContent = "Confirm Free RSVP";
+
+                    return;
+                }
+                sessionStorage.setItem(
+                    'flashMessage',
+                    result.message
+                );
+
+                sessionStorage.setItem(
+                    'flashEventId',
+                    eventId
+                );
+
+                window.location.reload();
+            }
+        );
+
+        return;
+    }
 
         paypal.Buttons({
             onClick: function(data, actions) {
@@ -1517,5 +2092,5 @@ function initGuestCheckout(eventId, ticketPrice) {
                 });
             }
         }).render('#guest-paypal-container');
-    }
+    
 }

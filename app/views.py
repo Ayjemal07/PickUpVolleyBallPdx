@@ -43,6 +43,46 @@ PAYPAL_PLAN_ID_TIER1 = os.getenv("PAYPAL_PLAN_ID_TIER1")
 PAYPAL_PLAN_ID_TIER2 = os.getenv("PAYPAL_PLAN_ID_TIER2")
 RSVP_CANCELLATION_CREDIT_CUTOFF_HOURS = 48
 
+FREE_EVENT_COURTESY_MESSAGE = (
+    "Payment is not required for this event. Courtesy of Pickup Volleyball."
+)
+
+
+def is_free_event(event):
+    """
+    Authoritative rule for determining whether an event is FREE.
+    FREE events do not use PayPal or event credits.
+    """
+    try:
+        return float(event.ticket_price or 0) <= 0
+    except (TypeError, ValueError):
+        return False
+
+
+def get_event_ticket_price(form, existing_price=0.0):
+    """
+    The admin form sends pricing_type=free or pricing_type=paid.
+    FREE events are always saved as $0.00.
+    """
+    pricing_type = (form.get("pricing_type") or "").strip().lower()
+
+    if pricing_type == "free":
+        return 0.0
+
+    raw_price = form.get("ticket_price")
+
+    if raw_price in (None, ""):
+        price = float(existing_price or 0)
+    else:
+        price = float(raw_price)
+
+    if price <= 0:
+        raise ValueError(
+            "Paid events must have a ticket price greater than $0.00."
+        )
+
+    return price
+
 def spend_user_credit(user, amount_needed=1):
     """
     FIFO Logic: Finds the credits expiring SOONEST and deducts from them.
@@ -103,6 +143,59 @@ def send_cancellation_credit_email(user, event, credits_num, expiry_date):
         mail.send(msg)
     except Exception as e:
         print(f"Failed to send cancellation email: {e}")
+
+def send_free_event_cancellation_email(
+    email,
+    event,
+    first_name=None
+):
+    """
+    Sends a cancellation notification for a FREE event.
+    Does not mention refunds or event credits.
+    """
+    try:
+        subject = "PUVB Event Cancellation"
+
+        event_date_str = event.date.strftime('%A %m/%d')
+        event_time_str = (
+            event.start_time
+            .strftime('%I:%M%p')
+            .lstrip('0')
+            .lower()
+        )
+
+        greeting = (
+            f"Hi {first_name},"
+            if first_name
+            else "Hello,"
+        )
+
+        body = f"""
+        {greeting}
+
+        Cancellation details: '{event_date_str} {event_time_str}
+        {event.title} in {event.location}' has been canceled
+        and will no longer be happening.
+
+        Payment was not required for this FREE event, so no
+        refund or event credit will be issued.
+
+        We’re sorry for any inconvenience and look forward
+        to having you join an event soon!
+        """
+
+        msg = Message(
+            subject=subject,
+            recipients=[email],
+            body=body.strip()
+        )
+
+        mail.send(msg)
+
+    except Exception as e:
+        print(
+            f"Failed to send FREE event cancellation email: {e}"
+        )
 
 def send_guest_cancellation_only_email(email, event):
     """Sends simple cancellation email to non-registered guests (no credits possible)."""
@@ -557,7 +650,7 @@ def events():
         full_address = request.form.get('full_address') # Get the new field
         allow_guests = request.form.get('allow_guests') == 'on'
         guest_limit = int(request.form.get('guest_limit') or 0)
-        ticket_price = float(request.form.get('ticket_price') or 0.0)
+        ticket_price = get_event_ticket_price(request.form)
         max_capacity = int(request.form.get('max_capacity') or 28)
 
 
@@ -683,7 +776,9 @@ def events():
             "rsvp_count": event.rsvp_count,
             "is_attending": event.is_attending,
             'image_filename': event.image_filename,
-            'is_past': is_past
+            'is_past': is_past,
+            "is_free": is_free_event(event),
+            "pricing_type": "free" if is_free_event(event) else "paid"
         }
 
     upcoming_events_data = [create_event_dict(e, is_past=False) for e in upcoming_events]
@@ -800,8 +895,29 @@ def edit_event(event_id):
 
         event.allow_guests = request.form.get('allow_guests') == 'on'
         event.guest_limit = int(request.form.get('guest_limit', event.guest_limit))
-        event.ticket_price = float(request.form.get('ticket_price', event.ticket_price))
         event.max_capacity = int(request.form.get('max_capacity', event.max_capacity))
+
+        new_ticket_price = get_event_ticket_price(
+            request.form,
+            event.ticket_price
+        )
+
+        pricing_type_changed = (
+            is_free_event(event) != (new_ticket_price <= 0)
+        )
+
+        # Avoid converting an already-booked paid event into FREE,
+        # or a booked FREE event into paid.
+        if (
+            pricing_type_changed
+            and EventAttendee.query.filter_by(event_id=event.id).first()
+        ):
+            raise ValueError(
+                "Event pricing cannot be changed between Paid and FREE "
+                "after RSVPs exist."
+            )
+
+        event.ticket_price = new_ticket_price
         
         # Handle image update
         image_file = request.files.get('eventImage')
@@ -837,28 +953,55 @@ def cancel_event(event_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     event = Event.query.get_or_404(event_id)
-    
-    # --- SAFETY CHECK: Prevent double-crediting ---
-    if event.status == 'canceled':
-        return jsonify({'error': 'This event is already canceled.'}), 400
 
-    data = request.get_json()
-    
-    # *** CRITICAL FIX: Update the status to canceled ***
-    event.status = 'canceled' 
-    event.cancellation_reason = data.get('cancellation_reason', 'Cancelled Event')
-    
-    attendees = EventAttendee.query.filter_by(event_id=event.id).all()
-    
+    # Prevent canceling the same event twice.
+    if event.status == 'canceled':
+        return jsonify({
+            'error': 'This event is already canceled.'
+        }), 400
+
+    data = request.get_json(silent=True) or {}
+
+    event.status = 'canceled'
+    event.cancellation_reason = data.get(
+        'cancellation_reason',
+        'Cancelled Event'
+    )
+
+    attendees = EventAttendee.query.filter_by(
+        event_id=event.id
+    ).all()
+
+    # Determine once whether this is a FREE event.
+    event_is_free = is_free_event(event)
+
     credits_issued_count = 0
     expiry = date.today() + timedelta(days=30)
+
     for attendee in attendees:
-        # Calculate spots (User + Guests)
+        # One spot for the registered person, plus their guests.
         spots_registered = 1 + (attendee.guest_count or 0)
-        
+
+        # Registered account holder.
         if attendee.user_id:
             user = User.query.get(attendee.user_id)
-            if user:
+
+            if not user:
+                continue
+
+            if event_is_free:
+                # FREE event:
+                # Send cancellation notification only.
+                # Do not create a CreditGrant.
+                send_free_event_cancellation_email(
+                    user.email,
+                    event,
+                    first_name=user.first_name
+                )
+
+            else:
+                # Paid/credit event:
+                # Issue credits for every reserved spot.
                 new_grant = CreditGrant(
                     user_id=user.id,
                     balance=spots_registered,
@@ -866,23 +1009,59 @@ def cancel_event(event_id):
                     description=f"Refund: {event.title}",
                     expiry_date=expiry
                 )
+
                 db.session.add(new_grant)
-                credits_issued_count += 1
-                
-                # 2. Send the Email
-                send_cancellation_credit_email(user, event, spots_registered, expiry)
-        
+
+                credits_issued_count += spots_registered
+
+                send_cancellation_credit_email(
+                    user,
+                    event,
+                    spots_registered,
+                    expiry
+                )
+
+        # Guest checkout without an account.
         elif attendee.email:
-             # Guest checkout (no account) - Just notify them
-             send_guest_cancellation_only_email(attendee.email, event)
+            if event_is_free:
+                send_free_event_cancellation_email(
+                    attendee.email,
+                    event
+                )
+            else:
+                send_guest_cancellation_only_email(
+                    attendee.email,
+                    event
+                )
 
     try:
         db.session.commit()
-        return jsonify({'message': 'Event canceled, credits issued, and emails sent successfully.'}), 200
+
+        if event_is_free:
+            message = (
+                "FREE event canceled successfully. "
+                "Attendees were notified and no credits were issued."
+            )
+        else:
+            message = (
+                f"Event canceled successfully. "
+                f"{credits_issued_count} credit(s) were issued "
+                f"and attendees were notified."
+            )
+
+        return jsonify({
+            'message': message,
+            'is_free_event': event_is_free,
+            'credits_issued': credits_issued_count
+        }), 200
+
     except Exception as e:
         db.session.rollback()
         traceback.print_exc()
-        return jsonify({'error': f'Error canceling event: {str(e)}'}), 500
+
+        return jsonify({
+            'error': f'Error canceling event: {str(e)}'
+        }), 500
 
 
 #event details page
@@ -1023,6 +1202,13 @@ def create_order():
     event = Event.query.get(event_id)
     if not event:
         return jsonify({"error": "Event not found"}), 404
+    
+    if is_free_event(event):
+        return jsonify({
+            "error": (
+                "Payment is not required for this FREE event."
+            )
+        }), 400
 
     current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
     current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
@@ -1112,6 +1298,13 @@ def capture_order(order_id):
         event = Event.query.get(event_id)
         if not event:
             return jsonify({"error": "Event not found"}), 404
+        
+        if is_free_event(event):
+            return jsonify({
+                "error": (
+                    "Payment is not required for this FREE event."
+                )
+            }), 400
 
         # --- 1. PRE-VALIDATION (Check BEFORE charging money) ---
         if is_guest_checkout:
@@ -1761,6 +1954,16 @@ def rsvp_with_credit():
         if not event:
             return jsonify({'error': 'Event not found.'}), 404
         
+        if is_free_event(event):
+            db.session.rollback()
+
+            return jsonify({
+                "error": (
+                    "This is a FREE event. "
+                    "No event credit should be used."
+                )
+            }), 400
+        
         current_attendees = EventAttendee.query.filter_by(event_id=event.id).all()
         current_rsvp_count = sum(1 + (a.guest_count or 0) for a in current_attendees)
 
@@ -1790,6 +1993,439 @@ def rsvp_with_credit():
         print(f"Error in RSVP: {e}") # specific error logging
         return jsonify({'error': 'An error occurred processing your request.'}), 500
 
+def validate_guest_count_for_event(event, guest_count):
+    try:
+        guest_count = int(guest_count)
+    except (TypeError, ValueError):
+        return None, "Guest count must be a whole number."
+
+    if guest_count < 0:
+        return None, "Guest count cannot be negative."
+
+    if guest_count > 0 and not event.allow_guests:
+        return None, "Guests are not allowed for this event."
+
+    if (
+        event.allow_guests
+        and event.guest_limit is not None
+        and guest_count > event.guest_limit
+    ):
+        return None, (
+            f"You may bring up to {event.guest_limit} guest(s)."
+        )
+
+    return guest_count, None
+
+
+@main.route("/api/rsvp/free", methods=["POST"])
+@login_required
+def rsvp_free_event():
+    data = request.get_json(silent=True) or {}
+    event_id = data.get("event_id")
+
+    if not event_id:
+        return jsonify({"error": "Event ID is required."}), 400
+
+    try:
+        # Lock the event row while capacity is checked.
+        event = Event.query.with_for_update().get(event_id)
+
+        if not event:
+            return jsonify({"error": "Event not found."}), 404
+
+        if not is_free_event(event):
+            db.session.rollback()
+            return jsonify({
+                "error": "This event is not categorized as FREE."
+            }), 400
+
+        if event.status != "active":
+            db.session.rollback()
+            return jsonify({
+                "error": "This event is not available for registration."
+            }), 400
+
+        event_start = datetime.combine(
+            event.date,
+            event.start_time
+        )
+
+        if event_start <= datetime.now():
+            db.session.rollback()
+            return jsonify({
+                "error": "Registration is closed for this event."
+            }), 400
+
+        guest_count, guest_error = validate_guest_count_for_event(
+            event,
+            data.get("guest_count", 0)
+        )
+
+        if guest_error:
+            db.session.rollback()
+            return jsonify({"error": guest_error}), 400
+
+        existing_rsvp = EventAttendee.query.filter_by(
+            event_id=event.id,
+            user_id=current_user.id
+        ).first()
+
+        if existing_rsvp:
+            db.session.rollback()
+            return jsonify({
+                "error": "You are already registered for this event."
+            }), 409
+
+        attendees = EventAttendee.query.filter_by(
+            event_id=event.id
+        ).all()
+
+        current_rsvp_count = sum(
+            1 + (attendee.guest_count or 0)
+            for attendee in attendees
+        )
+
+        spots_needed = 1 + guest_count
+
+        if current_rsvp_count + spots_needed > event.max_capacity:
+            db.session.rollback()
+            return jsonify({
+                "error": (
+                    "Sorry, this event does not have enough open spots."
+                )
+            }), 400
+
+        attendee = EventAttendee(
+            event_id=event.id,
+            user_id=current_user.id,
+            guest_count=guest_count
+        )
+
+        db.session.add(attendee)
+
+        # Send the new attendee INSERT to the database before recounting.
+        db.session.flush()
+
+        all_attendees = EventAttendee.query.filter_by(
+            event_id=event.id
+        ).all()
+
+        event.rsvp_count = sum(
+            1 + (registered.guest_count or 0)
+            for registered in all_attendees
+        )
+
+        db.session.commit()
+
+        send_rsvp_confirmation_email(
+            current_user,
+            event,
+            guest_count
+        )
+
+        return jsonify({
+            "success": True,
+            "message": (
+                f"You're confirmed for {event.title}! "
+                f"{FREE_EVENT_COURTESY_MESSAGE}"
+            )
+        }), 200
+
+    except Exception as error:
+        db.session.rollback()
+        traceback.print_exc()
+
+        return jsonify({
+            "error": f"An error occurred: {str(error)}"
+        }), 500
+    
+@main.route('/api/rsvp/free/guest', methods=['POST'])
+def rsvp_free_guest():
+    data = request.get_json(silent=True) or {}
+
+    event_id = data.get('event_id')
+    guest_info = data.get('guest_info') or {}
+
+    if not event_id:
+        return jsonify({
+            'error': 'Event ID is required.'
+        }), 400
+
+    required_fields = [
+        'first_name',
+        'last_name',
+        'email',
+        'address',
+        'dob',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        'signature_data'
+    ]
+
+    missing_fields = [
+        field
+        for field in required_fields
+        if not str(guest_info.get(field) or '').strip()
+    ]
+
+    if missing_fields:
+        return jsonify({
+            'error': 'Please complete all required fields.'
+        }), 400
+
+    try:
+        dob = datetime.strptime(
+            guest_info['dob'],
+            '%Y-%m-%d'
+        ).date()
+    except (TypeError, ValueError):
+        return jsonify({
+            'error': 'Invalid date of birth.'
+        }), 400
+
+    today = date.today()
+
+    age = (
+        today.year
+        - dob.year
+        - (
+            (today.month, today.day)
+            < (dob.month, dob.day)
+        )
+    )
+
+    if age < 18:
+        return jsonify({
+            'error': (
+                'You must be 18 years or older '
+                'to register.'
+            )
+        }), 400
+
+    try:
+        event = (
+            Event.query
+            .with_for_update()
+            .get(event_id)
+        )
+
+        if not event:
+            return jsonify({
+                'error': 'Event not found.'
+            }), 404
+
+        if not is_free_event(event):
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'This event is not categorized as FREE.'
+                )
+            }), 400
+
+        if event.status != 'active':
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'This event is not available '
+                    'for registration.'
+                )
+            }), 400
+
+        event_start = datetime.combine(
+            event.date,
+            event.start_time
+        )
+
+        if event_start <= datetime.now():
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'Registration is closed '
+                    'for this event.'
+                )
+            }), 400
+
+        guest_count, guest_error = (
+            validate_guest_count_for_event(
+                event,
+                data.get('guest_count', 0)
+            )
+        )
+
+        if guest_error:
+            db.session.rollback()
+
+            return jsonify({
+                'error': guest_error
+            }), 400
+
+        email = guest_info['email'].strip()
+
+        # Prevent an accidental duplicate submission.
+        existing_guest_rsvp = EventAttendee.query.filter(
+            EventAttendee.event_id == event.id,
+            EventAttendee.user_id.is_(None),
+            db.func.lower(EventAttendee.email)
+                == email.lower()
+        ).first()
+
+        if existing_guest_rsvp:
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'This email is already registered '
+                    'for this event.'
+                )
+            }), 409
+
+        attendees = EventAttendee.query.filter_by(
+            event_id=event.id
+        ).all()
+
+        current_rsvp_count = sum(
+            1 + (attendee.guest_count or 0)
+            for attendee in attendees
+        )
+
+        spots_needed = 1 + guest_count
+
+        if (
+            current_rsvp_count + spots_needed
+            > event.max_capacity
+        ):
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'This event does not have '
+                    'enough open spots.'
+                )
+            }), 400
+
+        signature_data = guest_info['signature_data']
+
+        if ',' not in signature_data:
+            db.session.rollback()
+
+            return jsonify({
+                'error': 'Invalid signature data.'
+            }), 400
+
+        try:
+            _, encoded_signature = (
+                signature_data.split(',', 1)
+            )
+
+            signature_image_data = base64.b64decode(
+                encoded_signature
+            )
+
+        except Exception:
+            db.session.rollback()
+
+            return jsonify({
+                'error': 'Invalid signature data.'
+            }), 400
+
+        waiver_filename = (
+            f'guest_waiver_{uuid.uuid4()}.pdf'
+        )
+
+        waiver_directory = os.path.join(
+            current_app.root_path,
+            'static',
+            'waivers'
+        )
+
+        os.makedirs(
+            waiver_directory,
+            exist_ok=True
+        )
+
+        waiver_path = os.path.join(
+            waiver_directory,
+            waiver_filename
+        )
+
+        waiver_data = {
+            'name': (
+                f"{guest_info['first_name'].strip()} "
+                f"{guest_info['last_name'].strip()}"
+            ),
+            'address': guest_info['address'].strip(),
+            'dob': guest_info['dob'],
+            'emergency_name': (
+                guest_info[
+                    'emergency_contact_name'
+                ].strip()
+            ),
+            'emergency_phone': (
+                guest_info[
+                    'emergency_contact_phone'
+                ].strip()
+            )
+        }
+
+        generate_detailed_waiver(
+            waiver_data,
+            signature_image_data,
+            waiver_path
+        )
+
+        attendee = EventAttendee(
+            event_id=event.id,
+            user_id=None,
+            guest_count=guest_count,
+            first_name=guest_info['first_name'].strip(),
+            last_name=guest_info['last_name'].strip(),
+            email=email,
+            waiver_pdf=waiver_filename
+        )
+
+        db.session.add(attendee)
+
+        # Send the new attendee INSERT to the database before recounting.
+        db.session.flush()
+
+        all_attendees = EventAttendee.query.filter_by(
+            event_id=event.id
+        ).all()
+
+        event.rsvp_count = sum(
+            1 + (registered.guest_count or 0)
+            for registered in all_attendees
+        )
+
+        db.session.commit()
+
+        send_guest_confirmation_email(
+            guest_info,
+            event,
+            waiver_path
+        )
+
+        return jsonify({
+            'success': True,
+            'message': (
+                f"You're confirmed for {event.title}! "
+                f"{FREE_EVENT_COURTESY_MESSAGE}"
+            )
+        }), 200
+
+    except Exception as error:
+        db.session.rollback()
+        traceback.print_exc()
+
+        return jsonify({
+            'error': (
+                f'An error occurred: {str(error)}'
+            )
+        }), 500
+
 
 @main.route('/api/rsvp/delete/<int:event_id>', methods=['POST'])
 @login_required
@@ -1815,8 +2451,17 @@ def delete_rsvp(event_id):
         return jsonify({'error': 'You are not currently RSVP\'d to this event.'}), 404
 
     try:
-        hours_until_event = (event_start_datetime - now).total_seconds() / 3600
-        credit_eligible = hours_until_event >= RSVP_CANCELLATION_CREDIT_CUTOFF_HOURS
+        hours_until_event = (
+            event_start_datetime - now
+        ).total_seconds() / 3600
+
+        event_is_free = is_free_event(event)
+
+        credit_eligible = (
+            not event_is_free
+            and hours_until_event
+                >= RSVP_CANCELLATION_CREDIT_CUTOFF_HOURS
+        )
 
         spots_to_credit = 1 + (rsvp.guest_count or 0)
         credits_issued = 0
@@ -1844,9 +2489,27 @@ def delete_rsvp(event_id):
             credits_issued = spots_to_credit
 
         db.session.delete(rsvp)
+        db.session.flush()
+
+        remaining_attendees = EventAttendee.query.filter_by(
+            event_id=event.id
+        ).all()
+
+        event.rsvp_count = sum(
+            1 + (registered.guest_count or 0)
+            for registered in remaining_attendees
+        )
+
         db.session.commit()
 
-        if credit_eligible:
+        if event_is_free:
+            message = (
+                "Your RSVP has been canceled. "
+                "No event credit was issued because payment was not "
+                "required for this FREE event."
+            )
+
+        elif credit_eligible:
             message = (
                 f'Your RSVP has been canceled. '
                 f'{credits_issued} event credit(s) were added to your account '
@@ -1893,54 +2556,207 @@ def get_rsvp_cancel_policy(event_id):
     credit_eligible = hours_until_event >= RSVP_CANCELLATION_CREDIT_CUTOFF_HOURS
     spots_to_credit = 1 + (rsvp.guest_count or 0)
 
-    if credit_eligible:
+
+    event_is_free = is_free_event(event)
+
+    credit_eligible = (
+        not event_is_free
+        and hours_until_event
+            >= RSVP_CANCELLATION_CREDIT_CUTOFF_HOURS
+    )
+
+    if event_is_free:
         confirmation_message = (
-            f'This will remove everyone in your RSVP. '
-            f'Because you are updating your RSVP at least {RSVP_CANCELLATION_CREDIT_CUTOFF_HOURS} hours before the event, '
-            f'you will receive {spots_to_credit} event credit(s) for you and your guests, if any.'
+            "This will remove everyone in your RSVP. "
+            "No event credit will be issued because payment "
+            "was not required for this FREE event."
         )
+
+    elif credit_eligible:
+        confirmation_message = (
+            "This will remove everyone in your RSVP. "
+            f"You will receive {spots_to_credit} event "
+            "credit(s) for you and your guests, if any."
+        )
+
     else:
         confirmation_message = (
-            'This will remove everyone in your RSVP. '
-            f'Because this RSVP is being canceled less than {RSVP_CANCELLATION_CREDIT_CUTOFF_HOURS} hours before the event, '
-            'event credits will not be issued.'
+            "This will remove everyone in your RSVP. "
+            "Event credits will not be issued because this "
+            "cancellation is inside the cancellation cutoff."
         )
 
     return jsonify({
-        'credit_eligible': credit_eligible,
-        'credits_to_issue': spots_to_credit if credit_eligible else 0,
-        'hours_until_event': round(hours_until_event, 1),
-        'confirmation_message': confirmation_message
+        "is_free_event": event_is_free,
+        "credit_eligible": credit_eligible,
+        "credits_to_issue": (
+            spots_to_credit if credit_eligible else 0
+        ),
+        "hours_until_event": round(hours_until_event, 1),
+        "confirmation_message": confirmation_message
     }), 200
     
 
 @main.route('/api/rsvp/update', methods=['POST'])
 @login_required
 def update_rsvp():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+
     event_id = data.get('event_id')
-    new_guest_count = data.get('new_guest_count')
+    requested_guest_count = data.get(
+        'new_guest_count'
+    )
 
-    if event_id is None or new_guest_count is None:
-        return jsonify({'error': 'Event ID and new guest count are required.'}), 400
-
-    # Find the existing RSVP for the current user and event
-    rsvp = EventAttendee.query.filter_by(event_id=event_id, user_id=current_user.id).first()
-
-    if not rsvp:
-        return jsonify({'error': 'No existing RSVP found to update.'}), 404
+    if (
+        event_id is None
+        or requested_guest_count is None
+    ):
+        return jsonify({
+            'error': (
+                'Event ID and new guest count '
+                'are required.'
+            )
+        }), 400
 
     try:
-        rsvp.guest_count = int(new_guest_count)
+        event = (
+            Event.query
+            .with_for_update()
+            .get(event_id)
+        )
+
+        if not event:
+            return jsonify({
+                'error': 'Event not found.'
+            }), 404
+
+        if event.status != 'active':
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'This event is not available '
+                    'for RSVP changes.'
+                )
+            }), 400
+
+        event_start = datetime.combine(
+            event.date,
+            event.start_time
+        )
+
+        if event_start <= datetime.now():
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'This event has already started.'
+                )
+            }), 400
+
+        new_guest_count, guest_error = (
+            validate_guest_count_for_event(
+                event,
+                requested_guest_count
+            )
+        )
+
+        if guest_error:
+            db.session.rollback()
+
+            return jsonify({
+                'error': guest_error
+            }), 400
+
+        rsvp = EventAttendee.query.filter_by(
+            event_id=event.id,
+            user_id=current_user.id
+        ).first()
+
+        if not rsvp:
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'No existing RSVP found to update.'
+                )
+            }), 404
+
+        old_guest_count = rsvp.guest_count or 0
+
+        additional_spots = (
+            new_guest_count - old_guest_count
+        )
+
+        # Paid events must use PayPal to add guests.
+        if (
+            not is_free_event(event)
+            and additional_spots > 0
+        ):
+            db.session.rollback()
+
+            return jsonify({
+                'error': (
+                    'Payment is required to add guests '
+                    'to this event.'
+                )
+            }), 400
+
+        if additional_spots > 0:
+            attendees = EventAttendee.query.filter_by(
+                event_id=event.id
+            ).all()
+
+            current_rsvp_count = sum(
+                1 + (attendee.guest_count or 0)
+                for attendee in attendees
+            )
+
+            if (
+                current_rsvp_count + additional_spots
+                > event.max_capacity
+            ):
+                db.session.rollback()
+
+                return jsonify({
+                    'error': (
+                        'The event does not have enough '
+                        'open spots.'
+                    )
+                }), 400
+
+        rsvp.guest_count = new_guest_count
+
+        # Write the changed guest count before recounting.
+        db.session.flush()
+
+        all_attendees = EventAttendee.query.filter_by(
+            event_id=event.id
+        ).all()
+
+        event.rsvp_count = sum(
+            1 + (registered.guest_count or 0)
+            for registered in all_attendees
+        )
+
         db.session.commit()
+
         return jsonify({
-            'success': True, 
-            'message': 'Your RSVP has been successfully updated!'
+            'success': True,
+            'message': (
+                'Your RSVP has been successfully updated!'
+            )
         }), 200
-    except Exception as e:
+
+    except Exception as error:
         db.session.rollback()
         traceback.print_exc()
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+
+        return jsonify({
+            'error': (
+                f'An error occurred: {str(error)}'
+            )
+        }), 500
 
 # Add this new route to your views.py file
 
@@ -2008,7 +2824,7 @@ def add_recurring_events():
                 full_address=form.get('full_address'),
                 allow_guests=form.get('allow_guests') == 'on',
                 guest_limit=int(form.get('guest_limit') or 0),
-                ticket_price=float(form.get('ticket_price') or 0.0),
+                ticket_price=get_event_ticket_price(form),
                 max_capacity=int(form.get('max_capacity') or 28),
                 date=event_date,
                 image_filename=image_filename,
