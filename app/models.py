@@ -287,3 +287,171 @@ class PayPalWebhookEvent(db.Model):
     notes = db.Column(db.String(255), nullable=True)
 
     received_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
+class MerchOrder(db.Model):
+    __tablename__ = 'merch_orders'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(
+        db.String(40),
+        unique=True,
+        nullable=False
+    )
+
+    user_id = db.Column(
+        db.String(36),
+        db.ForeignKey('user.id'),
+        nullable=True
+    )
+
+    customer_name = db.Column(
+        db.String(150),
+        nullable=False
+    )
+    customer_email = db.Column(
+        db.String(150),
+        nullable=False
+    )
+    customer_phone = db.Column(
+        db.String(40),
+        nullable=True
+    )
+
+    fulfillment_method = db.Column(
+        db.String(30),
+        nullable=False
+    )
+
+    shipping_name = db.Column(
+        db.String(150),
+        nullable=True
+    )
+    shipping_address_line_1 = db.Column(
+        db.String(200),
+        nullable=True
+    )
+    shipping_address_line_2 = db.Column(
+        db.String(200),
+        nullable=True
+    )
+    shipping_city = db.Column(
+        db.String(100),
+        nullable=True
+    )
+    shipping_state = db.Column(
+        db.String(50),
+        nullable=True
+    )
+    shipping_postal_code = db.Column(
+        db.String(20),
+        nullable=True
+    )
+    shipping_country = db.Column(
+        db.String(2),
+        nullable=True
+    )
+
+    subtotal = db.Column(
+        db.Numeric(10, 2),
+        nullable=False
+    )
+    shipping_amount = db.Column(
+        db.Numeric(10, 2),
+        nullable=False,
+        default=0
+    )
+    total = db.Column(
+        db.Numeric(10, 2),
+        nullable=False
+    )
+
+    currency = db.Column(
+        db.String(10),
+        nullable=False,
+        default='USD'
+    )
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default='pending'
+    )
+
+    paypal_order_id = db.Column(
+        db.String(255),
+        unique=True,
+        nullable=True
+    )
+    paypal_capture_id = db.Column(
+        db.String(255),
+        unique=True,
+        nullable=True
+    )
+    paypal_payer_email = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+    completed_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    user = db.relationship(
+        'User',
+        backref='merch_orders'
+    )
+
+    items = db.relationship(
+        'MerchOrderItem',
+        back_populates='order',
+        cascade='all, delete-orphan',
+        lazy=True
+    )
+
+
+class MerchOrderItem(db.Model):
+    __tablename__ = 'merch_order_items'
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    merch_order_id = db.Column(
+        db.Integer,
+        db.ForeignKey('merch_orders.id'),
+        nullable=False
+    )
+
+    product_id = db.Column(
+        db.String(80),
+        nullable=False
+    )
+    product_name = db.Column(
+        db.String(150),
+        nullable=False
+    )
+    size = db.Column(
+        db.String(20),
+        nullable=False
+    )
+    quantity = db.Column(
+        db.Integer,
+        nullable=False
+    )
+    unit_price = db.Column(
+        db.Numeric(10, 2),
+        nullable=False
+    )
+
+    order = db.relationship(
+        'MerchOrder',
+        back_populates='items'
+    )

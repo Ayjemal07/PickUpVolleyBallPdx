@@ -6,6 +6,7 @@ import urllib.parse
 import traceback
 from flask import request, jsonify # Import jsonify
 from datetime import datetime, timedelta, date
+from decimal import Decimal, InvalidOperation
 
 import os
 from flask import current_app
@@ -16,7 +17,8 @@ from flask_login import current_user, login_required
 
 from .models import (
     Event, User, db, EventAttendee, Subscription, CreditGrant,
-    CreditTransaction, PaymentTransaction, PayPalWebhookEvent
+    CreditTransaction, PaymentTransaction, PayPalWebhookEvent,
+    MerchOrder, MerchOrderItem
 )
 from flask_mail import Message
 from . import mail  
@@ -605,6 +607,112 @@ def send_weekly_admin_audit_report():
     )
 
     mail.send(msg)
+
+MERCH_CATALOG = {
+    'wildcats-hoodie': {
+        'name': 'Wildcats Volleyball Hoodie',
+        'price': Decimal('39.99'),
+        'image': 'merch/Hoodie1.jpeg',
+        'sizes': ['S', 'M', 'L', 'XL', '2XL']
+    },
+    'volleyball-life-shirt': {
+        'name': 'Volleyball Life T-Shirt',
+        'price': Decimal('24.99'),
+        'image': 'merch/SCT0395-2_2000x.jpeg',
+        'sizes': ['S', 'M', 'L', 'XL', '2XL']
+    },
+    'teal-volleyball-shirt': {
+        'name': 'Teal Volleyball T-Shirt',
+        'price': Decimal('24.99'),
+        'image': 'merch/TealVolleyTshirt.jpeg',
+        'sizes': ['S', 'M', 'L', 'XL', '2XL']
+    },
+    'pink-volleyball-hat': {
+        'name': 'Pink Volleyball Hat',
+        'price': Decimal('19.99'),
+        'image': 'merch/VolleyballHatTest.jpeg',
+        'sizes': ['One Size']
+    }
+}
+
+MERCH_SHIPPING_RATE = Decimal('7.99')
+
+MERCH_FULFILLMENT_METHODS = {
+    'event_pickup',
+    'shipping'
+}
+
+def serialize_merch_catalog():
+    return [
+        {
+            'id': product_id,
+            'name': product['name'],
+            'price': f"{product['price']:.2f}",
+            'image': product['image'],
+            'sizes': product['sizes']
+        }
+        for product_id, product in MERCH_CATALOG.items()
+    ]
+
+
+def validate_merch_cart(raw_items):
+    if not isinstance(raw_items, list) or not raw_items:
+        raise ValueError('Your cart is empty.')
+
+    validated_items = []
+    subtotal = Decimal('0.00')
+
+    for raw_item in raw_items:
+        if not isinstance(raw_item, dict):
+            raise ValueError('One of the cart items is invalid.')
+
+        product_id = str(
+            raw_item.get('product_id') or ''
+        ).strip()
+
+        size = str(
+            raw_item.get('size') or ''
+        ).strip()
+
+        product = MERCH_CATALOG.get(product_id)
+
+        if not product:
+            raise ValueError(
+                'One of the products is no longer available.'
+            )
+
+        try:
+            quantity = int(raw_item.get('quantity'))
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"Choose a valid quantity for {product['name']}."
+            )
+
+        if quantity < 1 or quantity > 10:
+            raise ValueError(
+                f"Quantity for {product['name']} must be "
+                "between 1 and 10."
+            )
+
+        if size not in product['sizes']:
+            raise ValueError(
+                f"Choose a valid size for {product['name']}."
+            )
+
+        subtotal += product['price'] * quantity
+
+        validated_items.append({
+            'product_id': product_id,
+            'name': product['name'],
+            'size': size,
+            'quantity': quantity,
+            'unit_price': product['price']
+        })
+
+    return (
+        validated_items,
+        subtotal.quantize(Decimal('0.01'))
+    )
 
 
 @main.route('/admin/send-weekly-audit', methods=['POST'])
@@ -2877,6 +2985,458 @@ def execute_guest_payment():
     if not event:
         return jsonify({'error': 'Event not found.'}), 404
     
+
+
+@main.route('/merch')
+def merch():
+    return render_template(
+        'merch.html',
+        products=serialize_merch_catalog()
+    )
+
+
+@main.route('/merch/cart')
+def merch_cart():
+    return render_template(
+        'merch_cart.html',
+        shipping_rate=f'{MERCH_SHIPPING_RATE:.2f}',
+        paypal_client_id=PAYPAL_CLIENT_ID
+    )
+
+@main.route('/api/merch/orders', methods=['POST'])
+def create_merch_order():
+    data = request.get_json(silent=True) or {}
+    customer = data.get('customer') or {}
+    shipping_address = data.get('shipping_address') or {}
+
+    customer_name = str(
+        customer.get('name') or ''
+    ).strip()
+
+    customer_email = str(
+        customer.get('email') or ''
+    ).strip().lower()
+
+    customer_phone = str(
+        customer.get('phone') or ''
+    ).strip()
+
+    fulfillment_method = str(
+        customer.get('fulfillment_method') or ''
+    ).strip()
+
+    if not customer_name or len(customer_name) > 150:
+        return jsonify({
+            'error': 'Enter your full name.'
+        }), 400
+
+    if (
+        not customer_email
+        or '@' not in customer_email
+        or len(customer_email) > 150
+    ):
+        return jsonify({
+            'error': 'Enter a valid email address.'
+        }), 400
+
+    if len(customer_phone) > 40:
+        return jsonify({
+            'error': 'Enter a valid phone number.'
+        }), 400
+
+    if fulfillment_method not in MERCH_FULFILLMENT_METHODS:
+        return jsonify({
+            'error': 'Choose pickup or shipping.'
+        }), 400
+
+    try:
+        validated_items, subtotal = validate_merch_cart(
+            data.get('items')
+        )
+    except ValueError as exc:
+        return jsonify({
+            'error': str(exc)
+        }), 400
+
+    shipping_name = None
+    shipping_address_line_1 = None
+    shipping_address_line_2 = None
+    shipping_city = None
+    shipping_state = None
+    shipping_postal_code = None
+    shipping_country = None
+
+    if fulfillment_method == 'shipping':
+        shipping_name = str(
+            shipping_address.get('name') or customer_name
+        ).strip()
+
+        shipping_address_line_1 = str(
+            shipping_address.get('address_line_1') or ''
+        ).strip()
+
+        shipping_address_line_2 = str(
+            shipping_address.get('address_line_2') or ''
+        ).strip()
+
+        shipping_city = str(
+            shipping_address.get('city') or ''
+        ).strip()
+
+        shipping_state = str(
+            shipping_address.get('state') or ''
+        ).strip().upper()
+
+        shipping_postal_code = str(
+            shipping_address.get('postal_code') or ''
+        ).strip()
+
+        shipping_country = str(
+            shipping_address.get('country') or 'US'
+        ).strip().upper()
+
+        if not shipping_name or len(shipping_name) > 150:
+            return jsonify({
+                'error': 'Enter the recipient name.'
+            }), 400
+
+        if (
+            not shipping_address_line_1
+            or len(shipping_address_line_1) > 200
+        ):
+            return jsonify({
+                'error': 'Enter a valid street address.'
+            }), 400
+
+        if len(shipping_address_line_2) > 200:
+            return jsonify({
+                'error': 'Address line 2 is too long.'
+            }), 400
+
+        if not shipping_city or len(shipping_city) > 100:
+            return jsonify({
+                'error': 'Enter a valid city.'
+            }), 400
+
+        if not shipping_state or len(shipping_state) > 50:
+            return jsonify({
+                'error': 'Enter a valid state.'
+            }), 400
+
+        if (
+            not shipping_postal_code
+            or len(shipping_postal_code) > 20
+        ):
+            return jsonify({
+                'error': 'Enter a valid ZIP code.'
+            }), 400
+
+        if shipping_country != 'US':
+            return jsonify({
+                'error': (
+                    'Shipping is currently available only '
+                    'within the United States.'
+                )
+            }), 400
+
+        shipping_amount = MERCH_SHIPPING_RATE
+    else:
+        shipping_amount = Decimal('0.00')
+
+    total = (
+        subtotal + shipping_amount
+    ).quantize(Decimal('0.01'))
+
+    order_number = (
+        f"MERCH-{datetime.utcnow():%Y%m%d}-"
+        f"{uuid.uuid4().hex[:8].upper()}"
+    )
+
+    user_id = (
+        current_user.id
+        if current_user.is_authenticated
+        else None
+    )
+
+    try:
+        access_token = get_access_token()
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {access_token}'
+        }
+
+        paypal_body = {
+            'intent': 'CAPTURE',
+            'purchase_units': [{
+                'reference_id': order_number,
+                'custom_id': order_number,
+                'description': (
+                    'Pickup Volleyball PDX merchandise'
+                ),
+                'amount': {
+                    'currency_code': 'USD',
+                    'value': f'{total:.2f}',
+                    'breakdown': {
+                        'item_total': {
+                            'currency_code': 'USD',
+                            'value': f'{subtotal:.2f}'
+                        },
+                        'shipping': {
+                            'currency_code': 'USD',
+                            'value': f'{shipping_amount:.2f}'
+                        }
+                    }
+                }
+            }],
+            'application_context': {
+                # We collect and validate the address ourselves.
+                'shipping_preference': 'NO_SHIPPING'
+            }
+        }
+
+        paypal_response = requests.post(
+            f'{PAYPAL_BASE}/v2/checkout/orders',
+            headers=headers,
+            json=paypal_body,
+            timeout=20
+        )
+
+        paypal_response.raise_for_status()
+        paypal_data = paypal_response.json()
+        paypal_order_id = paypal_data.get('id')
+
+        if not paypal_order_id:
+            raise ValueError(
+                'PayPal did not return an order ID.'
+            )
+
+        merch_order = MerchOrder(
+            order_number=order_number,
+            user_id=user_id,
+            customer_name=customer_name,
+            customer_email=customer_email,
+            customer_phone=customer_phone or None,
+            fulfillment_method=fulfillment_method,
+            shipping_name=shipping_name,
+            shipping_address_line_1=shipping_address_line_1,
+            shipping_address_line_2=(
+                shipping_address_line_2 or None
+            ),
+            shipping_city=shipping_city,
+            shipping_state=shipping_state,
+            shipping_postal_code=shipping_postal_code,
+            shipping_country=shipping_country,
+            subtotal=subtotal,
+            shipping_amount=shipping_amount,
+            total=total,
+            currency='USD',
+            status='pending',
+            paypal_order_id=paypal_order_id
+        )
+
+        for item in validated_items:
+            merch_order.items.append(
+                MerchOrderItem(
+                    product_id=item['product_id'],
+                    product_name=item['name'],
+                    size=item['size'],
+                    quantity=item['quantity'],
+                    unit_price=item['unit_price']
+                )
+            )
+
+        db.session.add(merch_order)
+        db.session.commit()
+
+        return jsonify({
+            'id': paypal_order_id
+        })
+
+    except (requests.RequestException, ValueError):
+        db.session.rollback()
+
+        current_app.logger.exception(
+            'Unable to create merchandise order'
+        )
+
+        return jsonify({
+            'error': (
+                'Checkout could not be started. '
+                'Please try again.'
+            )
+        }), 502
+
+
+@main.route(
+    '/api/merch/orders/<paypal_order_id>/capture',
+    methods=['POST']
+)
+def capture_merch_order(paypal_order_id):
+    merch_order = MerchOrder.query.filter_by(
+        paypal_order_id=paypal_order_id
+    ).first()
+
+    if not merch_order:
+        return jsonify({
+            'error': 'Merchandise order not found.'
+        }), 404
+
+    # Makes repeated successful capture requests safe.
+    if merch_order.status == 'completed':
+        return jsonify({
+            'success': True,
+            'order_number': merch_order.order_number
+        })
+
+    if merch_order.status != 'pending':
+        return jsonify({
+            'error': 'This order cannot be captured.'
+        }), 409
+
+    try:
+        access_token = get_access_token()
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {access_token}'
+        }
+
+        capture_response = requests.post(
+            (
+                f'{PAYPAL_BASE}/v2/checkout/orders/'
+                f'{paypal_order_id}/capture'
+            ),
+            headers=headers,
+            timeout=20
+        )
+
+        capture_response.raise_for_status()
+        order_data = capture_response.json()
+
+        if order_data.get('status') != 'COMPLETED':
+            return jsonify({
+                'error': 'PayPal did not complete the payment.'
+            }), 400
+
+        purchase_units = order_data.get(
+            'purchase_units'
+        ) or []
+
+        if not purchase_units:
+            return jsonify({
+                'error': 'PayPal returned incomplete payment data.'
+            }), 502
+
+        captures = (
+            purchase_units[0]
+            .get('payments', {})
+            .get('captures')
+            or []
+        )
+
+        if not captures:
+            return jsonify({
+                'error': 'PayPal capture information is missing.'
+            }), 502
+
+        capture = captures[0]
+        capture_id = capture.get('id')
+        amount = capture.get('amount') or {}
+
+        try:
+            captured_total = Decimal(
+                str(amount.get('value'))
+            ).quantize(Decimal('0.01'))
+        except (InvalidOperation, TypeError):
+            captured_total = Decimal('-1.00')
+
+        if amount.get('currency_code') != merch_order.currency:
+            current_app.logger.error(
+                'Merch currency mismatch for %s',
+                merch_order.order_number
+            )
+
+            return jsonify({
+                'error': 'Payment currency did not match.'
+            }), 409
+
+        expected_total = Decimal(
+            merch_order.total
+        ).quantize(Decimal('0.01'))
+
+        if captured_total != expected_total:
+            current_app.logger.error(
+                (
+                    'Merch amount mismatch for %s: '
+                    'expected %s, captured %s'
+                ),
+                merch_order.order_number,
+                expected_total,
+                captured_total
+            )
+
+            return jsonify({
+                'error': 'Payment amount did not match.'
+            }), 409
+
+        if not capture_id:
+            return jsonify({
+                'error': 'PayPal capture ID is missing.'
+            }), 502
+
+        duplicate_capture = MerchOrder.query.filter(
+            MerchOrder.paypal_capture_id == capture_id,
+            MerchOrder.id != merch_order.id
+        ).first()
+
+        if duplicate_capture:
+            return jsonify({
+                'error': 'This payment was already processed.'
+            }), 409
+
+        paypal_email = (
+            order_data.get('payer', {}).get(
+                'email_address'
+            )
+            or order_data.get(
+                'payment_source', {}
+            ).get(
+                'paypal', {}
+            ).get(
+                'email_address'
+            )
+        )
+
+        merch_order.paypal_capture_id = capture_id
+        merch_order.paypal_payer_email = paypal_email
+        merch_order.status = 'completed'
+        merch_order.completed_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'order_number': merch_order.order_number
+        })
+
+    except requests.RequestException:
+        db.session.rollback()
+
+        current_app.logger.exception(
+            'Unable to capture merchandise order %s',
+            merch_order.order_number
+        )
+
+        return jsonify({
+            'error': (
+                'Payment could not be confirmed. '
+                'Please contact us before retrying.'
+            )
+        }), 502
+    
+
+
 
 
 
