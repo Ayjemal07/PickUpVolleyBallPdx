@@ -1,0 +1,3544 @@
+{
+  "mode": "dry_run",
+  "started_at": "2026-09-27T21:13:47.298588Z",
+  "since": "2026-08-28T00:00:00Z",
+  "inventory_complete": true,
+  "coverage_errors": [],
+  "subscriptions": [
+    {
+      "paypal_subscription_id": "I-09J7797NG8UB",
+      "payments": [],
+      "user_id": "7801fbbd-3667-410e-8a0c-4e95c215f128",
+      "email": "aika2895@gmail.com",
+      "paypal_email": "aika2895@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-09JEG47TU8UB",
+      "payments": [],
+      "user_id": "a1e0ea00-4d9a-46eb-b1b3-373c6c90d2c8",
+      "email": "portlandcourtvolleyball@gmail.com",
+      "paypal_email": "hadenfranken1129@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-0AXMJGHPCWVP",
+      "payments": [
+        {
+          "payment_id": "75C14139R46098354",
+          "subscription_id": "I-0AXMJGHPCWVP",
+          "user_id": "b0129328-8273-4d9a-a23f-362735c21e7e",
+          "email": "gramarye7@yahoo.com",
+          "paid_at": "2026-09-15T10:53:02Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "b0129328-8273-4d9a-a23f-362735c21e7e",
+      "email": "gramarye7@yahoo.com",
+      "paypal_email": "gramarye7@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-0CA0PX85XP7A",
+      "payments": [],
+      "user_id": "62e884c0-38d6-4651-8aae-0240819f1a11",
+      "email": "lindsaythimmig@gmail.com",
+      "paypal_email": "lindsaythimmig@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-0TDH20PGU6LC",
+      "payments": [],
+      "user_id": "a937897f-8ddc-4262-8e60-451d2a8ced54",
+      "email": "gutierrezyesenia31@gmail.com",
+      "paypal_email": "dtupayachimayo@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "suspended",
+        "after": "suspended"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-0WSNCRACJEXP",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-0XK0YH0LMKWM",
+      "payments": [],
+      "user_id": "70035103-66ef-4e3b-b477-984092e39e8e",
+      "email": "taylormorganboyd@gmail.com",
+      "paypal_email": "taylorxbo@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-0YE8PT0SDGRE",
+      "payments": [],
+      "user_id": "20586fc7-5e36-4306-9f5c-5af0b8c294c3",
+      "email": "bh663430@gmail.com",
+      "paypal_email": "bdalder287@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-1GX906A42N01",
+      "payments": [],
+      "user_id": "e1c943f1-e3e2-4509-b406-ca62adabc8f6",
+      "email": "sam@test.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-1P9C34P153T4",
+      "payments": [],
+      "user_id": "be67296c-7f30-42ba-9616-7dfd826f25ac",
+      "email": "meganbuckle@hotmail.com",
+      "paypal_email": "meganbuckle@hotmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-1VTXD8714WPW",
+      "payments": [],
+      "user_id": "25d812f5-9fcf-4495-9042-2a3d8fea633d",
+      "email": "itsanonamer@gmail.com",
+      "paypal_email": "itsanonamer@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-1VXHCR2J74VN",
+      "payments": [],
+      "user_id": "7ed51039-0413-4100-a950-8a4bfa4c570a",
+      "email": "raymondcanyon72@gmail.com",
+      "paypal_email": "raymondcanyon72@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "1",
+      "balance_after": "1",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-1XAPRNW8JBVE",
+      "payments": [],
+      "user_id": "0ecbdeef-cc64-4fcc-9f5e-1c0e98d22f1b",
+      "email": "karmawoeser1@gmail.com",
+      "paypal_email": "karmawoeser1@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-2DAXA0VKTBTY",
+      "payments": [],
+      "user_id": "e1c943f1-e3e2-4509-b406-ca62adabc8f6",
+      "email": "sam@test.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-2EBLJP4KNSUK",
+      "payments": [],
+      "user_id": "45323293-7875-42e3-bb1a-ec3f970c4c12",
+      "email": "bdalder287@gmail.com",
+      "paypal_email": "bdalder287@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-2J3S52H8GG8J",
+      "payments": [],
+      "user_id": "72a3088e-08b1-41a3-9cee-18a93fee5d98",
+      "email": "vrynerson@gmail.com",
+      "paypal_email": "vleerynerson@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-2J5Y10YE4CMC",
+      "payments": [],
+      "user_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "email": "kyran.finley@gmail.com",
+      "paypal_email": "kyran.finley@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-2PP3V9YMT8E3",
+      "payments": [
+        {
+          "payment_id": "6P079557PM9919113",
+          "subscription_id": "I-2PP3V9YMT8E3",
+          "user_id": "b2262b85-3411-405f-9c2f-985e44d76837",
+          "email": "braysonkmoore@gmail.com",
+          "paid_at": "2026-09-13T11:21:58Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "b2262b85-3411-405f-9c2f-985e44d76837",
+      "email": "braysonkmoore@gmail.com",
+      "paypal_email": "braysonnnn@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "2",
+      "balance_after": "2",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-2WED03AE7V0R",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "Missing or conflicting owner; verify a subscription-to-user mapping"
+    },
+    {
+      "paypal_subscription_id": "I-32WA6W9W50JP",
+      "payments": [],
+      "user_id": "9d80fc72-6049-4b45-877a-86492342d606",
+      "email": "yaltagul@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-33RVTYB812H0",
+      "payments": [
+        {
+          "payment_id": "0J417799F9533751E",
+          "subscription_id": "I-33RVTYB812H0",
+          "user_id": "8bbe6530-898d-4af6-8522-61d0d289e3f0",
+          "email": "alua.abdikakhar23@gmail.com",
+          "paid_at": "2026-09-03T10:01:33Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "8bbe6530-898d-4af6-8522-61d0d289e3f0",
+      "email": "alua.abdikakhar23@gmail.com",
+      "paypal_email": "alua.abdikakhar23@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-342MEBTH19BB",
+      "payments": [],
+      "user_id": "86a0e59f-7b7b-41a4-a205-f1b12caae4ed",
+      "email": "joshcanetee@gmail.com",
+      "paypal_email": "joshcanetee@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-35G28HT8N8MT",
+      "payments": [],
+      "user_id": "dea72942-c540-4ccf-ae58-4c616bbf85d3",
+      "email": "delarosa10102@gmail.com",
+      "paypal_email": "thedelarosa10102@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-35R9T0UVDVEX",
+      "payments": [],
+      "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "email": "masonkjenslee1940@gmail.com",
+      "paypal_email": "masonkjenslee1940@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-3738EJ9T6BM1",
+      "payments": [],
+      "user_id": "8167371b-0664-4c54-b317-84063b7ea57c",
+      "email": "jjoshuaba@gmail.com",
+      "paypal_email": "jjoshuaba@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-3D2TSYTJAV0M",
+      "payments": [],
+      "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "email": "masonkjenslee1940@gmail.com",
+      "paypal_email": "masonkjenslee1940@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-3GNMYFAX4M0C",
+      "payments": [],
+      "user_id": "2bfff5f4-953d-4dcf-ab16-3ff340d5504d",
+      "email": "straight.adrian@gmail.com",
+      "paypal_email": "straight.adrian@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-3V5JXDSSPCYT",
+      "payments": [],
+      "user_id": "e3a90903-0c64-4a47-9763-ab86b29a8494",
+      "email": "sampcooney@gmail.com",
+      "paypal_email": "sampcooney@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-4D3HSX2MDEH1",
+      "payments": [
+        {
+          "payment_id": "5VY1047890667632H",
+          "subscription_id": "I-4D3HSX2MDEH1",
+          "user_id": "682fe4a9-01fc-4da9-8a49-fced14270af3",
+          "email": "baraiacs1@gmail.com",
+          "paid_at": "2026-09-19T10:34:51Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "682fe4a9-01fc-4da9-8a49-fced14270af3",
+      "email": "baraiacs1@gmail.com",
+      "paypal_email": "baraiacs1@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-4DWKUKBFG3RL",
+      "payments": [],
+      "user_id": "9405cdb7-bee8-433d-bb7b-f7379cbcfe48",
+      "email": "zagaryuk.e@gmail.com",
+      "paypal_email": "zagaryuk.e@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-4G8D7XHB57FT",
+      "payments": [],
+      "user_id": "ed79032c-7f78-4f45-a3aa-6c27ae20e956",
+      "email": "twoleafclover@outlook.com",
+      "paypal_email": "twoleafclover@outlook.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-4S41YKRYGGPC",
+      "payments": [],
+      "user_id": "a4275912-79e0-46c1-a71b-6f39da0298b0",
+      "email": "emaa.m245@gmail.com",
+      "paypal_email": "zagaryuk.e@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-4S4UGERK2FPC",
+      "payments": [],
+      "user_id": "c20f0b33-3732-45d7-b70d-e2394857552a",
+      "email": "leahusamuel@yahoo.com",
+      "paypal_email": "leahusamuel@yahoo.com",
+      "paypal_custom_id": "c20f0b33-3732-45d7-b70d-e2394857552a",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-4UJAEYFA948U",
+      "payments": [],
+      "user_id": "cd493b00-92c9-4025-a98b-37e56e9a4997",
+      "email": "autumncorn13@gmail.com",
+      "paypal_email": "autumncorn13@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-5E6VFGGW34UK",
+      "payments": [
+        {
+          "payment_id": "6VC55230UL2294702",
+          "subscription_id": "I-5E6VFGGW34UK",
+          "user_id": "89d00c4d-68de-4058-a86f-53667141e36c",
+          "email": "dylfall1121@gmail.com",
+          "paid_at": "2026-09-15T10:06:22Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "89d00c4d-68de-4058-a86f-53667141e36c",
+      "email": "dylfall1121@gmail.com",
+      "paypal_email": "dylfallows@hotmail.com",
+      "paypal_custom_id": "89d00c4d-68de-4058-a86f-53667141e36c",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "2",
+      "balance_after": "2",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-5KGT4XVFND6F",
+      "payments": [
+        {
+          "payment_id": "76459070195297329",
+          "subscription_id": "I-5KGT4XVFND6F",
+          "user_id": "f6472378-2dca-43af-8901-12ed433755a4",
+          "email": "sksiddiqui90210@gmail.com",
+          "paid_at": "2026-09-05T10:19:25Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "f6472378-2dca-43af-8901-12ed433755a4",
+      "email": "sksiddiqui90210@gmail.com",
+      "paypal_email": "sksiddiqui90210@gmail.com",
+      "paypal_custom_id": "f6472378-2dca-43af-8901-12ed433755a4",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-62R98T1PUL3B",
+      "payments": [],
+      "user_id": "dea72942-c540-4ccf-ae58-4c616bbf85d3",
+      "email": "delarosa10102@gmail.com",
+      "paypal_email": "thedelarosa10102@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-69CKGDS7EL95",
+      "payments": [],
+      "user_id": "9cc196ff-bbb0-4b3c-8891-b7903422df87",
+      "email": "wesenbea@gmail.com",
+      "paypal_email": "wesenbea@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-6D1A52K33LD0",
+      "payments": [
+        {
+          "payment_id": "2YK86321DF661635W",
+          "subscription_id": "I-6D1A52K33LD0",
+          "user_id": "043d5653-f106-429b-a7f9-a2ca838f4e72",
+          "email": "justaguy.one@gmail.com",
+          "paid_at": "2026-09-10T11:00:38Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "043d5653-f106-429b-a7f9-a2ca838f4e72",
+      "email": "justaguy.one@gmail.com",
+      "paypal_email": "justaguy.one@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "3",
+      "balance_after": "3",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-6DMYLKJS2WB0",
+      "payments": [],
+      "user_id": "d44fcf1c-b978-467e-b93a-e46f28e2ae0f",
+      "email": "nguyanna17@gmail.com",
+      "paypal_email": "aangvyen@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-6EBE5ALNCW58",
+      "payments": [],
+      "user_id": "ed79032c-7f78-4f45-a3aa-6c27ae20e956",
+      "email": "twoleafclover@outlook.com",
+      "paypal_email": "twoleafclover@outlook.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-6S1C7MVUP8M0",
+      "payments": [],
+      "user_id": "dcc3f685-1cfe-4436-a176-8055b4d20363",
+      "email": "mcmahoney1@gmail.com",
+      "paypal_email": "mcmahoney1@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-6T780U4U6RDU",
+      "payments": [
+        {
+          "payment_id": "5UU32480P5869332L",
+          "subscription_id": "I-6T780U4U6RDU",
+          "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+          "email": "ayjemal0707@gmail.com",
+          "paid_at": "2026-09-27T06:28:39Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-7169MHNCHMBE",
+      "payments": [],
+      "user_id": "be67296c-7f30-42ba-9616-7dfd826f25ac",
+      "email": "meganbuckle@hotmail.com",
+      "paypal_email": "meganbuckle@hotmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-73NVNMB6SGKX",
+      "payments": [],
+      "user_id": "86a0e59f-7b7b-41a4-a205-f1b12caae4ed",
+      "email": "joshcanetee@gmail.com",
+      "paypal_email": "joshcanetee@gmail.com",
+      "paypal_custom_id": "86a0e59f-7b7b-41a4-a205-f1b12caae4ed",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-73YJB7L1APVE",
+      "payments": [],
+      "user_id": "98832593-faec-4af4-a1f7-ccf476052212",
+      "email": "jeenittiwat@gmail.com",
+      "paypal_email": null,
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-74BXCTCPUSJL",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-7D5USJVPUD4Y",
+      "payments": [],
+      "user_id": "dcc3f685-1cfe-4436-a176-8055b4d20363",
+      "email": "mcmahoney1@gmail.com",
+      "paypal_email": "mcmahoney1@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-7M5VCX771SPH",
+      "payments": [],
+      "user_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "email": "kyran.finley@gmail.com",
+      "paypal_email": "kyran.finley@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-7T95JSMT0431",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-7WYLHNK794XL",
+      "payments": [],
+      "user_id": "35fb51ef-11e6-473f-9108-51789bc1fe10",
+      "email": "rairikudhan1980@yahoo.com",
+      "paypal_email": "devi.subba@yahoo.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-82VTPFUNLNGS",
+      "payments": [
+        {
+          "payment_id": "383252746W316731T",
+          "subscription_id": "I-82VTPFUNLNGS",
+          "user_id": "deb6260d-b857-4468-a624-51f433f3b4a4",
+          "email": "lauraspopescu@gmail.com",
+          "paid_at": "2026-09-22T10:17:30Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "deb6260d-b857-4468-a624-51f433f3b4a4",
+      "email": "lauraspopescu@gmail.com",
+      "paypal_email": "laurapop7@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-830W1TJ3TW2P",
+      "payments": [],
+      "user_id": "f6472378-2dca-43af-8901-12ed433755a4",
+      "email": "sksiddiqui90210@gmail.com",
+      "paypal_email": "miercoles90210@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-86VR8F5HDG3U",
+      "payments": [],
+      "user_id": "bf423223-a7c0-405c-bec9-76139bb53bd8",
+      "email": "mchheuy@yahoo.com",
+      "paypal_email": "mchheuy@yahoo.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-8759GVWEBHMU",
+      "payments": [],
+      "user_id": "17fcfe1c-bb2c-421e-bb32-64c90bcce5e6",
+      "email": "Israel.geck@gmail.com",
+      "paypal_email": "israel.geck@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "9",
+      "balance_after": "9",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-8G40T1AVUJUU",
+      "payments": [],
+      "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "email": "masonkjenslee1940@gmail.com",
+      "paypal_email": "masonkjenslee1940@gmail.com",
+      "paypal_custom_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-8WUDYDX8BCB2",
+      "payments": [
+        {
+          "payment_id": "9LL01697UP1526508",
+          "subscription_id": "I-8WUDYDX8BCB2",
+          "user_id": "1229c612-51f2-407a-9b35-0cb562c208e8",
+          "email": "liamgoggles04@hotmail.com",
+          "paid_at": "2026-09-24T10:35:02Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "1229c612-51f2-407a-9b35-0cb562c208e8",
+      "email": "liamgoggles04@hotmail.com",
+      "paypal_email": "liamgoggles04@hotmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "9",
+      "balance_after": "9",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-96KT76F5X2GF",
+      "payments": [],
+      "user_id": "995254db-708d-457a-ae62-a4efe55d765c",
+      "email": "hannahrae.o@gmail.com",
+      "paypal_email": "hannah.rae@comcast.net",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-9BK70P6J82LM",
+      "payments": [],
+      "user_id": "035764a6-4c76-48ea-8552-8904a8725e54",
+      "email": "alvarado4elizabeth@yahoo.com",
+      "paypal_email": "alvarado4elizabeth@yahoo.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "suspended"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-9LG03S4EKFM7",
+      "payments": [
+        {
+          "payment_id": "1KL78682SC9921411",
+          "subscription_id": "I-9LG03S4EKFM7",
+          "user_id": "58a520ca-6ce4-4eb1-a5f3-9ce5ac85c607",
+          "email": "colleendwyer96@gmail.com",
+          "paid_at": "2026-09-08T16:55:22Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "58a520ca-6ce4-4eb1-a5f3-9ce5ac85c607",
+      "email": "colleendwyer96@gmail.com",
+      "paypal_email": "colleendwyer96@gmail.com",
+      "paypal_custom_id": "58a520ca-6ce4-4eb1-a5f3-9ce5ac85c607",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "3",
+      "balance_after": "3",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-A9W0F6MKMA1S",
+      "payments": [],
+      "user_id": "1702c341-62e2-4872-9547-4f7f15eaa8cc",
+      "email": "ANHDONNY@GMAIL.COM",
+      "paypal_email": "anhdonny@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-AC8LJX8LA805",
+      "payments": [],
+      "user_id": "0a14eda3-a798-421c-a8ce-24a0ffd3b02b",
+      "email": "amandalealv@gmail.com",
+      "paypal_email": "amandalealv2@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-AC8YG88CJ805",
+      "payments": [],
+      "user_id": "45323293-7875-42e3-bb1a-ec3f970c4c12",
+      "email": "bdalder287@gmail.com",
+      "paypal_email": "bdalder287@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-AC9DC4JRW5SF",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-AFB0DUTD6WF1",
+      "payments": [],
+      "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "email": "masonkjenslee1940@gmail.com",
+      "paypal_email": "masonkjenslee1940@gmail.com",
+      "paypal_custom_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-ARBAGPHR2VWX",
+      "payments": [],
+      "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "email": "masonkjenslee1940@gmail.com",
+      "paypal_email": "masonkjenslee1940@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-ARSWTYN33224",
+      "payments": [],
+      "user_id": "36ae1bd2-e6f4-44f4-82c8-d9612352122d",
+      "email": "jingwenhuang1999@gmail.com",
+      "paypal_email": "jellyfish25usqz@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-B4DX11WB32PR",
+      "payments": [],
+      "user_id": "f724b66a-0bf0-44a5-adc3-0e9d5e3164d0",
+      "email": "karmapoint@gmail.com",
+      "paypal_email": "karmapoint@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-BB67B0SJ73RX",
+      "payments": [],
+      "user_id": "61c553be-fccb-4e81-9c0c-3c5a478d0288",
+      "email": "jadesaber05@gmail.com",
+      "paypal_email": "jadesaber05@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-BCN221ATVCP9",
+      "payments": [],
+      "user_id": "2bfff5f4-953d-4dcf-ab16-3ff340d5504d",
+      "email": "straight.adrian@gmail.com",
+      "paypal_email": "straight.adrian@gmail.com",
+      "paypal_custom_id": "2bfff5f4-953d-4dcf-ab16-3ff340d5504d",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-BFF45K6N05ND",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-BHMTLFAY3BNH",
+      "payments": [],
+      "user_id": "7801fbbd-3667-410e-8a0c-4e95c215f128",
+      "email": "aika2895@gmail.com",
+      "paypal_email": "aika2895@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-BKPNMU56KNFE",
+      "payments": [],
+      "user_id": "ed79032c-7f78-4f45-a3aa-6c27ae20e956",
+      "email": "twoleafclover@outlook.com",
+      "paypal_email": "twoleafclover@outlook.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-BRTN5E1AGRV8",
+      "payments": [],
+      "user_id": "7ac25a5b-26ea-4e9a-a2ca-7e77b1fc4f20",
+      "email": "ovrmydadbdy@gmail.com",
+      "paypal_email": "matthewberryessa@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-C3EWW8BCTJKP",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-C47E6C8229RM",
+      "payments": [],
+      "user_id": "eddcda8e-36af-4748-a8ed-034fe9b99900",
+      "email": "racheleast19@gmail.com",
+      "paypal_email": "racheleast19@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-C6JXTHYNMV2P",
+      "payments": [],
+      "user_id": "a3586eee-7198-40b9-8e64-7f08e6610924",
+      "email": "andrew@valleywinemerchants.com",
+      "paypal_email": "Andrew@valleywinemerchants.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-C6KJNARYPYJM",
+      "payments": [],
+      "user_id": "9d80fc72-6049-4b45-877a-86492342d606",
+      "email": "yaltagul@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-C6W6BPH78UR5",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-C7AYWG8GJ473",
+      "payments": [],
+      "user_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "email": "kyran.finley@gmail.com",
+      "paypal_email": "kyran.finley@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-CCYBP7EVNBY9",
+      "payments": [],
+      "user_id": "558621e7-76d3-45a8-b633-aa5b2f37ca18",
+      "email": "finggster07@gmail.com",
+      "paypal_email": "finggster07@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-CLGSWWDFVPB1",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-CP69ECNXCNT1",
+      "payments": [],
+      "user_id": "a1e0ea00-4d9a-46eb-b1b3-373c6c90d2c8",
+      "email": "portlandcourtvolleyball@gmail.com",
+      "paypal_email": "hadenfranken1129@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-CSMRA7DYFJED",
+      "payments": [],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-CVREMP8V8S8B",
+      "payments": [],
+      "user_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "email": "kyran.finley@gmail.com",
+      "paypal_email": "kyran.finley@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-CX88SMANNX8X",
+      "payments": [],
+      "user_id": "2bfff5f4-953d-4dcf-ab16-3ff340d5504d",
+      "email": "straight.adrian@gmail.com",
+      "paypal_email": "straight.adrian@gmail.com",
+      "paypal_custom_id": "2bfff5f4-953d-4dcf-ab16-3ff340d5504d",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-D76K63FEDFBX",
+      "payments": [
+        {
+          "payment_id": "297253286A951213U",
+          "subscription_id": "I-D76K63FEDFBX",
+          "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+          "email": "ayjemal0707@gmail.com",
+          "paid_at": "2026-09-27T05:21:23Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-D9P48UWNXW62",
+      "payments": [],
+      "user_id": "b5fb9559-f0fc-42da-85fe-73bc3c059c76",
+      "email": "datupa11@gmail.com",
+      "paypal_email": "dtupayachimayo@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-DBMXYEG1CPF0",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-DDSECKH0PE0D",
+      "payments": [],
+      "user_id": "cd3aff9f-103e-4da2-ad61-f7e17be2ad52",
+      "email": "kalani.hiramoto@gmail.com",
+      "paypal_email": "kalani.hiramoto@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-DDYJSACNRKGG",
+      "payments": [],
+      "user_id": "e1c943f1-e3e2-4509-b406-ca62adabc8f6",
+      "email": "sam@test.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-DELCAEE1DBGY",
+      "payments": [],
+      "user_id": "90647668-25d7-4f48-908f-b44bf256e83a",
+      "email": "pdx.graul@gmail.com",
+      "paypal_email": "pdx.graul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "suspended",
+        "after": "suspended"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-DH0973LN102N",
+      "payments": [
+        {
+          "payment_id": "7BS79579V2133500J",
+          "subscription_id": "I-DH0973LN102N",
+          "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+          "email": "ayjemal0707@gmail.com",
+          "paid_at": "2026-09-27T06:50:11Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-DTE6VHP967HW",
+      "payments": [],
+      "user_id": "1c68b340-caa2-4f77-9e0d-6ec97052d388",
+      "email": "mykelcaruso@gmail.com",
+      "paypal_email": "mykelcaruso@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-DTLHTA2WMTRP",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "Missing or conflicting owner; verify a subscription-to-user mapping"
+    },
+    {
+      "paypal_subscription_id": "I-E2C7L4JHRE1U",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "Missing or conflicting owner; verify a subscription-to-user mapping"
+    },
+    {
+      "paypal_subscription_id": "I-E4WW56KM8VFS",
+      "payments": [],
+      "user_id": "2c26051a-a0d7-46f3-ae9c-20c48c87ff49",
+      "email": "misakihuffer@gmail.com",
+      "paypal_email": "misakihuffer@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-EBNHT1E2T40B",
+      "payments": [],
+      "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "email": "gregschmitz@mac.com",
+      "paypal_email": "gregschmitz@mac.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-ELDK244F0G6D",
+      "payments": [],
+      "user_id": "0ecbdeef-cc64-4fcc-9f5e-1c0e98d22f1b",
+      "email": "karmawoeser1@gmail.com",
+      "paypal_email": "karmawoeser1@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-EMUR3B5SAVKA",
+      "payments": [],
+      "user_id": "deb6260d-b857-4468-a624-51f433f3b4a4",
+      "email": "lauraspopescu@gmail.com",
+      "paypal_email": "lauraspopescu@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-EPYH37Y268NG",
+      "payments": [],
+      "user_id": "af22c546-ad1c-4c2d-afa2-5640fb204e8e",
+      "email": "adrian.straight44@gmail.com",
+      "paypal_email": "straight.adrian@gmail.com",
+      "paypal_custom_id": "af22c546-ad1c-4c2d-afa2-5640fb204e8e",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-ET6SLLJ88D5A",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-EUT1C00UF156",
+      "payments": [],
+      "user_id": "a816453b-c9dd-4624-a23d-0f48e857d313",
+      "email": "bribriphillips9@gmail.com",
+      "paypal_email": "bbrianaphillips@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-F0M5NS34E707",
+      "payments": [],
+      "user_id": "ec6a3258-faa0-48cd-b388-c2a434095307",
+      "email": "arynerson@gmail.com",
+      "paypal_email": "arynerson@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-F5EDLD0ENKUS",
+      "payments": [
+        {
+          "payment_id": "2UN8095287502513J",
+          "subscription_id": "I-F5EDLD0ENKUS",
+          "user_id": "41adeaa0-3fdd-446c-bf04-e9dcb126a1b5",
+          "email": "thedelarosa10102@gmail.com",
+          "paid_at": "2026-09-23T10:40:16Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "41adeaa0-3fdd-446c-bf04-e9dcb126a1b5",
+      "email": "thedelarosa10102@gmail.com",
+      "paypal_email": "delarosa10102@gmail.com",
+      "paypal_custom_id": "41adeaa0-3fdd-446c-bf04-e9dcb126a1b5",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-F7G526D5M98X",
+      "payments": [
+        {
+          "payment_id": "0WF10239VE3217243",
+          "subscription_id": "I-F7G526D5M98X",
+          "user_id": "02113790-3316-4328-a37f-f0bb7ae62004",
+          "email": "mayabedell04@gmail.com",
+          "paid_at": "2026-09-02T10:27:11Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "02113790-3316-4328-a37f-f0bb7ae62004",
+      "email": "mayabedell04@gmail.com",
+      "paypal_email": "mayabedell04@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "5",
+      "balance_after": "5",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-FAAESNM1K89T",
+      "payments": [],
+      "user_id": "0ecbdeef-cc64-4fcc-9f5e-1c0e98d22f1b",
+      "email": "karmawoeser1@gmail.com",
+      "paypal_email": "karmawoeser1@gmail.com",
+      "paypal_custom_id": "0ecbdeef-cc64-4fcc-9f5e-1c0e98d22f1b",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-FJLXKWV358G2",
+      "payments": [],
+      "user_id": "e26d7dc1-6679-4e8d-9b32-eb29e65908de",
+      "email": "bthomason@live.com",
+      "paypal_email": "bthomason@live.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-FSNW66YPVUN0",
+      "payments": [],
+      "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "email": "gregschmitz@mac.com",
+      "paypal_email": "gregschmitz@mac.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-FYR6CDV20SDJ",
+      "payments": [],
+      "user_id": "13161f70-c31a-4f94-9e77-02de94885655",
+      "email": "cw.beguelin@gmail.com",
+      "paypal_email": "cw.beguelin@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-G3HR2XXUXREV",
+      "payments": [],
+      "user_id": "dcc3f685-1cfe-4436-a176-8055b4d20363",
+      "email": "mcmahoney1@gmail.com",
+      "paypal_email": "mcmahoney1@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-G4HAY5ET990D",
+      "payments": [],
+      "user_id": "d021ed12-161f-49d2-86f2-fc94904502ab",
+      "email": "lilyannm@lmillerstrategies.com",
+      "paypal_email": "lilyann.miller2@icloud.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-G601G28R36R8",
+      "payments": [],
+      "user_id": "d1e58d9f-7b15-4437-91e7-70768bd35264",
+      "email": "lia.g.wagner@icloud.com",
+      "paypal_email": "lia.g.wagner@icloud.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GAS5C5YV5PDL",
+      "payments": [],
+      "user_id": "17fcfe1c-bb2c-421e-bb32-64c90bcce5e6",
+      "email": "Israel.geck@gmail.com",
+      "paypal_email": "israel.geck@gmail.com",
+      "paypal_custom_id": "17fcfe1c-bb2c-421e-bb32-64c90bcce5e6",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "9",
+      "balance_after": "9",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GC5MESCTLELG",
+      "payments": [],
+      "user_id": "0ecbdeef-cc64-4fcc-9f5e-1c0e98d22f1b",
+      "email": "karmawoeser1@gmail.com",
+      "paypal_email": "karmawoeser1@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GE2KWX3R596M",
+      "payments": [
+        {
+          "payment_id": "3BH52710UY315602N",
+          "subscription_id": "I-GE2KWX3R596M",
+          "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+          "email": "ayjemal0707@gmail.com",
+          "paid_at": "2026-09-27T06:06:47Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GHC4G5XJCLHG",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-GR2R9C7DA6DX",
+      "payments": [],
+      "user_id": "442f3722-03cd-4fde-aa76-b6ede6c801b3",
+      "email": "pcoe97430@gmail.com",
+      "paypal_email": "coeheidi@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GRYPGYKWY8M7",
+      "payments": [],
+      "user_id": "86a0e59f-7b7b-41a4-a205-f1b12caae4ed",
+      "email": "joshcanetee@gmail.com",
+      "paypal_email": "joshcanetee@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GUA2YLB4DFDX",
+      "payments": [],
+      "user_id": "bc135860-71e8-46b2-8bfc-1f23faa7b926",
+      "email": "Ninja20241@gmail.com",
+      "paypal_email": "ninja20241@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GUBYWUSB2EP6",
+      "payments": [],
+      "user_id": "f4a33174-f77c-422f-93fa-70c08dceaf99",
+      "email": "kyle.hk2006@gmail.com",
+      "paypal_email": "kyle.hk2006@gmail.com",
+      "paypal_custom_id": "f4a33174-f77c-422f-93fa-70c08dceaf99",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GVEJHLNYL8DK",
+      "payments": [],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GY5UB2B8SE8U",
+      "payments": [],
+      "user_id": "9d80fc72-6049-4b45-877a-86492342d606",
+      "email": "yaltagul@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-GYR2G3M3CESK",
+      "payments": [],
+      "user_id": "25d812f5-9fcf-4495-9042-2a3d8fea633d",
+      "email": "itsanonamer@gmail.com",
+      "paypal_email": "itsanonamer@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-H8YVP7E6548N",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-HC8KJLM5J5NW",
+      "payments": [],
+      "user_id": "e4909820-7308-43f5-9e05-bf012190b30e",
+      "email": "instantteen@yahoo.com",
+      "paypal_email": "instantteen@yahoo.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-HCTHF97H13HA",
+      "payments": [],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-HEKLU36NRAVR",
+      "payments": [],
+      "user_id": "86a0e59f-7b7b-41a4-a205-f1b12caae4ed",
+      "email": "joshcanetee@gmail.com",
+      "paypal_email": "joshcanetee@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-HFCX6P9EXXS7",
+      "payments": [],
+      "user_id": "d021ed12-161f-49d2-86f2-fc94904502ab",
+      "email": "lilyannm@lmillerstrategies.com",
+      "paypal_email": "lilyann.miller2@icloud.com",
+      "paypal_custom_id": "d021ed12-161f-49d2-86f2-fc94904502ab",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-HG70F92UJFMY",
+      "payments": [],
+      "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "email": "gregschmitz@mac.com",
+      "paypal_email": "gregschmitz@mac.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-HT1G6RVV0WPS",
+      "payments": [],
+      "user_id": "9bfd80c0-959d-4125-8f5f-4e4bf4ba7549",
+      "email": "arao0917@gmail.com",
+      "paypal_email": "arao0917@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-HT731RKH7UL9",
+      "payments": [
+        {
+          "payment_id": "35884861JJ415271M",
+          "subscription_id": "I-HT731RKH7UL9",
+          "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+          "email": "gregschmitz@mac.com",
+          "paid_at": "2026-09-27T11:28:12Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "email": "gregschmitz@mac.com",
+      "paypal_email": "gregschmitz@mac.com",
+      "paypal_custom_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-HWYRLY84N865",
+      "payments": [
+        {
+          "payment_id": "67C753879P599570N",
+          "subscription_id": "I-HWYRLY84N865",
+          "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+          "email": "masonkjenslee1940@gmail.com",
+          "paid_at": "2026-09-10T06:23:32Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "email": "masonkjenslee1940@gmail.com",
+      "paypal_email": "masonkjenslee1940@gmail.com",
+      "paypal_custom_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-J756GSB6C1VK",
+      "payments": [],
+      "user_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "email": "kyran.finley@gmail.com",
+      "paypal_email": "kyran.finley@gmail.com",
+      "paypal_custom_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-J8974KGXCM3J",
+      "payments": [
+        {
+          "payment_id": "6TV00588FE536615W",
+          "subscription_id": "I-J8974KGXCM3J",
+          "user_id": "acc80441-54a1-4f9a-b542-a5278396e35a",
+          "email": "curtishansen3@gmail.com",
+          "paid_at": "2026-09-21T10:40:41Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "acc80441-54a1-4f9a-b542-a5278396e35a",
+      "email": "curtishansen3@gmail.com",
+      "paypal_email": "curtishansen3@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-J9CY3EY97TDB",
+      "payments": [],
+      "user_id": "02113790-3316-4328-a37f-f0bb7ae62004",
+      "email": "mayabedell04@gmail.com",
+      "paypal_email": "mayabedell04@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "5",
+      "balance_after": "5",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-J9TUAYPLMVUY",
+      "payments": [
+        {
+          "payment_id": "9U889368MY982113J",
+          "subscription_id": "I-J9TUAYPLMVUY",
+          "user_id": "ff2bbfd9-3a44-4f76-bc8e-a751385c242e",
+          "email": "dchcinamon@gmail.com",
+          "paid_at": "2026-09-12T10:36:44Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "ff2bbfd9-3a44-4f76-bc8e-a751385c242e",
+      "email": "dchcinamon@gmail.com",
+      "paypal_email": "denhicke@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "2",
+      "balance_after": "2",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-JCCNB8A3MHR7",
+      "payments": [],
+      "user_id": "dea72942-c540-4ccf-ae58-4c616bbf85d3",
+      "email": "delarosa10102@gmail.com",
+      "paypal_email": "delarosa10102@gmail.com",
+      "paypal_custom_id": "dea72942-c540-4ccf-ae58-4c616bbf85d3",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-JCNR0X11D2YN",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-JE732NBG8PN2",
+      "payments": [],
+      "user_id": "a5a683f8-76d0-4477-bbea-7e1e2910afba",
+      "email": "japinzelik@gmail.com",
+      "paypal_email": "japinzelik@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-JFDDPD2J7XJG",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-JJX4B225Y11K",
+      "payments": [],
+      "user_id": "c20f0b33-3732-45d7-b70d-e2394857552a",
+      "email": "leahusamuel@yahoo.com",
+      "paypal_email": "leahusamuel@yahoo.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-JK6HS6MLS3JH",
+      "payments": [],
+      "user_id": "e4909820-7308-43f5-9e05-bf012190b30e",
+      "email": "instantteen@yahoo.com",
+      "paypal_email": "instantteen@yahoo.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-JXEYXFK9188D",
+      "payments": [],
+      "user_id": "0ecbdeef-cc64-4fcc-9f5e-1c0e98d22f1b",
+      "email": "karmawoeser1@gmail.com",
+      "paypal_email": "karmawoeser1@gmail.com",
+      "paypal_custom_id": "0ecbdeef-cc64-4fcc-9f5e-1c0e98d22f1b",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-K54VNBHY4JK1",
+      "payments": [],
+      "user_id": "b5fb9559-f0fc-42da-85fe-73bc3c059c76",
+      "email": "datupa11@gmail.com",
+      "paypal_email": "dtupayachimayo@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-KBUDMP6RF7LY",
+      "payments": [],
+      "user_id": "ed79032c-7f78-4f45-a3aa-6c27ae20e956",
+      "email": "twoleafclover@outlook.com",
+      "paypal_email": "twoleafclover@outlook.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-KPTS1EX8B7J4",
+      "payments": [
+        {
+          "payment_id": "06507658AF949873D",
+          "subscription_id": "I-KPTS1EX8B7J4",
+          "user_id": "607d8f7e-8754-4d95-8c29-d3adcdbfdb08",
+          "email": "collapsedcave@icloud.com",
+          "paid_at": "2026-09-24T10:00:59Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "607d8f7e-8754-4d95-8c29-d3adcdbfdb08",
+      "email": "collapsedcave@icloud.com",
+      "paypal_email": "collapsedcave@icloud.com",
+      "paypal_custom_id": "607d8f7e-8754-4d95-8c29-d3adcdbfdb08",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-KS8Y84K4J0EH",
+      "payments": [
+        {
+          "payment_id": "1GC13384BX597801P",
+          "subscription_id": "I-KS8Y84K4J0EH",
+          "user_id": "6d9e91af-5164-42e7-8e68-1707755fa112",
+          "email": "ruben.lacatus22@gmail.com",
+          "paid_at": "2026-09-05T10:37:03Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "6d9e91af-5164-42e7-8e68-1707755fa112",
+      "email": "ruben.lacatus22@gmail.com",
+      "paypal_email": "Ruben.lacatus22@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "3",
+      "balance_after": "3",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-L1YXFW0B3VYG",
+      "payments": [
+        {
+          "payment_id": "0WA51556LH1399316",
+          "subscription_id": "I-L1YXFW0B3VYG",
+          "user_id": "1622d428-7569-4e7b-a297-f1bc3e4aab39",
+          "email": "fickbohmphoebe@gmail.com",
+          "paid_at": "2026-09-05T10:16:30Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "1622d428-7569-4e7b-a297-f1bc3e4aab39",
+      "email": "fickbohmphoebe@gmail.com",
+      "paypal_email": "fickbohmphoebe@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-L89FS2XH4M6P",
+      "payments": [
+        {
+          "payment_id": "38820159TR456180K",
+          "subscription_id": "I-L89FS2XH4M6P",
+          "user_id": "833ddcea-f975-4526-88d0-f984d0421d13",
+          "email": "nicolette.carlson@gmail.com",
+          "paid_at": "2026-09-15T11:30:30Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "833ddcea-f975-4526-88d0-f984d0421d13",
+      "email": "nicolette.carlson@gmail.com",
+      "paypal_email": "nicolette.carlson@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-LBT07CLRLWMN",
+      "payments": [],
+      "user_id": "72a3088e-08b1-41a3-9cee-18a93fee5d98",
+      "email": "vrynerson@gmail.com",
+      "paypal_email": "vleerynerson@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-LDML202D4U1F",
+      "payments": [],
+      "user_id": "a1e0ea00-4d9a-46eb-b1b3-373c6c90d2c8",
+      "email": "portlandcourtvolleyball@gmail.com",
+      "paypal_email": "portlandcourtvolleyball@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-LH9U3X4P2CA6",
+      "payments": [],
+      "user_id": "1ffd1c16-6170-4806-a781-348e6f6f1a29",
+      "email": "qtkristabug@gmail.com",
+      "paypal_email": "krista.phillips.911@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-LLRYGG9KDPH0",
+      "payments": [],
+      "user_id": "2a417ef0-69cb-425e-9ce6-ae59e16494fd",
+      "email": "Ninjronito@gmail.com",
+      "paypal_email": "ninjronito@gmail.com",
+      "paypal_custom_id": "2a417ef0-69cb-425e-9ce6-ae59e16494fd",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-LN86VWVBFJFM",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "Missing or conflicting owner; verify a subscription-to-user mapping"
+    },
+    {
+      "paypal_subscription_id": "I-LNDYDWEY3J8K",
+      "payments": [],
+      "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "email": "gregschmitz@mac.com",
+      "paypal_email": "gregschmitz@mac.com",
+      "paypal_custom_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-M768VAVUFVJ7",
+      "payments": [
+        {
+          "payment_id": "04544616SF799410U",
+          "subscription_id": "I-M768VAVUFVJ7",
+          "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+          "email": "gregschmitz@mac.com",
+          "paid_at": "2026-09-04T00:44:58Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "email": "gregschmitz@mac.com",
+      "paypal_email": "gregschmitz@mac.com",
+      "paypal_custom_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-MAX35PWVJ35K",
+      "payments": [],
+      "user_id": "9d80fc72-6049-4b45-877a-86492342d606",
+      "email": "yaltagul@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-MMYUFKTWLP01",
+      "payments": [],
+      "user_id": "70035103-66ef-4e3b-b477-984092e39e8e",
+      "email": "taylormorganboyd@gmail.com",
+      "paypal_email": "taylormorganboyd@gmail.com",
+      "paypal_custom_id": "70035103-66ef-4e3b-b477-984092e39e8e",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-MW2AJV4PRHF1",
+      "payments": [],
+      "user_id": "35fb51ef-11e6-473f-9108-51789bc1fe10",
+      "email": "rairikudhan1980@yahoo.com",
+      "paypal_email": "rairikudhan1980@yahoo.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-MYF7FXYALU8A",
+      "payments": [],
+      "user_id": "a816453b-c9dd-4624-a23d-0f48e857d313",
+      "email": "bribriphillips9@gmail.com",
+      "paypal_email": "bribriphillips9@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-NEEWGTSNHWYP",
+      "payments": [
+        {
+          "payment_id": "1KD90421RJ916481R",
+          "subscription_id": "I-NEEWGTSNHWYP",
+          "user_id": "afb5268b-fa82-4027-bfe6-1581e699b6f0",
+          "email": "brass4slas@gmail.com",
+          "paid_at": "2026-09-06T03:00:03Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "afb5268b-fa82-4027-bfe6-1581e699b6f0",
+      "email": "brass4slas@gmail.com",
+      "paypal_email": "brass4slas@gmail.com",
+      "paypal_custom_id": "afb5268b-fa82-4027-bfe6-1581e699b6f0",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "3",
+      "balance_after": "3",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-NL39C4GT5VTM",
+      "payments": [],
+      "user_id": "2c26051a-a0d7-46f3-ae9c-20c48c87ff49",
+      "email": "misakihuffer@gmail.com",
+      "paypal_email": "misakihuffer@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-NWU9F7WR56YF",
+      "payments": [],
+      "user_id": "995254db-708d-457a-ae62-a4efe55d765c",
+      "email": "hannahrae.o@gmail.com",
+      "paypal_email": "hannah.rae@comcast.net",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-NX8UCBULDKSA",
+      "payments": [],
+      "user_id": "1982febb-322c-4539-b6f8-6c3e6c68f112",
+      "email": "Gar.joseph25@gmail.com",
+      "paypal_email": "Gar.joseph25@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-P4T8RR7JE6SU",
+      "payments": [],
+      "user_id": "9d80fc72-6049-4b45-877a-86492342d606",
+      "email": "yaltagul@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-P4TGH07BE7SU",
+      "payments": [],
+      "user_id": "8bbe6530-898d-4af6-8522-61d0d289e3f0",
+      "email": "alua.abdikakhar23@gmail.com",
+      "paypal_email": "alua.abdikakhar23@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-PGY29DLM1MNV",
+      "payments": [],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-PH3EL0XLWE93",
+      "payments": [
+        {
+          "payment_id": "8GG651684D398933Y",
+          "subscription_id": "I-PH3EL0XLWE93",
+          "user_id": "17fcfe1c-bb2c-421e-bb32-64c90bcce5e6",
+          "email": "Israel.geck@gmail.com",
+          "paid_at": "2026-09-27T11:14:13Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "17fcfe1c-bb2c-421e-bb32-64c90bcce5e6",
+      "email": "Israel.geck@gmail.com",
+      "paypal_email": "israel.geck@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "9",
+      "balance_after": "9",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-PV9NV9PT0XC4",
+      "payments": [],
+      "user_id": "e1c943f1-e3e2-4509-b406-ca62adabc8f6",
+      "email": "sam@test.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-R35UY9VDKDUS",
+      "payments": [],
+      "user_id": "86a0e59f-7b7b-41a4-a205-f1b12caae4ed",
+      "email": "joshcanetee@gmail.com",
+      "paypal_email": "joshcanetee@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-R3909TDW97AF",
+      "payments": [],
+      "user_id": "9d80fc72-6049-4b45-877a-86492342d606",
+      "email": "yaltagul@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-R62YVAA3F43W",
+      "payments": [],
+      "user_id": "0e8b289f-7f68-4275-961f-97756100d1d9",
+      "email": "emilyjennings99@gmail.com",
+      "paypal_email": "emilyjennings99@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-R81U3STSYTKJ",
+      "payments": [],
+      "user_id": "17fcfe1c-bb2c-421e-bb32-64c90bcce5e6",
+      "email": "Israel.geck@gmail.com",
+      "paypal_email": "israel.geck@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "9",
+      "balance_after": "9",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-RD6R28DAAGRX",
+      "payments": [],
+      "user_id": "f6472378-2dca-43af-8901-12ed433755a4",
+      "email": "sksiddiqui90210@gmail.com",
+      "paypal_email": "sksiddiqui90210@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-RFK9BC1YNBRY",
+      "payments": [],
+      "user_id": "8d85ffc9-0596-4042-a463-30389850e6de",
+      "email": "takaa.chiba@gmail.com",
+      "paypal_email": "takaa.chiba@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-RJWBP7B50YMG",
+      "payments": [],
+      "user_id": "a5a683f8-76d0-4477-bbea-7e1e2910afba",
+      "email": "japinzelik@gmail.com",
+      "paypal_email": "Japinzelik@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-RTP702FT2MPA",
+      "payments": [],
+      "user_id": "607d8f7e-8754-4d95-8c29-d3adcdbfdb08",
+      "email": "collapsedcave@icloud.com",
+      "paypal_email": "collapsedcave@icloud.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-RXC8J7MD1XM7",
+      "payments": [],
+      "user_id": "558621e7-76d3-45a8-b633-aa5b2f37ca18",
+      "email": "finggster07@gmail.com",
+      "paypal_email": "finggster07@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-RXCV5RM0XXM7",
+      "payments": [],
+      "user_id": "ed79032c-7f78-4f45-a3aa-6c27ae20e956",
+      "email": "twoleafclover@outlook.com",
+      "paypal_email": "twoleafclover@outlook.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-SF47EC1MY7WL",
+      "payments": [],
+      "user_id": "8983fde7-a709-4ad4-b637-f89be3cf06b5",
+      "email": "joshuarburke@gmail.com",
+      "paypal_email": "joshuarburke@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-SLTAX04DXD8J",
+      "payments": [],
+      "user_id": "698b456d-440e-4a71-aa5a-1bccae327001",
+      "email": "Stu.Haru@gmail.com",
+      "paypal_email": "Stu.haru@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-SN9GCU4NNVFL",
+      "payments": [],
+      "user_id": "be67296c-7f30-42ba-9616-7dfd826f25ac",
+      "email": "meganbuckle@hotmail.com",
+      "paypal_email": "meganbuckle@hotmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-SP6VMA62GYW9",
+      "payments": [],
+      "user_id": "17f24422-7b76-484f-936a-3c58b3860efa",
+      "email": "brandyanaquach@gmail.com",
+      "paypal_email": "nora_cornell12699@hotmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "1",
+      "balance_after": "1",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-T1FMYSU0J97M",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-TJH2AX9EBYY1",
+      "payments": [],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-TJH53A9M5YY1",
+      "payments": [],
+      "user_id": "72a3088e-08b1-41a3-9cee-18a93fee5d98",
+      "email": "vrynerson@gmail.com",
+      "paypal_email": "vleerynerson@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-TK5H0BWEWMGF",
+      "payments": [],
+      "user_id": "0e8b289f-7f68-4275-961f-97756100d1d9",
+      "email": "emilyjennings99@gmail.com",
+      "paypal_email": "emilyjennings99@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-U5LVJRWRWH3A",
+      "payments": [],
+      "user_id": "a5a683f8-76d0-4477-bbea-7e1e2910afba",
+      "email": "japinzelik@gmail.com",
+      "paypal_email": "japinzelik@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-UNNTSJTETD7L",
+      "payments": [],
+      "user_id": "a3586eee-7198-40b9-8e64-7f08e6610924",
+      "email": "andrew@valleywinemerchants.com",
+      "paypal_email": "Andrew@valleywinemerchants.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-UVVN099D461T",
+      "payments": [],
+      "user_id": "61c553be-fccb-4e81-9c0c-3c5a478d0288",
+      "email": "jadesaber05@gmail.com",
+      "paypal_email": "jadesaber05@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-V1U7630PBCMV",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-V65H611LDEBH",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-VNJHJWF7FVBS",
+      "payments": [],
+      "user_id": "9d80fc72-6049-4b45-877a-86492342d606",
+      "email": "yaltagul@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-VP44KFA7WEGL",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "Missing or conflicting owner; verify a subscription-to-user mapping"
+    },
+    {
+      "paypal_subscription_id": "I-VPP2J2517S11",
+      "payments": [],
+      "user_id": "ed79032c-7f78-4f45-a3aa-6c27ae20e956",
+      "email": "twoleafclover@outlook.com",
+      "paypal_email": "twoleafclover@outlook.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-VT2XDW8S20NX",
+      "payments": [],
+      "user_id": "479635f9-16cc-46ee-b914-c893744439f1",
+      "email": "samanthackohler@gmail.com",
+      "paypal_email": "samanthackohler@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-VV6W73AXJTKB",
+      "payments": [],
+      "user_id": "deb6260d-b857-4468-a624-51f433f3b4a4",
+      "email": "lauraspopescu@gmail.com",
+      "paypal_email": "lauraspopescu@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-VVLS281BGJMK",
+      "payments": [],
+      "user_id": "10af2566-b48d-4bd4-96ce-2cd00d7fae3a",
+      "email": "luke.frakes02@gmail.com",
+      "paypal_email": "luke.frakes02@gmail.com",
+      "paypal_custom_id": "10af2566-b48d-4bd4-96ce-2cd00d7fae3a",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-VY5PVEFVEW0S",
+      "payments": [
+        {
+          "payment_id": "3D804090TN1334611",
+          "subscription_id": "I-VY5PVEFVEW0S",
+          "user_id": "4262f9de-be4d-4c80-9cc5-bd3da29cdaff",
+          "email": "ictoat@gmail.com",
+          "paid_at": "2026-09-25T10:17:31Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "4262f9de-be4d-4c80-9cc5-bd3da29cdaff",
+      "email": "ictoat@gmail.com",
+      "paypal_email": "ictoat@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-W4ACBFMVGLFY",
+      "payments": [],
+      "user_id": "2f7f0c83-0035-4a09-9399-724bd48b73d8",
+      "email": "abbyclough18@gmail.com",
+      "paypal_email": "abbyclough18@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-W5GYLCV1ECWH",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-W8S7LCWDTEY6",
+      "payments": [
+        {
+          "payment_id": "9YJ6472226167501X",
+          "subscription_id": "I-W8S7LCWDTEY6",
+          "user_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+          "email": "kyran.finley@gmail.com",
+          "paid_at": "2026-09-17T19:25:02Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "email": "kyran.finley@gmail.com",
+      "paypal_email": "kyran.finley@gmail.com",
+      "paypal_custom_id": "3c5dd570-898c-4fd9-8f42-983373225750",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-WDEP6G0P281C",
+      "payments": [],
+      "user_id": "c2a79cd9-e8eb-4555-a67f-f7d6ca5f5469",
+      "email": "khambrajrai@gmail.com",
+      "paypal_email": "khambrajrai@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-WFWXYMV7UHCR",
+      "payments": [],
+      "user_id": "ed79032c-7f78-4f45-a3aa-6c27ae20e956",
+      "email": "twoleafclover@outlook.com",
+      "paypal_email": "twoleafclover@outlook.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-WG4G5RBLD6JT",
+      "payments": [],
+      "user_id": "be67296c-7f30-42ba-9616-7dfd826f25ac",
+      "email": "meganbuckle@hotmail.com",
+      "paypal_email": "meganbuckle@hotmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-WGN7PADTAU2J",
+      "payments": [],
+      "user_id": "ac729f79-4afa-4ec1-8876-8a52be84ec17",
+      "email": "catleberman18@gmail.com",
+      "paypal_email": "catleberman18@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-WNDR3FC5JAGY",
+      "payments": [],
+      "user_id": "c8d42f99-2d75-4bfc-8cba-4a7287dd5bdd",
+      "email": "masonkjenslee1940@gmail.com",
+      "paypal_email": "masonkjenslee1940@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-X6WAH7X231F8",
+      "payments": [],
+      "user_id": "a5a683f8-76d0-4477-bbea-7e1e2910afba",
+      "email": "japinzelik@gmail.com",
+      "paypal_email": "japinzelik@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-XFG4W6BC59SD",
+      "payments": [],
+      "user_id": "b2262b85-3411-405f-9c2f-985e44d76837",
+      "email": "braysonkmoore@gmail.com",
+      "paypal_email": "braysonnnn@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "2",
+      "balance_after": "2",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-XJKB56MUWBBH",
+      "payments": [],
+      "user_id": "72a3088e-08b1-41a3-9cee-18a93fee5d98",
+      "email": "vrynerson@gmail.com",
+      "paypal_email": "vrynerson@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-XRH7TW93V3GE",
+      "payments": [],
+      "user_id": "a5a683f8-76d0-4477-bbea-7e1e2910afba",
+      "email": "japinzelik@gmail.com",
+      "paypal_email": "japinzelik@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-XS29RCFUFEYU",
+      "payments": [],
+      "user_id": "2bfff5f4-953d-4dcf-ab16-3ff340d5504d",
+      "email": "straight.adrian@gmail.com",
+      "paypal_email": "straight.adrian@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-XUSEWSPFSUTV",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-Y36ESSYEKAWU",
+      "payments": [],
+      "user_id": "16e83794-9fdc-4d5f-8f53-35c2a0ac310f",
+      "email": "ayjemal0707@gmail.com",
+      "paypal_email": "yaltagul@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "24",
+      "balance_after": "24",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-Y36XXHY3KDWU",
+      "payments": [],
+      "user_id": "71c919c0-a85f-46ff-80e8-a4be3925515c",
+      "email": "gregschmitz@mac.com",
+      "paypal_email": "gregschmitz@mac.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-Y3A808C44FUS",
+      "payments": [],
+      "user_id": "70035103-66ef-4e3b-b477-984092e39e8e",
+      "email": "taylormorganboyd@gmail.com",
+      "paypal_email": "taylorxbo@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-Y4A9NLVEYYHC",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "Missing or conflicting owner; verify a subscription-to-user mapping"
+    },
+    {
+      "paypal_subscription_id": "I-Y8AJB8BEW6HR",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-Y9CCBVP1KF12",
+      "payments": [],
+      "user_id": "118caba9-4ceb-463d-bec6-58a22d1015d3",
+      "email": "cusmanoj@gmail.com",
+      "paypal_email": "cusmanoj@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-YD8A0168MYEL",
+      "payments": [],
+      "user_id": "ff2bbfd9-3a44-4f76-bc8e-a751385c242e",
+      "email": "dchcinamon@gmail.com",
+      "paypal_email": "denhicke@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": "2",
+      "balance_after": "2",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-YDEHD6GYAC44",
+      "payments": [],
+      "user_id": "1702c341-62e2-4872-9547-4f7f15eaa8cc",
+      "email": "ANHDONNY@GMAIL.COM",
+      "paypal_email": "anhdonny@gmail.com",
+      "paypal_custom_id": "1702c341-62e2-4872-9547-4f7f15eaa8cc",
+      "status_change": {
+        "before": "canceled",
+        "after": "canceled"
+      },
+      "balance_before": 0,
+      "balance_after": 0,
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-YE97JWKP925F",
+      "payments": [],
+      "result": "review_or_error_no_changes",
+      "error": "PayPal request failed (404)"
+    },
+    {
+      "paypal_subscription_id": "I-YH142M8D1AWE",
+      "payments": [
+        {
+          "payment_id": "0EH05670EP587432J",
+          "subscription_id": "I-YH142M8D1AWE",
+          "user_id": "7ed51039-0413-4100-a950-8a4bfa4c570a",
+          "email": "raymondcanyon72@gmail.com",
+          "paid_at": "2026-09-07T10:52:59Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "7ed51039-0413-4100-a950-8a4bfa4c570a",
+      "email": "raymondcanyon72@gmail.com",
+      "paypal_email": "raymondcanyon72@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "1",
+      "balance_after": "1",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-YSE00BKM2217",
+      "payments": [
+        {
+          "payment_id": "8LM21454F78414510",
+          "subscription_id": "I-YSE00BKM2217",
+          "user_id": "01203a0b-53ea-42de-a43a-5514406d4f56",
+          "email": "davidwoodham@pm.me",
+          "paid_at": "2026-09-26T11:12:05Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "01203a0b-53ea-42de-a43a-5514406d4f56",
+      "email": "davidwoodham@pm.me",
+      "paypal_email": "davidwoodham@pm.me",
+      "paypal_custom_id": "01203a0b-53ea-42de-a43a-5514406d4f56",
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "4",
+      "balance_after": "4",
+      "result": "preview"
+    },
+    {
+      "paypal_subscription_id": "I-YSWLR70RS4CF",
+      "payments": [
+        {
+          "payment_id": "56D74301GU523343M",
+          "subscription_id": "I-YSWLR70RS4CF",
+          "user_id": "a1e0ea00-4d9a-46eb-b1b3-373c6c90d2c8",
+          "email": "portlandcourtvolleyball@gmail.com",
+          "paid_at": "2026-09-18T10:06:31Z",
+          "action": "already_recorded"
+        }
+      ],
+      "user_id": "a1e0ea00-4d9a-46eb-b1b3-373c6c90d2c8",
+      "email": "portlandcourtvolleyball@gmail.com",
+      "paypal_email": "hadenfranken1129@gmail.com",
+      "paypal_custom_id": null,
+      "status_change": {
+        "before": "active",
+        "after": "active"
+      },
+      "balance_before": "8",
+      "balance_after": "8",
+      "result": "preview"
+    }
+  ],
+  "limitations": [
+    "Historical deleted grants cannot be reconstructed from the database alone.",
+    "Old local completed payments are preserved, never automatically reissued.",
+    "Refunds/reversals, conflicting ownership, and ambiguous legacy issuance require review.",
+    "PayPal HTTP errors are never treated as cancellations or evidence of nonpayment."
+  ],
+  "unresolved_webhooks": [
+    {
+      "event_id": "WH-9SJ3888370919635K-9D797702TN4079842",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-L89FS2XH4M6P",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-8AA67098NV9718438-7RW30500U3810224X",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-DTLHTA2WMTRP",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-2FG743527B875500T-85473287UH0112422",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-L89FS2XH4M6P",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-98V77410SJ655854C-46B45973WB988935K",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-DTLHTA2WMTRP",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-9HW428179B140594J-4KE62477TE796394Y",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-L89FS2XH4M6P",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-9RK973597N2955414-2LH15935LY980584P",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-DTLHTA2WMTRP",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-78U94299FP3088216-0NX65286MW672170J",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-L89FS2XH4M6P",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-5S02035208554240U-1R79567081630151H",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-DTLHTA2WMTRP",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-373453396G616692M-2MB91405TA488881P",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-L89FS2XH4M6P",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-6RR50336VB101084J-28W31359SP182533N",
+      "kind": "BILLING.SUBSCRIPTION.CREATED",
+      "subscription": "I-W8S7LCWDTEY6",
+      "status": "failed",
+      "notes": "Could not fetch subscription from PayPal"
+    },
+    {
+      "event_id": "WH-0XE30608R9550132M-6A710262CE787224C",
+      "kind": "PAYMENT.SALE.COMPLETED",
+      "subscription": "I-DTLHTA2WMTRP",
+      "status": "failed",
+      "notes": "Subscription not found after recovery attempt"
+    },
+    {
+      "event_id": "WH-58S32966B3353525G-7BJ56110S2224422T",
+      "kind": "BILLING.SUBSCRIPTION.CREATED",
+      "subscription": "I-GE2KWX3R596M",
+      "status": "failed",
+      "notes": "Could not fetch subscription from PayPal"
+    }
+  ],
+  "finished_at": "2026-09-27T21:18:39.690734Z",
+  "summary": {
+    "subscriptions_checked": 226,
+    "subscriptions_with_errors": 27,
+    "payments_needing_review": 0,
+    "credits_to_issue": 0,
+    "ownership_source": "PayPal custom_id, existing subscription, transaction owner, or explicit verified mapping; never email matching"
+  }
+}

@@ -49,7 +49,8 @@ class User(UserMixin, db.Model):
         Calculates total available credits dynamically from the ledger.
         This is the Single Source of Truth.
         """
-        today = date.today()
+        from .subscription_credits import credit_day
+        today = credit_day()
         # Sum balances of all grants that are not expired
         total = db.session.query(db.func.sum(CreditGrant.balance)).filter(
             CreditGrant.user_id == self.id,
@@ -61,7 +62,8 @@ class User(UserMixin, db.Model):
     @property
     def next_credit_expiry(self):
         """Returns the date of the credit that expires soonest."""
-        today = date.today()
+        from .subscription_credits import credit_day
+        today = credit_day()
         next_grant = CreditGrant.query.filter(
             CreditGrant.user_id == self.id,
             CreditGrant.balance > 0,
@@ -72,54 +74,31 @@ class User(UserMixin, db.Model):
             return next_grant.expiry_date.strftime('%b %d, %Y')
         return None
 
-    def spend_credits(self, amount_needed, event_title="an event"):
-        """
-        FIFO Logic: Deducts credits from grants expiring soonest.
-        Returns True if successful, False if insufficient funds.
-        """
-        today = date.today()
-        
-        # 1. Check total balance first
-        if self.event_credits < amount_needed:
+    def spend_credits(self, amount_needed, event_title="an event", *, commit=True):
+        """Serialize spending with issuance; callers may include RSVP in the transaction."""
+        if not isinstance(amount_needed, int) or isinstance(amount_needed, bool) or amount_needed <= 0:
+            raise ValueError("Credit amount must be a positive integer")
+        from .subscription_credits import credit_day
+        User.query.filter_by(id=self.id).with_for_update().first()
+        grants = CreditGrant.query.filter(CreditGrant.user_id == self.id,
+            CreditGrant.balance > 0, CreditGrant.expiry_date >= credit_day()).order_by(
+                CreditGrant.expiry_date.asc(), CreditGrant.id.asc()).populate_existing().with_for_update().all()
+        if sum(g.balance for g in grants) < amount_needed:
             return False
-
-        # 2. Get active grants sorted by expiry (Soonest first)
-        active_grants = CreditGrant.query.filter(
-            CreditGrant.user_id == self.id,
-            CreditGrant.balance > 0,
-            CreditGrant.expiry_date >= today
-        ).order_by(CreditGrant.expiry_date.asc()).all()
-
-        remaining_to_pay = amount_needed
-
-        for grant in active_grants:
-            if remaining_to_pay <= 0:
+        remaining = amount_needed
+        for grant in grants:
+            deduction = min(grant.balance, remaining)
+            grant.balance -= deduction
+            remaining -= deduction
+            if remaining == 0:
                 break
-            
-            if grant.balance >= remaining_to_pay:
-                # This grant covers the rest
-                grant.balance -= remaining_to_pay
-                remaining_to_pay = 0
-            else:
-                # Take all from this grant and move to next
-                remaining_to_pay -= grant.balance
-                grant.balance = 0
-        
-        # If we successfully deducted everything
-        if remaining_to_pay == 0:
-            transaction = CreditTransaction(
-                user_id=self.id,
-                amount=-amount_needed, # Negative amount for spending
-                transaction_type='spent',
-                description=f"RSVP for {event_title}"
-            )
-            db.session.add(transaction)
-
+        db.session.add(CreditTransaction(user_id=self.id, amount=-amount_needed,
+            transaction_type='spent', description=f"RSVP for {event_title}"))
+        if commit:
             db.session.commit()
-            return True
         else:
-            db.session.rollback() # Should not happen if step 1 passed
-            return False
+            db.session.flush()
+        return True
 
     subscriptions = db.relationship('Subscription', back_populates='user', lazy=True, cascade="all, delete-orphan")
 
