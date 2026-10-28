@@ -119,62 +119,9 @@ Your Cart | Pick Up Volleyball PDX
                         </label>
                     </section>
 
-                    <section class="merch-form-section">
-                        <h2>How would you like your order?</h2>
-
-                        <div class="merch-fulfillment-options">
-                            <label class="merch-fulfillment-option">
-                                <input
-                                    type="radio"
-                                    name="fulfillment_method"
-                                    value="event_pickup"
-                                    checked
-                                >
-
-                                <span>
-                                    <strong>
-                                        Pickup at an event
-                                    </strong>
-
-                                    <small>
-                                        Free
-                                    </small>
-                                </span>
-                            </label>
-
-                            <label class="merch-fulfillment-option">
-                                <input
-                                    type="radio"
-                                    name="fulfillment_method"
-                                    value="shipping"
-                                >
-
-                                <span>
-                                    <strong>
-                                        Ship my order
-                                    </strong>
-
-                                    <small>
-                                        ${{ shipping_rate }}
-                                    </small>
-                                </span>
-                            </label>
-                        </div>
-
-                        <div
-                            id="merchPickupMessage"
-                            class="merch-fulfillment-message"
-                        >
-                            Pick up your order at one of our
-                            upcoming volleyball events. Contact us which event you will be attending. 
-                            We will give you an update on your order status.
-                        </div>
-                    </section>
-
                     <section
                         id="merchShippingFields"
                         class="merch-form-section"
-                        hidden
                     >
                         <h2>Shipping address</h2>
 
@@ -186,6 +133,7 @@ Your Cart | Pick Up Volleyball PDX
                                 type="text"
                                 maxlength="150"
                                 autocomplete="shipping name"
+                                required
                             >
                         </label>
 
@@ -197,6 +145,7 @@ Your Cart | Pick Up Volleyball PDX
                                 type="text"
                                 maxlength="200"
                                 autocomplete="shipping address-line1"
+                                required
                             >
                         </label>
 
@@ -221,6 +170,7 @@ Your Cart | Pick Up Volleyball PDX
                                     type="text"
                                     maxlength="100"
                                     autocomplete="shipping address-level2"
+                                    required
                                 >
                             </label>
 
@@ -233,6 +183,7 @@ Your Cart | Pick Up Volleyball PDX
                                     maxlength="50"
                                     placeholder="OR"
                                     autocomplete="shipping address-level1"
+                                    required
                                 >
                             </label>
 
@@ -244,6 +195,7 @@ Your Cart | Pick Up Volleyball PDX
                                     type="text"
                                     maxlength="20"
                                     autocomplete="shipping postal-code"
+                                    required
                                 >
                             </label>
                         </div>
@@ -272,9 +224,9 @@ Your Cart | Pick Up Volleyball PDX
                     </div>
 
                     <div class="merch-summary-row">
-                        <span>Pickup/shipping</span>
+                        <span>Shipping</span>
                         <span id="merchShippingAmount">
-                            Free
+                            ${{ shipping_rate }}
                         </span>
                     </div>
 

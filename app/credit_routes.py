@@ -66,10 +66,12 @@ def refresh():
         cached = session.get('subscription_refresh', {})
         if cached.get('uid') == current_user.id and time.time()-cached.get('at', 0) < 30:
             return jsonify(**member_snapshot(current_user.id), verified=cached.get('verified', False),
-                           payment_review_required=cached.get('payment_review_required', False), cached=True)
+                           payment_review_required=cached.get('payment_review_required', False),
+                           payment_history_pending=cached.get('payment_history_pending', False), cached=True)
         result = refresh_member(current_user.id)
         session['subscription_refresh'] = {'uid': current_user.id, 'at': time.time(), 'verified': result['verified'],
-                                          'payment_review_required': result['payment_review_required']}
+                                          'payment_review_required': result['payment_review_required'],
+                                          'payment_history_pending': result['payment_history_pending']}
         return jsonify(result)
     except Exception as exc:
         return _error(exc)

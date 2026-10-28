@@ -1,12 +1,18 @@
 # This file handles the routes
 
-from flask import Blueprint, render_template, redirect, url_for, flash, session 
+from flask import Blueprint, render_template, redirect, url_for, flash, session, abort, make_response
 import urllib.parse
 
 import traceback
 from flask import request, jsonify # Import jsonify
 from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
+from collections import defaultdict
+import hmac
+import re
+import secrets
+from urllib.parse import quote
+from sqlalchemy import update
 
 import os
 from flask import current_app
@@ -18,7 +24,7 @@ from flask_login import current_user, login_required
 from .models import (
     Event, User, db, EventAttendee, Subscription, CreditGrant,
     CreditTransaction, PaymentTransaction, PayPalWebhookEvent,
-    MerchOrder, MerchOrderItem
+    MerchOrder, MerchOrderItem, MerchProduct, MerchProductImage, MerchVariant
 )
 from flask_mail import Message
 from . import mail  
@@ -575,50 +581,100 @@ def send_weekly_admin_audit_report():
 
     mail.send(msg)
 
-MERCH_CATALOG = {
-    'wildcats-hoodie': {
-        'name': 'Wildcats Volleyball Hoodie',
-        'price': Decimal('39.99'),
-        'image': 'merch/Hoodie1.jpeg',
-        'sizes': ['S', 'M', 'L', 'XL', '2XL']
-    },
-    'volleyball-life-shirt': {
-        'name': 'Volleyball Life T-Shirt',
-        'price': Decimal('24.99'),
-        'image': 'merch/SCT0395-2_2000x.jpeg',
-        'sizes': ['S', 'M', 'L', 'XL', '2XL']
-    },
-    'teal-volleyball-shirt': {
-        'name': 'Teal Volleyball T-Shirt',
-        'price': Decimal('24.99'),
-        'image': 'merch/TealVolleyTshirt.jpeg',
-        'sizes': ['S', 'M', 'L', 'XL', '2XL']
-    },
-    'pink-volleyball-hat': {
-        'name': 'Pink Volleyball Hat',
-        'price': Decimal('19.99'),
-        'image': 'merch/VolleyballHatTest.jpeg',
-        'sizes': ['One Size']
-    }
-}
-
 MERCH_SHIPPING_RATE = Decimal('7.99')
 
-MERCH_FULFILLMENT_METHODS = {
-    'event_pickup',
-    'shipping'
-}
+MERCH_FULFILLMENT_METHODS = {'shipping'}
+MERCH_RESERVATION_MINUTES = 30
+
+
+def merch_admin():
+    return current_user.is_authenticated and current_user.role == 'admin'
+
+
+def merch_admin_token():
+    if 'merch_admin_token' not in session:
+        session['merch_admin_token'] = secrets.token_urlsafe(32)
+    return session['merch_admin_token']
+
+
+def valid_merch_admin_token():
+    supplied = request.form.get('admin_token', '')
+    expected = session.get('merch_admin_token', '')
+    return bool(expected) and hmac.compare_digest(supplied, expected)
+
+
+def release_merch_reservation(order, status='expired'):
+    if not order.inventory_reserved:
+        return
+    for item in order.items:
+        if item.variant_id:
+            released = db.session.execute(
+                update(MerchVariant)
+                .where(MerchVariant.id == item.variant_id,
+                       MerchVariant.stock_reserved >= item.quantity)
+                .values(stock_reserved=(
+                    MerchVariant.stock_reserved - item.quantity
+                ))
+            )
+            if released.rowcount != 1:
+                raise ValueError('Reserved merchandise stock is inconsistent.')
+    order.inventory_reserved = False
+    order.reservation_expires_at = None
+    order.status = status
+
+
+def expire_merch_reservations():
+    expired = (MerchOrder.query
+               .filter(MerchOrder.status == 'pending',
+                       MerchOrder.inventory_reserved.is_(True),
+                       MerchOrder.reservation_expires_at < datetime.utcnow())
+               .with_for_update()
+               .all())
+    for order in expired:
+        release_merch_reservation(order)
+    if expired:
+        db.session.commit()
+
+
+def merch_tracking_url(order):
+    if not order.tracking_number:
+        return None
+    number = quote(order.tracking_number, safe='')
+    return {
+        'USPS': f'https://tools.usps.com/go/TrackConfirmAction?tLabels={number}',
+        'UPS': f'https://www.ups.com/track?tracknum={number}',
+        'FedEx': f'https://www.fedex.com/fedextrack/?trknbr={number}',
+    }.get(order.tracking_carrier)
 
 def serialize_merch_catalog():
     return [
         {
-            'id': product_id,
-            'name': product['name'],
-            'price': f"{product['price']:.2f}",
-            'image': product['image'],
-            'sizes': product['sizes']
+            'id': product.id,
+            'name': product.name,
+            'description': product.description,
+            'price': f'{product.price:.2f}',
+            'image': product.image,
+            'detail_image': product.detail_image,
+            'detail_position': product.detail_position,
+            'gallery_images': [image.image for image in product.gallery_images],
+            'has_stock': any(
+                variant.active and variant.available > 0
+                for variant in product.variants
+            ),
+            'variants': [
+                {
+                    'id': variant.id,
+                    'size': variant.size,
+                    'color': variant.color,
+                    'available': variant.available,
+                    'image': variant.image or product.image,
+                }
+                for variant in product.variants if variant.active
+            ],
         }
-        for product_id, product in MERCH_CATALOG.items()
+        for product in (MerchProduct.query.filter_by(active=True)
+                        .order_by(MerchProduct.created_at,
+                                  MerchProduct.id).all())
     ]
 
 
@@ -627,23 +683,23 @@ def validate_merch_cart(raw_items):
         raise ValueError('Your cart is empty.')
 
     validated_items = []
+    quantities = defaultdict(int)
     subtotal = Decimal('0.00')
 
     for raw_item in raw_items:
         if not isinstance(raw_item, dict):
             raise ValueError('One of the cart items is invalid.')
 
-        product_id = str(
-            raw_item.get('product_id') or ''
-        ).strip()
+        product_id = str(raw_item.get('product_id') or '').strip()
+        try:
+            variant_id = int(raw_item.get('variant_id'))
+        except (TypeError, ValueError):
+            raise ValueError('Choose a size and color for each item.')
 
-        size = str(
-            raw_item.get('size') or ''
-        ).strip()
-
-        product = MERCH_CATALOG.get(product_id)
-
-        if not product:
+        variant = db.session.get(MerchVariant, variant_id)
+        product = variant.product if variant else None
+        if (not product or product.id != product_id or not product.active
+                or not variant.active):
             raise ValueError(
                 'One of the products is no longer available.'
             )
@@ -652,28 +708,39 @@ def validate_merch_cart(raw_items):
             quantity = int(raw_item.get('quantity'))
         except (TypeError, ValueError):
             raise ValueError(
-                f"Choose a valid quantity for {product['name']}."
+                f'Choose a valid quantity for {product.name}.'
             )
 
         if quantity < 1 or quantity > 10:
             raise ValueError(
-                f"Quantity for {product['name']} must be "
+                f'Quantity for {product.name} must be '
                 "between 1 and 10."
             )
 
-        if size not in product['sizes']:
+        quantities[variant_id] += quantity
+        if quantities[variant_id] > 10:
             raise ValueError(
-                f"Choose a valid size for {product['name']}."
+                f'Maximum quantity is 10 for {product.name} '
+                f'({variant.color}, {variant.size}).'
             )
 
-        subtotal += product['price'] * quantity
-
+    for variant_id, quantity in quantities.items():
+        variant = db.session.get(MerchVariant, variant_id)
+        product = variant.product
+        if quantity > variant.available:
+            raise ValueError(
+                f'Only {variant.available} left for {product.name} '
+                f'({variant.color}, {variant.size}).'
+            )
+        subtotal += product.price * quantity
         validated_items.append({
-            'product_id': product_id,
-            'name': product['name'],
-            'size': size,
+            'product_id': product.id,
+            'variant_id': variant.id,
+            'name': product.name,
+            'size': variant.size,
+            'color': variant.color,
             'quantity': quantity,
-            'unit_price': product['price']
+            'unit_price': product.price,
         })
 
     return (
@@ -1555,7 +1622,8 @@ def capture_order(order_id):
 @main.route('/subscriptions')
 def subscriptions():
     from .subscription_checkout import member_snapshot
-    today = date.today()
+    from .subscription_credits import credit_day
+    today = credit_day()
     subscriptions_data = []
     total_monthly_credits = 0
     has_tier_1 = False
@@ -1620,86 +1688,19 @@ def confirm_subscription():
 @main.route('/api/paypal/create-subscription', methods=['POST'])
 @login_required
 def create_subscription():
-    try:
-        # 1. Get tier from the frontend request
-        request_data = request.get_json()
-        tier = request_data.get('tier')
-
-        # 2. Select the correct Plan ID based on the tier
-        if tier == '1':
-            plan_id = PAYPAL_PLAN_ID_TIER1
-        elif tier == '2':
-            plan_id = PAYPAL_PLAN_ID_TIER2
-        else:
-            return jsonify({'error': 'Invalid subscription tier provided.'}), 400
-        
-        access_token = get_access_token()
-        url = f"{PAYPAL_BASE}/v1/billing/subscriptions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {access_token}"
-        }
-        data = {
-            "plan_id": plan_id,
-            "custom_id": current_user.id,
-            "subscriber": {
-                "email_address": current_user.email
-            },
-            "application_context": {
-                "return_url": url_for('main.subscriptions', _external=True),
-                "cancel_url": url_for('main.subscriptions', _external=True)
-            }
-        }
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code == 201:
-            subscription = response.json()
-            return jsonify({'id': subscription['id']}), 201
-        else:
-            return jsonify({'error': 'Failed to create subscription'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    from .credit_routes import create
+    return create()
 
 # In views.py, update the cancel_subscription route
 
 @main.route('/cancel_subscription/<string:subscription_id>', methods=['POST'])
 @login_required
 def cancel_subscription(subscription_id):
-    # Find the subscription in our database
-    sub_to_cancel = Subscription.query.filter_by(
-        paypal_subscription_id=subscription_id, 
-        user_id=current_user.id
-    ).first()
-
-
-    # Security check: ensure the sub belongs to the current user
-    if not sub_to_cancel or sub_to_cancel.user_id != current_user.id:
-        return jsonify({'error': 'Subscription not found or you do not have permission to cancel it.'}), 404
-    
-    if sub_to_cancel.status == 'canceled':
-        return jsonify({'error': 'This subscription has already been canceled.'}), 400
-
-    try:
-        # Cancel the subscription with PayPal
-        access_token = get_access_token()
-        url = f"{PAYPAL_BASE}/v1/billing/subscriptions/{sub_to_cancel.paypal_subscription_id}/cancel"
-        #Add explicit headers
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
-        response = requests.post(url, headers=headers, json={'reason': 'User requested cancellation'})
-
-        if response.status_code == 204:
-            # Update the status in our database
-            sub_to_cancel.status = 'canceled'
-            db.session.commit()
-            flash('Subscription canceled successfully. Your credits remain until the expiry date.', 'success')
-            return jsonify({'success': True}), 200
-        else:
-            return jsonify({'error': 'Failed to cancel subscription with PayPal.'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    from .credit_routes import cancel
+    response = cancel(subscription_id)
+    if response[1] == 200:
+        flash('Subscription canceled successfully. Your credits remain until the expiry date.', 'success')
+    return response
 
 
 @main.route('/api/user/subscription/refresh', methods=['POST'])
@@ -1720,65 +1721,8 @@ def get_subscription_status():
 @main.route('/api/subscription/upgrade', methods=['POST'])
 @login_required
 def upgrade_subscription():
-    data = request.get_json()
-    target_tier = data.get('tier')
-
-    if target_tier != '2':
-        return jsonify({'error': 'Upgrade path not supported.'}), 400
-
-    try:
-        # Step 1: Find the user's active Tier 1 subscription
-        old_subscription = Subscription.query.filter_by(
-            user_id=current_user.id, 
-            tier=1, 
-            status='active'
-        ).first()
-
-        if not old_subscription:
-            return jsonify({'error': 'No active Tier 1 subscription found to upgrade.'}), 404
-
-        # Step 2: Cancel the old subscription in PayPal
-        access_token = get_access_token()
-        cancel_url = f"{PAYPAL_BASE}/v1/billing/subscriptions/{old_subscription.paypal_subscription_id}/cancel"
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
-        
-        cancel_response = requests.post(cancel_url, headers=headers, json={'reason': 'User upgraded to a new plan.'})
-        
-
-        if cancel_response.status_code != 204:
-            # Log the full error for debugging
-            print(f"Upgrade Failed: PayPal cancel return {cancel_response.status_code} - {cancel_response.text}")
-            return jsonify({'error': 'Failed to cancel your current subscription. Upgrade aborted to prevent double billing.'}), 500
-
-        # Step 3: Only NOW do we mark it canceled in our DB
-        old_subscription.status = 'canceled'
-        db.session.commit()
-
-        # Step 4: Create the new PayPal subscription for Tier 2
-        create_url = f"{PAYPAL_BASE}/v1/billing/subscriptions"
-        create_data = {
-            "plan_id": PAYPAL_PLAN_ID_TIER2,
-            "custom_id": current_user.id,
-            "subscriber": {"email_address": current_user.email},
-            "application_context": {
-                "return_url": url_for('main.subscriptions', _external=True),
-                "cancel_url": url_for('main.subscriptions', _external=True)
-            }
-        }
-        create_response = requests.post(create_url, headers=headers, json=create_data)
-        create_response.raise_for_status() 
-        
-        new_paypal_sub = create_response.json()
-        return jsonify({'id': new_paypal_sub['id']}), 201
-
-    except Exception as e:
-        db.session.rollback()
-        traceback.print_exc()
-        return jsonify({'error': f'An error occurred during the upgrade process: {str(e)}'}), 500
+    from .credit_routes import create
+    return create(upgrade=True)
 
 
 @main.route('/api/paypal/webhook', methods=['POST'])
@@ -2735,9 +2679,13 @@ def execute_guest_payment():
 
 @main.route('/merch')
 def merch():
+    expire_merch_reservations()
     return render_template(
         'merch.html',
-        products=serialize_merch_catalog()
+        products=serialize_merch_catalog(),
+        is_merch_admin=merch_admin(),
+        admin_products=(MerchProduct.query.order_by(MerchProduct.name).all()
+                        if merch_admin() else [])
     )
 
 
@@ -2748,6 +2696,314 @@ def merch_cart():
         shipping_rate=f'{MERCH_SHIPPING_RATE:.2f}',
         paypal_client_id=PAYPAL_CLIENT_ID
     )
+
+
+@main.route('/api/merch/quote', methods=['POST'])
+def merch_quote():
+    data = request.get_json(silent=True) or {}
+    expire_merch_reservations()
+    try:
+        items, subtotal = validate_merch_cart(data.get('items'))
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    return jsonify({
+        'items': [{
+            'productId': item['product_id'],
+            'variantId': item['variant_id'],
+            'name': item['name'],
+            'size': item['size'],
+            'color': item['color'],
+            'quantity': item['quantity'],
+            'unitPrice': f"{item['unit_price']:.2f}",
+            'available': db.session.get(MerchVariant,
+                                        item['variant_id']).available,
+            'image': url_for('static', filename='images/' + (
+                db.session.get(MerchVariant, item['variant_id']).image
+                or db.session.get(MerchProduct, item['product_id']).image)),
+        } for item in items],
+        'subtotal': f'{subtotal:.2f}',
+        'shipping': f'{MERCH_SHIPPING_RATE:.2f}',
+        'total': f'{subtotal + MERCH_SHIPPING_RATE:.2f}',
+    })
+
+
+def save_merch_image(file, current=None):
+    if not file or not file.filename:
+        if current:
+            return current
+        raise ValueError('Add a product image.')
+
+    content = file.read(8 * 1024 * 1024 + 1)
+    if len(content) > 8 * 1024 * 1024:
+        raise ValueError('Each product image must be 8 MB or smaller.')
+    if content.startswith(b'\xff\xd8\xff'):
+        extension = '.jpg'
+    elif content.startswith(b'\x89PNG\r\n\x1a\n'):
+        extension = '.png'
+    elif content[:4] == b'RIFF' and content[8:12] == b'WEBP':
+        extension = '.webp'
+    else:
+        raise ValueError('Use a JPEG, PNG, or WebP product image.')
+
+    folder = current_app.config.get('MERCH_UPLOAD_FOLDER') or os.path.join(
+        current_app.root_path, 'static', 'images', 'merch', 'uploads')
+    os.makedirs(folder, exist_ok=True)
+    filename = f'{uuid.uuid4().hex}{extension}'
+    with open(os.path.join(folder, filename), 'wb') as output:
+        output.write(content)
+    return f'merch/uploads/{filename}'
+
+
+def save_merch_product(product=None):
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+    if not name or len(name) > 150:
+        raise ValueError('Enter a product name under 150 characters.')
+    if len(description) > 3000:
+        raise ValueError('Keep the description under 3,000 characters.')
+    try:
+        raw_price = Decimal(request.form.get('price', ''))
+    except (InvalidOperation, ValueError):
+        raise ValueError('Enter a valid price.')
+    if (not raw_price.is_finite()
+            or raw_price.as_tuple().exponent < -2):
+        raise ValueError('Enter a price with at most two decimal places.')
+    price = raw_price.quantize(Decimal('0.01'))
+    if price <= 0 or price > Decimal('9999.99'):
+        raise ValueError('Price must be between $0.01 and $9,999.99.')
+
+    if product is None:
+        slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')[:80]
+        if not slug or db.session.get(MerchProduct, slug):
+            raise ValueError('Use a distinct product name.')
+        product = MerchProduct(id=slug)
+
+    existing = []
+    labels = set()
+    current_variants = (MerchVariant.query.filter_by(product_id=product.id)
+                        .populate_existing().with_for_update().all())
+    for variant in current_variants:
+        raw_stock = request.form.get(f'stock_{variant.id}', '')
+        try:
+            stock = int(raw_stock)
+        except (TypeError, ValueError):
+            raise ValueError('Enter a whole number for each stock quantity.')
+        if stock < variant.stock_reserved or stock > 1000000:
+            raise ValueError(
+                f'Stock for {variant.color} / {variant.size} must be '
+                f'at least its {variant.stock_reserved} reserved units.'
+            )
+        existing.append((variant, stock,
+                         request.form.get(f'active_{variant.id}') == 'on',
+                         request.files.get(f'image_{variant.id}')))
+        labels.add((variant.size.casefold(), variant.color.casefold()))
+
+    sizes = request.form.getlist('new_size[]')
+    colors = request.form.getlist('new_color[]')
+    stocks = request.form.getlist('new_stock[]')
+    new_images = request.files.getlist('new_image[]')
+    if not (len(sizes) == len(colors) == len(stocks)) or len(sizes) > 100:
+        raise ValueError('Invalid variant rows.')
+    new_images += [None] * (len(sizes) - len(new_images))
+    new_variants = []
+    for size, color, raw_stock, image_file in zip(
+            sizes, colors, stocks, new_images):
+        size, color = size.strip(), color.strip()
+        if (not size and not color and not raw_stock.strip()
+                and not (image_file and image_file.filename)):
+            continue
+        if not size or not color or len(size) > 20 or len(color) > 40:
+            raise ValueError('Each variant needs a size and color.')
+        try:
+            stock = int(raw_stock)
+        except (TypeError, ValueError):
+            raise ValueError('Enter a whole number for each stock quantity.')
+        if stock < 0 or stock > 1000000:
+            raise ValueError('Stock must be between 0 and 1,000,000.')
+        label = (size.casefold(), color.casefold())
+        if label in labels:
+            raise ValueError(f'{color} / {size} is already listed.')
+        labels.add(label)
+        new_variants.append((MerchVariant(
+            size=size, color=color, stock_on_hand=stock, active=True),
+            image_file))
+    if not labels:
+        raise ValueError('Add at least one size and color.')
+
+    gallery_rows = []
+    for gallery_image in product.gallery_images:
+        if request.form.get(f'gallery_remove_{gallery_image.id}') == 'on':
+            continue
+        try:
+            sort_order = int(request.form.get(
+                f'gallery_order_{gallery_image.id}',
+                str(gallery_image.sort_order)))
+        except (TypeError, ValueError):
+            raise ValueError('Enter a whole number for each photo order.')
+        if sort_order < 1 or sort_order > 1000:
+            raise ValueError('Photo order must be between 1 and 1000.')
+        gallery_rows.append((sort_order, gallery_image.id, gallery_image))
+    new_gallery_files = [file for file in request.files.getlist('gallery_images')
+                         if file and file.filename]
+    if len(gallery_rows) + len(new_gallery_files) > 12:
+        raise ValueError('A listing can have up to 12 additional photos.')
+
+    primary = save_merch_image(request.files.get('image'), product.image)
+    detail_file = request.files.get('detail_image')
+    detail = save_merch_image(detail_file, product.detail_image or primary) \
+        if detail_file and detail_file.filename else (product.detail_image or primary)
+    product.name = name
+    product.description = description
+    product.price = price
+    product.image = primary
+    product.detail_image = detail
+    product.detail_position = product.detail_position or 'center'
+    product.active = request.form.get('active') == 'on'
+    for gallery_image in list(product.gallery_images):
+        if request.form.get(f'gallery_remove_{gallery_image.id}') == 'on':
+            db.session.delete(gallery_image)
+    gallery_rows.sort(key=lambda row: (row[0], row[1]))
+    for order, (_, _, gallery_image) in enumerate(gallery_rows, 1):
+        gallery_image.sort_order = order
+    for order, image_file in enumerate(new_gallery_files,
+                                       len(gallery_rows) + 1):
+        product.gallery_images.append(MerchProductImage(
+            image=save_merch_image(image_file), sort_order=order))
+    for variant, stock, active, image_file in existing:
+        variant.stock_on_hand = stock
+        variant.active = active
+        if image_file and image_file.filename:
+            variant.image = save_merch_image(image_file)
+    for variant, image_file in new_variants:
+        if image_file and image_file.filename:
+            variant.image = save_merch_image(image_file)
+        product.variants.append(variant)
+    db.session.add(product)
+    db.session.commit()
+    return product
+
+
+@main.route('/merch/admin/products/new', methods=['GET', 'POST'])
+@login_required
+def merch_product_new():
+    if not merch_admin():
+        abort(403)
+    if request.method == 'POST':
+        if not valid_merch_admin_token():
+            abort(403)
+        try:
+            product = save_merch_product()
+            flash('Product added. Set stock before accepting orders.', 'success')
+            return redirect(url_for('main.merch_product_edit',
+                                    product_id=product.id))
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), 'danger')
+    return render_template('merch_product_edit.html', product=None,
+                           admin_token=merch_admin_token())
+
+
+@main.route('/merch/admin/products/<product_id>/edit',
+            methods=['GET', 'POST'])
+@login_required
+def merch_product_edit(product_id):
+    if not merch_admin():
+        abort(403)
+    expire_merch_reservations()
+    product = MerchProduct.query.get_or_404(product_id)
+    if request.method == 'POST':
+        if not valid_merch_admin_token():
+            abort(403)
+        try:
+            save_merch_product(product)
+            flash('Product updated.', 'success')
+            return redirect(url_for('main.merch_product_edit',
+                                    product_id=product.id))
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), 'danger')
+    return render_template('merch_product_edit.html', product=product,
+                           admin_token=merch_admin_token())
+
+
+@main.route('/merch/admin/orders')
+@login_required
+def merch_admin_orders():
+    if not merch_admin():
+        abort(403)
+    expire_merch_reservations()
+    page = max(1, request.args.get('page', 1, type=int) or 1)
+    pagination = (MerchOrder.query.order_by(MerchOrder.created_at.desc())
+                  .paginate(page=page, per_page=30, error_out=False))
+    return render_template('merch_admin_orders.html', orders=pagination.items,
+                           pagination=pagination,
+                           admin_token=merch_admin_token(),
+                           tracking_url=merch_tracking_url)
+
+
+@main.route('/merch/admin/orders/<int:order_id>/tracking', methods=['POST'])
+@login_required
+def merch_admin_tracking(order_id):
+    if not merch_admin() or not valid_merch_admin_token():
+        abort(403)
+    order = MerchOrder.query.get_or_404(order_id)
+    if order.status != 'completed' or order.fulfillment_method != 'shipping':
+        flash('Only paid shipping orders can be marked shipped.', 'danger')
+        return redirect(url_for('main.merch_admin_orders'))
+    carrier = request.form.get('carrier', '').strip()
+    number = request.form.get('tracking_number', '').strip()
+    if (carrier not in {'USPS', 'UPS', 'FedEx', 'Other'}
+            or not re.fullmatch(r'[A-Za-z0-9 -]{4,120}', number)):
+        flash('Choose a carrier and enter a valid tracking number.', 'danger')
+        return redirect(url_for('main.merch_admin_orders'))
+    changed = (carrier != order.tracking_carrier
+               or number != order.tracking_number)
+    order.tracking_carrier = carrier
+    order.tracking_number = number
+    order.shipped_at = order.shipped_at or datetime.utcnow()
+    if changed:
+        order.tracking_notified_at = None
+    db.session.commit()
+
+    if request.form.get('notify_customer') == 'on':
+        tracking_link = merch_tracking_url(order)
+        body = (f'Your Pick Up Volleyball order {order.order_number} has shipped.\n\n'
+                f'Carrier: {carrier}\nTracking number: {number}\n')
+        if tracking_link:
+            body += f'Track your package: {tracking_link}\n'
+        try:
+            mail.send(Message(
+                subject=f'Your order {order.order_number} has shipped',
+                recipients=[order.customer_email], body=body
+            ))
+            order.tracking_notified_at = datetime.utcnow()
+            db.session.commit()
+            flash('Tracking saved and customer emailed.', 'success')
+        except Exception:
+            current_app.logger.exception('Merch tracking email failed')
+            flash('Tracking saved, but the email could not be sent.', 'warning')
+    else:
+        flash('Tracking saved.', 'success')
+    return redirect(url_for('main.merch_admin_orders'))
+
+
+@main.route('/merch/admin/orders/<int:order_id>/retry-capture',
+            methods=['POST'])
+@login_required
+def merch_admin_retry_capture(order_id):
+    if not merch_admin() or not valid_merch_admin_token():
+        abort(403)
+    order = MerchOrder.query.get_or_404(order_id)
+    if order.status != 'capturing' or not order.paypal_order_id:
+        flash('This order does not need payment confirmation.', 'warning')
+        return redirect(url_for('main.merch_admin_orders'))
+    result = make_response(capture_merch_order(order.paypal_order_id))
+    if result.status_code == 200:
+        flash('PayPal payment confirmed and stock finalized.', 'success')
+    else:
+        flash('PayPal could not confirm this order. Review it in PayPal '
+              'before taking any further action.', 'warning')
+    return redirect(url_for('main.merch_admin_orders'))
 
 @main.route('/api/merch/orders', methods=['POST'])
 def create_merch_order():
@@ -2792,10 +3048,11 @@ def create_merch_order():
 
     if fulfillment_method not in MERCH_FULFILLMENT_METHODS:
         return jsonify({
-            'error': 'Choose pickup or shipping.'
+            'error': 'Shipping is the only available delivery method.'
         }), 400
 
     try:
+        expire_merch_reservations()
         validated_items, subtotal = validate_merch_cart(
             data.get('items')
         )
@@ -2803,6 +3060,16 @@ def create_merch_order():
         return jsonify({
             'error': str(exc)
         }), 400
+
+    try:
+        expected_subtotal = Decimal(str(data.get('expected_subtotal')))
+    except (InvalidOperation, TypeError):
+        return jsonify({'error': 'Refresh your cart before checkout.'}), 409
+    if (not expected_subtotal.is_finite()
+            or expected_subtotal != subtotal):
+        return jsonify({
+            'error': 'A product price changed. Refresh your cart before paying.'
+        }), 409
 
     shipping_name = None
     shipping_address_line_1 = None
@@ -2904,12 +3171,71 @@ def create_merch_order():
         else None
     )
 
+    merch_order = MerchOrder(
+        order_number=order_number,
+        user_id=user_id,
+        customer_name=customer_name,
+        customer_email=customer_email,
+        customer_phone=customer_phone or None,
+        fulfillment_method=fulfillment_method,
+        shipping_name=shipping_name,
+        shipping_address_line_1=shipping_address_line_1,
+        shipping_address_line_2=shipping_address_line_2 or None,
+        shipping_city=shipping_city,
+        shipping_state=shipping_state,
+        shipping_postal_code=shipping_postal_code,
+        shipping_country=shipping_country,
+        subtotal=subtotal,
+        shipping_amount=shipping_amount,
+        total=total,
+        currency='USD',
+        status='pending',
+        inventory_reserved=True,
+        cancel_token=secrets.token_urlsafe(32),
+        reservation_expires_at=(datetime.utcnow() + timedelta(
+            minutes=MERCH_RESERVATION_MINUTES)),
+    )
+    for item in validated_items:
+        merch_order.items.append(MerchOrderItem(
+            product_id=item['product_id'],
+            variant_id=item['variant_id'],
+            product_name=item['name'],
+            size=item['size'],
+            color=item['color'],
+            quantity=item['quantity'],
+            unit_price=item['unit_price'],
+        ))
+
+    try:
+        for item in validated_items:
+            reserved = db.session.execute(
+                update(MerchVariant)
+                .where(MerchVariant.id == item['variant_id'],
+                       MerchVariant.active.is_(True),
+                       MerchVariant.product.has(MerchProduct.active.is_(True)),
+                       MerchVariant.stock_on_hand -
+                       MerchVariant.stock_reserved >= item['quantity'])
+                .values(stock_reserved=(
+                    MerchVariant.stock_reserved + item['quantity']
+                ))
+            )
+            if reserved.rowcount != 1:
+                raise ValueError(
+                    'An item just sold out. Refresh the merch page.'
+                )
+        db.session.add(merch_order)
+        db.session.commit()
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({'error': str(exc)}), 409
+
     try:
         access_token = get_access_token()
 
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {access_token}'
+            'Authorization': f'Bearer {access_token}',
+            'PayPal-Request-Id': f'merch-create-{order_number}'
         }
 
         paypal_body = {
@@ -2920,6 +3246,29 @@ def create_merch_order():
                 'description': (
                     'Pickup Volleyball PDX merchandise'
                 ),
+                'items': [{
+                    'name': item['name'],
+                    'description': f"{item['color']} / {item['size']}",
+                    'sku': f"{item['product_id']}-{item['variant_id']}",
+                    'quantity': str(item['quantity']),
+                    'category': 'PHYSICAL_GOODS',
+                    'unit_amount': {
+                        'currency_code': 'USD',
+                        'value': f"{item['unit_price']:.2f}"
+                    }
+                } for item in validated_items],
+                'shipping': {
+                    'name': {'full_name': shipping_name},
+                    'address': {
+                        'address_line_1': shipping_address_line_1,
+                        **({'address_line_2': shipping_address_line_2}
+                           if shipping_address_line_2 else {}),
+                        'admin_area_2': shipping_city,
+                        'admin_area_1': shipping_state,
+                        'postal_code': shipping_postal_code,
+                        'country_code': shipping_country,
+                    }
+                },
                 'amount': {
                     'currency_code': 'USD',
                     'value': f'{total:.2f}',
@@ -2935,9 +3284,12 @@ def create_merch_order():
                     }
                 }
             }],
-            'application_context': {
-                # We collect and validate the address ourselves.
-                'shipping_preference': 'NO_SHIPPING'
+            'payment_source': {
+                'paypal': {
+                    'experience_context': {
+                        'shipping_preference': 'SET_PROVIDED_ADDRESS'
+                    }
+                }
             }
         }
 
@@ -2957,50 +3309,21 @@ def create_merch_order():
                 'PayPal did not return an order ID.'
             )
 
-        merch_order = MerchOrder(
-            order_number=order_number,
-            user_id=user_id,
-            customer_name=customer_name,
-            customer_email=customer_email,
-            customer_phone=customer_phone or None,
-            fulfillment_method=fulfillment_method,
-            shipping_name=shipping_name,
-            shipping_address_line_1=shipping_address_line_1,
-            shipping_address_line_2=(
-                shipping_address_line_2 or None
-            ),
-            shipping_city=shipping_city,
-            shipping_state=shipping_state,
-            shipping_postal_code=shipping_postal_code,
-            shipping_country=shipping_country,
-            subtotal=subtotal,
-            shipping_amount=shipping_amount,
-            total=total,
-            currency='USD',
-            status='pending',
-            paypal_order_id=paypal_order_id
-        )
-
-        for item in validated_items:
-            merch_order.items.append(
-                MerchOrderItem(
-                    product_id=item['product_id'],
-                    product_name=item['name'],
-                    size=item['size'],
-                    quantity=item['quantity'],
-                    unit_price=item['unit_price']
-                )
-            )
-
-        db.session.add(merch_order)
+        merch_order.paypal_order_id = paypal_order_id
         db.session.commit()
 
         return jsonify({
-            'id': paypal_order_id
+            'id': paypal_order_id,
+            'cancel_token': merch_order.cancel_token,
         })
 
-    except (requests.RequestException, ValueError):
+    except Exception:
         db.session.rollback()
+
+        pending_order = db.session.get(MerchOrder, merch_order.id)
+        if pending_order and pending_order.status == 'pending':
+            release_merch_reservation(pending_order, status='failed')
+            db.session.commit()
 
         current_app.logger.exception(
             'Unable to create merchandise order'
@@ -3012,6 +3335,24 @@ def create_merch_order():
                 'Please try again.'
             )
         }), 502
+
+
+@main.route('/api/merch/orders/<paypal_order_id>/cancel', methods=['POST'])
+def cancel_merch_order(paypal_order_id):
+    order = MerchOrder.query.filter_by(paypal_order_id=paypal_order_id).first()
+    supplied = (request.get_json(silent=True) or {}).get('cancel_token', '')
+    if (not order or not order.cancel_token
+            or not hmac.compare_digest(str(supplied), order.cancel_token)):
+        return jsonify({'error': 'Checkout not found.'}), 404
+    if order.status == 'cancelled':
+        return jsonify({'success': True})
+    if order.status != 'pending':
+        return jsonify({
+            'error': 'Payment confirmation is in progress. Contact us before retrying.'
+        }), 409
+    release_merch_reservation(order, status='cancelled')
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @main.route(
@@ -3035,17 +3376,33 @@ def capture_merch_order(paypal_order_id):
             'order_number': merch_order.order_number
         })
 
-    if merch_order.status != 'pending':
+    if merch_order.status not in {'pending', 'capturing'}:
         return jsonify({
             'error': 'This order cannot be captured.'
         }), 409
+
+    if (merch_order.status == 'pending'
+            and merch_order.inventory_reserved
+            and merch_order.reservation_expires_at <= datetime.utcnow()):
+        release_merch_reservation(merch_order)
+        db.session.commit()
+        return jsonify({
+            'error': 'Your cart reservation expired. Please start checkout again.'
+        }), 409
+
+    if merch_order.status == 'pending' and merch_order.inventory_reserved:
+        merch_order.status = 'capturing'
+        merch_order.reservation_expires_at = datetime.utcnow() + timedelta(
+            minutes=5)
+        db.session.commit()
 
     try:
         access_token = get_access_token()
 
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {access_token}'
+            'Authorization': f'Bearer {access_token}',
+            'PayPal-Request-Id': f'merch-capture-{merch_order.order_number}'
         }
 
         capture_response = requests.post(
@@ -3154,6 +3511,32 @@ def capture_merch_order(paypal_order_id):
             )
         )
 
+        merch_order = (MerchOrder.query.filter_by(id=merch_order.id)
+                       .with_for_update().populate_existing().first())
+        if merch_order.status == 'completed':
+            return jsonify({
+                'success': True,
+                'order_number': merch_order.order_number
+            })
+        if merch_order.inventory_reserved:
+            for item in merch_order.items:
+                changed = db.session.execute(
+                    update(MerchVariant)
+                    .where(MerchVariant.id == item.variant_id,
+                           MerchVariant.stock_reserved >= item.quantity,
+                           MerchVariant.stock_on_hand >= item.quantity)
+                    .values(
+                        stock_reserved=(MerchVariant.stock_reserved -
+                                        item.quantity),
+                        stock_on_hand=(MerchVariant.stock_on_hand -
+                                       item.quantity),
+                    )
+                )
+                if changed.rowcount != 1:
+                    raise ValueError('Reserved stock could not be finalized.')
+            merch_order.inventory_reserved = False
+            merch_order.reservation_expires_at = None
+
         merch_order.paypal_capture_id = capture_id
         merch_order.paypal_payer_email = paypal_email
         merch_order.status = 'completed'
@@ -3166,7 +3549,7 @@ def capture_merch_order(paypal_order_id):
             'order_number': merch_order.order_number
         })
 
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
         db.session.rollback()
 
         current_app.logger.exception(

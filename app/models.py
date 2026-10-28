@@ -269,6 +269,65 @@ class PayPalWebhookEvent(db.Model):
 
 
 
+class MerchProduct(db.Model):
+    __tablename__ = 'merch_products'
+
+    id = db.Column(db.String(80), primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=False, default='')
+    price = db.Column(db.Numeric(10, 2), nullable=False)
+    image = db.Column(db.String(255), nullable=False)
+    detail_image = db.Column(db.String(255), nullable=False)
+    detail_position = db.Column(db.String(30), nullable=False, default='center')
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow,
+                           onupdate=datetime.utcnow)
+
+    variants = db.relationship('MerchVariant', back_populates='product',
+                               order_by='MerchVariant.id', lazy=True)
+    gallery_images = db.relationship(
+        'MerchProductImage', back_populates='product',
+        order_by=lambda: (MerchProductImage.sort_order, MerchProductImage.id),
+        cascade='all, delete-orphan', lazy=True)
+
+
+class MerchProductImage(db.Model):
+    __tablename__ = 'merch_product_images'
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.String(80), db.ForeignKey('merch_products.id'),
+                           nullable=False, index=True)
+    image = db.Column(db.String(255), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    product = db.relationship('MerchProduct', back_populates='gallery_images')
+
+
+class MerchVariant(db.Model):
+    __tablename__ = 'merch_variants'
+    __table_args__ = (
+        db.UniqueConstraint('product_id', 'size', 'color',
+                            name='uq_merch_variant_option'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.String(80), db.ForeignKey('merch_products.id'),
+                           nullable=False, index=True)
+    size = db.Column(db.String(20), nullable=False)
+    color = db.Column(db.String(40), nullable=False)
+    image = db.Column(db.String(255), nullable=True)
+    stock_on_hand = db.Column(db.Integer, nullable=False, default=0)
+    stock_reserved = db.Column(db.Integer, nullable=False, default=0)
+    active = db.Column(db.Boolean, nullable=False, default=True)
+
+    product = db.relationship('MerchProduct', back_populates='variants')
+
+    @property
+    def available(self):
+        return max(0, self.stock_on_hand - self.stock_reserved)
+
+
 class MerchOrder(db.Model):
     __tablename__ = 'merch_orders'
 
@@ -382,6 +441,14 @@ class MerchOrder(db.Model):
         nullable=True
     )
 
+    inventory_reserved = db.Column(db.Boolean, nullable=False, default=False)
+    reservation_expires_at = db.Column(db.DateTime, nullable=True)
+    cancel_token = db.Column(db.String(80), nullable=True)
+    tracking_carrier = db.Column(db.String(50), nullable=True)
+    tracking_number = db.Column(db.String(120), nullable=True)
+    shipped_at = db.Column(db.DateTime, nullable=True)
+    tracking_notified_at = db.Column(db.DateTime, nullable=True)
+
     user = db.relationship(
         'User',
         backref='merch_orders'
@@ -413,6 +480,8 @@ class MerchOrderItem(db.Model):
         db.String(80),
         nullable=False
     )
+    variant_id = db.Column(db.Integer, db.ForeignKey('merch_variants.id'),
+                           nullable=True)
     product_name = db.Column(
         db.String(150),
         nullable=False
@@ -421,6 +490,7 @@ class MerchOrderItem(db.Model):
         db.String(20),
         nullable=False
     )
+    color = db.Column(db.String(40), nullable=False, default='As shown')
     quantity = db.Column(
         db.Integer,
         nullable=False

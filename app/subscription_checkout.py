@@ -36,34 +36,38 @@ def _owned(details, uid):
 def _close_slot(sid):
     row = SubscriptionCheckout.query.filter_by(paypal_subscription_id=sid).first()
     if row:
-        row.state, row.slot_key, row.updated_at = 'closed', None, utcnow()
+        # Closing the new tier must not discard already-authorized cancellation
+        # of the old tier. Keep that durable job retryable until it finishes.
+        if row.state != 'cancel_pending':
+            row.state = 'closed'
+        row.slot_key, row.updated_at = None, utcnow()
 
 
-def sync_one(sid, *, uid=None, api=None, finish=True):
+def sync_one(sid, *, uid=None, api=None, finish=True, lookback_days=32):
     """Reconcile one subscription; receipts and credits commit atomically."""
     api = api or PayPal()
     details = api.subscription(sid)
     if uid is not None:
         _owned(details, uid)
     end = utcnow()
-    txs = api.transactions(sid, end-timedelta(days=32), end)
-    last_payment = details.get('billing_info', {}).get('last_payment', {}).get('time')
-    payment_history_pending = False
-    if not txs and last_payment:
-        from .subscription_credits import parse_time
-        if end-timedelta(days=32) <= parse_time(last_payment) <= end:
-            # PayPal can expose the approved/active subscription before the
-            # corresponding transaction appears in transaction history. Sync
-            # the status, but do not issue credits until the payment record is
-            # independently visible and verified. This is a normal pending
-            # state, not a server/PayPal outage.
-            payment_history_pending = True
+    txs = api.transactions(sid, end-timedelta(days=lookback_days), end)
+    last_payment = (details.get('billing_info') or {}).get('last_payment') or {}
+    last_payment_time = last_payment.get('time')
+    from .subscription_credits import parse_time
+    latest_paid_at = parse_time(last_payment_time) if last_payment_time else None
+    # PayPal can show a new renewal in billing_info before its transaction is
+    # listed. A transaction from the previous monthly cycle must not confirm
+    # that new payment. Allow a day for the two PayPal timestamps to differ.
+    matching_txs = ([tx for tx in txs if parse_time(tx['time']) >= latest_paid_at-timedelta(days=1)]
+                    if latest_paid_at and end-timedelta(days=lookback_days) <= latest_paid_at <= end else txs)
+    payment_history_pending = bool(latest_paid_at and
+        end-timedelta(days=lookback_days) <= latest_paid_at <= end and not matching_txs)
     try:
         sub, user, _ = sync_subscription(details)
         if uid is not None and user.id != uid:
             raise ReviewRequired('Subscription ownership changed')
         results = [issue_payment(sub, user, details, tx) for tx in txs]
-        paid_ids = [tx['id'] for tx in txs if tx.get('status') == 'COMPLETED']
+        paid_ids = [tx['id'] for tx in matching_txs if tx.get('status') == 'COMPLETED']
         paid = bool(paid_ids and db.session.query(SubscriptionCreditReceipt.id).join(
             PaymentTransaction, PaymentTransaction.id == SubscriptionCreditReceipt.payment_id).filter(
             PaymentTransaction.paypal_capture_id.in_(paid_ids),
@@ -88,6 +92,7 @@ def sync_one(sid, *, uid=None, api=None, finish=True):
             'payment_history_pending': payment_history_pending,
             'upgrade_pending': upgrade_pending,
             'payment_review_required': legacy_receipt or any(r['action'].startswith('review_') for r in results),
+            'payments': results,
             'credits_issued': sum(r.get('credits', 0) for r in results)}
 
 
@@ -97,7 +102,8 @@ def finish_upgrade(sid, *, api, paid, target_status):
     if not row or row.state in ('complete', 'closed'):
         db.session.rollback()
         return False
-    if not paid or target_status != 'active':
+    retrying_cancel = row.state == 'cancel_pending'
+    if not retrying_cancel and (not paid or target_status != 'active'):
         db.session.rollback()
         return False
     # A legacy payment receipt without a grant is not proof that the upgraded
@@ -110,7 +116,9 @@ def finish_upgrade(sid, *, api, paid, target_status):
         SubscriptionCreditReceipt.grant_id.isnot(None)).first()
     if not issued:
         db.session.rollback()
-        return False
+        # Never cancel without verified issuance. A saved cancellation job with
+        # missing evidence still needs attention; it is not a successful pass.
+        return retrying_cancel
     row_id, uid, old_sid = row.id, row.user_id, row.replaces_subscription_id
     row.state = 'cancel_pending' if old_sid else 'complete'
     row.updated_at, row.last_error = utcnow(), None
@@ -211,7 +219,8 @@ def start_checkout(uid, tier, action, return_url, *, api=None):
     # scan, emails, or other members' PayPal requests in the signup path.
     tiers = (1, 2) if action == 'upgrade' else (tier,)
     ids = [s.paypal_subscription_id for s in Subscription.query.filter(
-        Subscription.user_id == uid, Subscription.tier.in_(tiers)).all()]
+        Subscription.user_id == uid, Subscription.tier.in_(tiers),
+        Subscription.status.in_(OPEN)).all()]
     db.session.rollback()
     for sid in ids:
         sync_one(sid, uid=uid, api=api)
@@ -220,6 +229,13 @@ def start_checkout(uid, tier, action, return_url, *, api=None):
         if not user:
             raise ReviewRequired('User does not exist')
         row = SubscriptionCheckout.query.filter_by(slot_key=slot).first()
+        if row and row.paypal_subscription_id:
+            retired = Subscription.query.filter_by(
+                paypal_subscription_id=row.paypal_subscription_id, user_id=uid).first()
+            if retired and retired.status in ('canceled', 'expired'):
+                _close_slot(row.paypal_subscription_id)
+                db.session.flush()
+                row = None
         same_tier = Subscription.query.filter(Subscription.user_id == uid,
             Subscription.tier == tier, Subscription.status.in_(OPEN)).all()
         # A canceled popup resumes the same pending agreement with one click.
@@ -320,6 +336,7 @@ def refresh_member(uid, *, api=None):
             errors.append(sid)
     result = member_snapshot(uid)
     result.update(verified=not errors, verification_errors=errors,
+                  payment_history_pending=any(r['payment_history_pending'] for r in results),
                   payment_review_required=result['checkout_review_required'] or
                                           any(r['payment_review_required'] for r in results))
     return result

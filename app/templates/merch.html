@@ -8,15 +8,11 @@ Merch | Pick Up Volleyball PDX
 <section class="merch-page">
     <div class="merch-shell">
         <header class="merch-hero">
-            <p class="merch-eyebrow">
-                Pickup Volleyball PDX
-            </p>
-
-            <h1>Rep your volleyball community</h1>
-
-            <p>
-                Limited-run volleyball apparel and gear.
-            </p>
+            <div class="merch-hero-copy">
+                <p class="merch-eyebrow">Pick Up Volleyball</p>
+                <h1>Rep your community</h1>
+                <p class="merch-hero-description">Limited-run volleyball apparel</p>
+            </div>
 
             <a
                 href="{{ url_for('main.merch_cart') }}"
@@ -32,6 +28,21 @@ Merch | Pick Up Volleyball PDX
                 <span id="merchHeaderCartCount">0</span>
             </a>
         </header>
+
+        {% if is_merch_admin %}
+        <section class="merch-admin-bar" aria-label="Merchandise administration">
+            <strong>Merch admin</strong>
+            <a href="{{ url_for('main.merch_product_new') }}">Add product</a>
+            <a href="{{ url_for('main.merch_admin_orders') }}">Orders &amp; tracking</a>
+            <div class="merch-admin-product-links">
+                {% for item in admin_products %}
+                <a href="{{ url_for('main.merch_product_edit', product_id=item.id) }}">
+                    {{ item.name }}{% if not item.active %} (hidden){% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
 
         <div
             id="merchStatus"
@@ -52,15 +63,48 @@ Merch | Pick Up Volleyball PDX
                     filename='images/' ~ product.image
                 ) }}"
             >
-                <div class="merch-image-wrap">
+                {% set image_count = 2 + product.gallery_images|length %}
+                <div class="merch-image-wrap" aria-label="Photos of {{ product.name }}">
                     <img
+                        class="merch-image-slide is-active"
                         src="{{ url_for(
                             'static',
                             filename='images/' ~ product.image
                         ) }}"
-                        alt="{{ product.name }}"
+                        alt="{{ product.name }}, photo 1 of {{ image_count }}"
                         loading="lazy"
+                        aria-hidden="false"
                     >
+                    <img
+                        class="merch-image-slide{% if product.detail_image == product.image %} is-zoom{% endif %}"
+                        src="{{ url_for(
+                            'static',
+                            filename='images/' ~ product.detail_image
+                        ) }}"
+                        alt="{{ product.name }}, photo 2 of {{ image_count }}"
+                        loading="lazy"
+                        style="object-position: {{ product.detail_position }}"
+                        aria-hidden="true"
+                    >
+                    {% for image in product.gallery_images %}
+                    <img class="merch-image-slide"
+                         src="{{ url_for('static', filename='images/' ~ image) }}"
+                         alt="{{ product.name }}, photo {{ loop.index + 2 }} of {{ image_count }}"
+                         loading="lazy" aria-hidden="true">
+                    {% endfor %}
+                    <button type="button" class="merch-gallery-arrow is-prev"
+                            aria-label="Previous photo of {{ product.name }}">&#10094;</button>
+                    <button type="button" class="merch-gallery-arrow is-next"
+                            aria-label="Next photo of {{ product.name }}">&#10095;</button>
+                    <div class="merch-gallery-dots" role="group"
+                         aria-label="Choose photo of {{ product.name }}">
+                        {% for index in range(image_count) %}
+                        <button type="button" class="merch-gallery-dot{% if index == 0 %} is-active{% endif %}"
+                                data-index="{{ index }}"
+                                aria-label="Show photo {{ index + 1 }} of {{ image_count }} for {{ product.name }}"
+                                aria-current="{{ 'true' if index == 0 else 'false' }}"></button>
+                        {% endfor %}
+                    </div>
                 </div>
 
                 <div class="merch-product-info">
@@ -70,25 +114,32 @@ Merch | Pick Up Volleyball PDX
                         <p class="merch-price">
                             ${{ product.price }}
                         </p>
+                        {% if product.description %}
+                        <p class="merch-description">{{ product.description }}</p>
+                        {% endif %}
                     </div>
 
                     <div class="merch-product-options">
                         <label>
-                            Size
+                            Color &amp; size
 
                             <select
-                                class="merch-size"
-                                aria-label="Size for {{ product.name }}"
+                                class="merch-variant"
+                                aria-label="Color and size for {{ product.name }}"
                             >
-                                {% if product.sizes|length > 1 %}
-                                <option value="">
-                                    Select size
-                                </option>
-                                {% endif %}
-
-                                {% for size in product.sizes %}
-                                <option value="{{ size }}">
-                                    {{ size }}
+                                <option value="">Select color &amp; size</option>
+                                {% for variant in product.variants %}
+                                <option
+                                    value="{{ variant.id }}"
+                                    data-size="{{ variant.size }}"
+                                    data-color="{{ variant.color }}"
+                                    data-available="{{ variant.available }}"
+                                    data-image="{{ url_for('static', filename='images/' ~ variant.image) }}"
+                                    data-detail-image="{{ url_for('static', filename='images/' ~ (variant.image if variant.image != product.image else product.detail_image)) }}"
+                                    {% if variant.available == 0 %}disabled{% endif %}
+                                >
+                                    {{ variant.color }} · {{ variant.size }}
+                                    {% if variant.available == 0 %}— sold out{% else %}— {{ variant.available }} left{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
@@ -113,14 +164,18 @@ Merch | Pick Up Volleyball PDX
                     <button
                         type="button"
                         class="merch-add-button"
+                        {% if not product.has_stock %}disabled{% endif %}
                     >
                         <i
                             class="fa-solid fa-cart-plus"
                             aria-hidden="true"
                         ></i>
 
-                        Add to cart
+                        {% if product.has_stock %}Add to cart{% else %}Sold out{% endif %}
                     </button>
+                    {% if is_merch_admin %}
+                    <a class="merch-edit-link" href="{{ url_for('main.merch_product_edit', product_id=product.id) }}">Edit listing</a>
+                    {% endif %}
                 </div>
             </article>
             {% endfor %}

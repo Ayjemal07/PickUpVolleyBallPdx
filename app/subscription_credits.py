@@ -258,15 +258,17 @@ def normalize_payment(transaction):
 def issue_payment(sub, user, details, transaction, *, approved_missing=None, restore_days=None, webhook_id=None):
     """One verified payment. Does not commit. Caller must rollback on any exception.
 
-    approved_missing maps a reviewed payment ID to its subscription ID. It never
-    overrides an existing local payment/receipt or conflicting owner.
+    approved_missing maps a reviewed payment ID to its subscription ID. It can
+    restore a reviewed legacy payment without an issuance receipt, but never
+    overrides a receipt with a grant or conflicting ownership.
     """
     pid, paid_at, amount, currency = normalize_payment(transaction)
     result = {'payment_id': pid, 'subscription_id': sub.paypal_subscription_id,
               'user_id': user.id, 'email': user.email, 'paid_at': iso(paid_at)}
     existing = PaymentTransaction.query.filter_by(paypal_capture_id=pid).populate_existing().with_for_update().first()
     if existing and (existing.user_id != user.id or existing.paypal_subscription_id != sub.paypal_subscription_id
-                     or existing.transaction_type != 'subscription_payment'):
+                     or existing.transaction_type != 'subscription_payment'
+                     or existing.subscription_id not in (None, sub.id)):
         raise ReviewRequired('Existing payment has a different owner/subscription/type')
     if transaction.get('status') != 'COMPLETED':
         result.update(action='review_payment_status', status=transaction.get('status'))
@@ -275,27 +277,36 @@ def issue_payment(sub, user, details, transaction, *, approved_missing=None, res
     if currency != 'USD' or amount != expected_price:
         result.update(action='review_amount', amount=str(amount), currency=currency)
         return result
+    approved = (approved_missing or {}).get(pid) == sub.paypal_subscription_id
+    receipt = None
     if existing:
         receipt = SubscriptionCreditReceipt.query.filter_by(payment_id=existing.id).first()
+        if receipt and receipt.subscription_id != sub.id:
+            raise ReviewRequired('Existing receipt belongs to another subscription')
         if existing.status != 'completed':
             result['action'] = 'review_local_payment_status'
             return result
         sub.expiry_date = max(sub.expiry_date, credit_day(paid_at) + timedelta(days=30))
-        if receipt:
+        if receipt and receipt.grant_id is not None:
             result['action'] = 'already_recorded'
             return result
-        # Old helper committed credits before recording the payment. Do not reissue
-        # merely because cleanup removed the old grant. Preserve durable evidence.
-        db.session.add(SubscriptionCreditReceipt(payment_id=existing.id,
-            subscription_id=sub.id, grant_id=None, original_amount=credits,
-            payment_time=paid_at, mode='legacy_payment_recorded'))
-        result['action'] = 'preserve_legacy_payment_no_credit_change'
-        return result
+        # A legacy payment row proves payment, not that credits were delivered.
+        # Keep it reviewable on every retry; never report this as successful
+        # issuance, or automatically replace grants that were spent/expired.
+        if not approved:
+            if not receipt:
+                db.session.add(SubscriptionCreditReceipt(payment_id=existing.id,
+                    subscription_id=sub.id, grant_id=None, original_amount=credits,
+                    payment_time=paid_at, mode='legacy_payment_recorded'))
+            result.update(action='review_legacy_payment_without_grant',
+                          reason='Completed local payment has no linked credit grant; verify legacy issuance/spending before approving restoration')
+            return result
+        if receipt and receipt.mode not in ('legacy_payment_recorded',):
+            raise ReviewRequired('Receipt has lost its grant; investigate deletion before restoring')
     boundary = db.session.get(CreditSystemState, 'atomic_issuance_started_at')
     if not boundary:
         raise ReviewRequired('Credit migration/cutover marker missing')
     cutover = parse_time(boundary.value)
-    approved = (approved_missing or {}).get(pid) == sub.paypal_subscription_id
     # Old failed requests can have committed a grant without a payment row.
     # For recent cycles, cleanup could not have deleted an unexpired grant.
     recent = paid_at >= utcnow() - timedelta(days=27)
@@ -311,7 +322,7 @@ def issue_payment(sub, user, details, transaction, *, approved_missing=None, res
                       spending_entries=spending)
         return result
     expiry = credit_day(paid_at) + timedelta(days=30)
-    mode = 'new_payment' if paid_at >= cutover else ('approved_repair' if approved else 'recent_missing_repair')
+    mode = 'approved_repair' if approved else ('new_payment' if paid_at >= cutover else 'recent_missing_repair')
     if expiry < credit_day():
         if not approved or restore_days is None:
             result['action'] = 'review_expired_missing_cycle'
@@ -319,19 +330,25 @@ def issue_payment(sub, user, details, transaction, *, approved_missing=None, res
         expiry = credit_day() + timedelta(days=restore_days)
         mode = 'approved_historical_restoration'
     payer_email = transaction.get('payer_email') or details.get('subscriber', {}).get('email_address')
-    payment = PaymentTransaction(user_id=user.id, subscription_id=sub.id,
+    payment = existing or PaymentTransaction(user_id=user.id, subscription_id=sub.id,
         paypal_capture_id=pid, paypal_subscription_id=sub.paypal_subscription_id,
         paypal_webhook_event_id=webhook_id, platform_email=user.email,
         paypal_payer_email=payer_email, custom_id=details.get('custom_id'),
         amount=float(amount), currency=currency, transaction_type='subscription_payment',
         status='completed', description=f'Tier {tier} verified payment; {mode}')
+    if existing and existing.subscription_id is None:
+        existing.subscription_id = sub.id
     grant = CreditGrant(user_id=user.id, balance=credits, source_type='subscription',
         description=f'Tier {tier}; PayPal {pid}; {mode}', expiry_date=expiry)
     db.session.add_all([payment, grant])
     db.session.flush()
+    if receipt:
+        receipt.grant_id, receipt.original_amount = grant.id, credits
+        receipt.payment_time, receipt.mode, receipt.issued_at = paid_at, mode, utcnow()
+    else:
+        db.session.add(SubscriptionCreditReceipt(payment_id=payment.id, subscription_id=sub.id,
+            grant_id=grant.id, original_amount=credits, payment_time=paid_at, mode=mode))
     db.session.add_all([
-        SubscriptionCreditReceipt(payment_id=payment.id, subscription_id=sub.id,
-            grant_id=grant.id, original_amount=credits, payment_time=paid_at, mode=mode),
         CreditTransaction(user_id=user.id, amount=credits, transaction_type='earned',
             description=f'Tier {tier}; payment {pid}; grant {grant.id}; {mode}')])
     # This is paid-through, not the next PayPal billing date. Never revive canceled status.

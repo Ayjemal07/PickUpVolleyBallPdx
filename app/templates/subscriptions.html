@@ -304,6 +304,7 @@
                     passNotice.textContent = !result.verified ? 'Some pass details could not be verified. Please try again shortly.' :
                         result.upgrade_pending ? 'Tier 2 is ready. We are retrying the cancellation of Tier 1 renewals.' :
                         result.payment_review_required ? 'A payment needs review. Please contact support before purchasing again.' :
+                        result.payment_history_pending ? 'PayPal shows a recent payment, but its transaction is not available for credit verification yet. Please do not subscribe again; contact support if the credits do not appear shortly.' :
                         result.pending_subscription ? 'A checkout is waiting for PayPal approval or payment. Use the same plan button below to continue.' :
                         'Your pass status is up to date. Available credits: ' + result.event_credits;
                 } catch (error) {

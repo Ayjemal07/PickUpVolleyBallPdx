@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeof item.productId === 'string' &&
                 typeof item.name === 'string' &&
                 typeof item.size === 'string' &&
+                typeof item.color === 'string' &&
+                Number.isInteger(item.variantId) &&
                 Number.isInteger(item.quantity) &&
                 item.quantity >= 1 &&
                 item.quantity <= MAX_QUANTITY &&
@@ -58,6 +60,104 @@ document.addEventListener('DOMContentLoaded', () => {
             `merch-status ${type ? `is-${type}` : ''}`;
     }
 
+    document.querySelectorAll('.merch-image-wrap').forEach(wrap => {
+        const slides = Array.from(wrap.querySelectorAll('.merch-image-slide'));
+        const dots = Array.from(wrap.querySelectorAll('.merch-gallery-dot'));
+        let active = 0;
+        let manuallySelected = false;
+        let hoverPreview = false;
+
+        function showPhoto(index, manual = false) {
+            active = (index + slides.length) % slides.length;
+            if (manual) {
+                manuallySelected = true;
+                hoverPreview = false;
+            }
+            slides.forEach((slide, position) => {
+                const selected = position === active;
+                slide.classList.toggle('is-active', selected);
+                slide.setAttribute('aria-hidden', String(!selected));
+            });
+            dots.forEach((dot, position) => {
+                const selected = position === active;
+                dot.classList.toggle('is-active', selected);
+                dot.setAttribute('aria-current', String(selected));
+            });
+        }
+
+        wrap.querySelector('.is-prev').addEventListener('click', () => {
+            showPhoto(active - 1, true);
+        });
+        wrap.querySelector('.is-next').addEventListener('click', () => {
+            showPhoto(active + 1, true);
+        });
+        dots.forEach(dot => dot.addEventListener('click', () => {
+            showPhoto(Number(dot.dataset.index), true);
+        }));
+        wrap.addEventListener('pointerenter', event => {
+            if (event.pointerType === 'mouse' && !manuallySelected && active === 0) {
+                hoverPreview = true;
+                showPhoto(1);
+            }
+        });
+        wrap.addEventListener('pointerleave', event => {
+            if (event.pointerType === 'mouse' && hoverPreview) {
+                hoverPreview = false;
+                showPhoto(0);
+            }
+        });
+        wrap.addEventListener('keydown', event => {
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                event.preventDefault();
+                showPhoto(active + (event.key === 'ArrowRight' ? 1 : -1), true);
+            }
+        });
+        wrap.resetGallery = () => {
+            manuallySelected = false;
+            hoverPreview = false;
+            showPhoto(0);
+        };
+    });
+
+    document
+        .querySelectorAll('.merch-variant')
+        .forEach(select => {
+            const card = select.closest('.merch-product-card');
+            const wrap = card.querySelector('.merch-image-wrap');
+            const [primary, detail] = wrap.querySelectorAll('.merch-image-slide');
+            const defaultImage = primary.getAttribute('src');
+            const defaultDetail = detail.getAttribute('src');
+            const defaultFocus = detail.style.objectPosition;
+
+            select.addEventListener('change', () => {
+                const option = select.selectedOptions[0];
+                const available = Number(
+                    option?.dataset.available || 0
+                );
+                const selectedImage = option?.dataset.image || defaultImage;
+                primary.src = selectedImage;
+                const selectedDetail = option?.dataset.detailImage || defaultDetail;
+                detail.src = selectedDetail;
+                detail.classList.toggle(
+                    'is-zoom',
+                    selectedDetail === selectedImage
+                );
+                detail.style.objectPosition = selectedImage === defaultImage
+                    ? defaultFocus
+                    : 'center';
+                card.dataset.productImage = selectedImage;
+                wrap.resetGallery();
+
+                const quantitySelect = card.querySelector('.merch-quantity');
+                Array.from(quantitySelect.options).forEach(option => {
+                    option.disabled = Number(option.value) > available;
+                });
+                if (Number(quantitySelect.value) > available) {
+                    quantitySelect.value = '1';
+                }
+            });
+        });
+
     document
         .querySelectorAll('.merch-add-button')
         .forEach(button => {
@@ -66,8 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     '.merch-product-card'
                 );
 
-                const sizeSelect = card.querySelector(
-                    '.merch-size'
+                const variantSelect = card.querySelector(
+                    '.merch-variant'
                 );
 
                 const quantity = Number(
@@ -76,13 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     ).value
                 );
 
-                const size = sizeSelect.value;
+                const option = variantSelect.selectedOptions[0];
 
-                if (!size) {
-                    sizeSelect.focus();
+                if (!variantSelect.value) {
+                    variantSelect.focus();
 
                     setStatus(
-                        'Choose a size before adding this item.',
+                        'Choose a color and size before adding this item.',
                         'error'
                     );
 
@@ -91,8 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const newItem = {
                     productId: card.dataset.productId,
+                    variantId: Number(variantSelect.value),
                     name: card.dataset.productName,
-                    size,
+                    size: option.dataset.size,
+                    color: option.dataset.color,
+                    available: Number(option.dataset.available),
                     quantity,
                     unitPrice: Number(
                         card.dataset.productPrice
@@ -101,9 +204,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const existing = cart.find(item =>
-                    item.productId === newItem.productId &&
-                    item.size === newItem.size
+                    item.variantId === newItem.variantId
                 );
+
+                if (quantity + (existing?.quantity || 0) >
+                    Number(option.dataset.available)) {
+                    setStatus('Not enough of this color and size is in stock.', 'error');
+                    return;
+                }
 
                 if (existing) {
                     if (
@@ -113,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         setStatus(
                             (
                                 `Maximum quantity is ` +
-                                `${MAX_QUANTITY} per size.`
+                                `${MAX_QUANTITY} per color and size.`
                             ),
                             'error'
                         );
@@ -131,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 setStatus(
                     (
-                        `${newItem.name} (${newItem.size}) ` +
+                        `${newItem.name} (${newItem.color}, ${newItem.size}) ` +
                         `was added to your cart.`
                     ),
                     'success'

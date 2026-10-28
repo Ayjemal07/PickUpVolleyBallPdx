@@ -20,12 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkoutForm =
         document.getElementById('merchCheckoutForm');
 
-    const shippingFields =
-        document.getElementById('merchShippingFields');
-
-    const pickupMessage =
-        document.getElementById('merchPickupMessage');
-
     const subtotalElement =
         document.getElementById('merchSubtotal');
 
@@ -51,6 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let cart = loadCart();
     let paymentInProgress = false;
+    let paymentReady = false;
+    let quoteRevision = 0;
+    let activePayPalOrderId = null;
+    let activeCancelToken = null;
 
     function loadCart() {
         try {
@@ -67,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 typeof item.productId === 'string' &&
                 typeof item.name === 'string' &&
                 typeof item.size === 'string' &&
+                typeof item.color === 'string' &&
+                Number.isInteger(item.variantId) &&
                 Number.isInteger(item.quantity) &&
                 item.quantity >= 1 &&
                 item.quantity <= MAX_QUANTITY &&
@@ -98,12 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `merch-status ${type ? `is-${type}` : ''}`;
     }
 
-    function selectedFulfillment() {
-        return document.querySelector(
-            'input[name="fulfillment_method"]:checked'
-        ).value;
-    }
-
     function subtotal() {
         return cart.reduce(
             (sum, item) =>
@@ -114,9 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function currentShippingAmount() {
-        return selectedFulfillment() === 'shipping'
-            ? shippingRate
-            : 0;
+        return shippingRate;
     }
 
     function renderTotals() {
@@ -133,31 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
             money(cartSubtotal + shipping);
     }
 
-    function setShippingRequirements(enabled) {
-        const requiredFieldIds = [
-            'merchShippingName',
-            'merchAddressLine1',
-            'merchCity',
-            'merchState',
-            'merchPostalCode'
-        ];
-
-        requiredFieldIds.forEach(id => {
-            document.getElementById(id).required = enabled;
-        });
-    }
-
-    function updateFulfillmentDisplay() {
-        const shippingSelected =
-            selectedFulfillment() === 'shipping';
-
-        shippingFields.hidden = !shippingSelected;
-        pickupMessage.hidden = shippingSelected;
-
-        setShippingRequirements(shippingSelected);
-        renderTotals();
-    }
-
     function updateQuantity(index, quantity) {
         if (quantity < 1) {
             cart.splice(index, 1);
@@ -170,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         saveCart();
         renderCart();
+        refreshCartQuote();
     }
 
     function createQuantityButton(
@@ -209,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const meta = document.createElement('p');
             meta.textContent =
-                `Size: ${item.size} · ${money(item.unitPrice)}`;
+                `${item.color} · ${item.size} · ${money(item.unitPrice)}`;
 
             const controls = document.createElement('div');
             controls.className = 'merch-cart-controls';
@@ -240,7 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             increase.disabled =
-                item.quantity >= MAX_QUANTITY;
+                item.quantity >= Math.min(
+                    MAX_QUANTITY,
+                    Number(item.available) || MAX_QUANTITY
+                );
 
             const remove = document.createElement('button');
             remove.type = 'button';
@@ -251,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cart.splice(index, 1);
                 saveCart();
                 renderCart();
+                refreshCartQuote();
             });
 
             controls.append(
@@ -275,22 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTotals();
     }
 
-    document
-        .querySelectorAll(
-            'input[name="fulfillment_method"]'
-        )
-        .forEach(input => {
-            input.addEventListener(
-                'change',
-                updateFulfillmentDisplay
-            );
-        });
-
     function checkoutPayload() {
-        const fulfillmentMethod =
-            selectedFulfillment();
-
         const payload = {
+            expected_subtotal: subtotal().toFixed(2),
             customer: {
                 name: document
                     .getElementById('merchCustomerName')
@@ -307,18 +266,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     .value
                     .trim(),
 
-                fulfillment_method: fulfillmentMethod
+                fulfillment_method: 'shipping'
             },
 
             items: cart.map(item => ({
                 product_id: item.productId,
-                size: item.size,
+                variant_id: item.variantId,
                 quantity: item.quantity
             }))
         };
 
-        if (fulfillmentMethod === 'shipping') {
-            payload.shipping_address = {
+        payload.shipping_address = {
                 name: document
                     .getElementById('merchShippingName')
                     .value
@@ -352,8 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 country: document
                     .getElementById('merchCountry')
                     .value
-            };
-        }
+        };
 
         return payload;
     }
@@ -397,6 +354,45 @@ document.addEventListener('DOMContentLoaded', () => {
         return data;
     }
 
+    async function refreshCartQuote() {
+        const revision = ++quoteRevision;
+        paymentReady = false;
+        if (cart.length === 0) return;
+
+        try {
+            const result = await apiRequest('/api/merch/quote', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    items: cart.map(item => ({
+                        product_id: item.productId,
+                        variant_id: item.variantId,
+                        quantity: item.quantity
+                    }))
+                })
+            });
+            if (revision !== quoteRevision) return;
+
+            const changed = result.items.some((item, index) =>
+                Number(item.unitPrice) !== Number(cart[index]?.unitPrice) ||
+                Number(item.available) !== Number(cart[index]?.available)
+            );
+            cart = result.items;
+            saveCart();
+            renderCart();
+            paymentReady = true;
+            if (changed) {
+                setStatus('Prices or stock changed. Review your cart before paying.');
+            } else {
+                setStatus('');
+            }
+        } catch (error) {
+            if (revision === quoteRevision) {
+                setStatus(error.message, 'error');
+            }
+        }
+    }
+
     if (window.paypal) {
         window.paypal.Buttons({
             style: {
@@ -408,8 +404,12 @@ document.addEventListener('DOMContentLoaded', () => {
             onClick(data, actions) {
                 if (
                     paymentInProgress ||
+                    !paymentReady ||
                     !validateCheckout()
                 ) {
+                    if (!paymentReady) {
+                        setStatus('Your cart needs to be updated before checkout.', 'error');
+                    }
                     return actions.reject();
                 }
 
@@ -438,6 +438,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     );
 
+                    activePayPalOrderId = result.id;
+                    activeCancelToken = result.cancel_token;
                     return result.id;
                 } catch (error) {
                     paymentInProgress = false;
@@ -455,9 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 setStatus(
                     'Confirming your payment…'
                 );
-
-                const fulfillmentMethod =
-                    selectedFulfillment();
 
                 try {
                     const result = await apiRequest(
@@ -479,6 +478,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     cart = [];
                     saveCart();
+                    activePayPalOrderId = null;
+                    activeCancelToken = null;
 
                     checkoutLayout.hidden = true;
                     emptyPage.hidden = true;
@@ -486,22 +487,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     orderNumber.textContent =
                         result.order_number;
 
-                    if (
-                        fulfillmentMethod ===
-                        'event_pickup'
-                    ) {
-                        successFulfillment.textContent =
-                            (
-                                'We’ll email you to arrange ' +
-                                'pickup at an upcoming event.'
-                            );
-                    } else {
-                        successFulfillment.textContent =
-                            (
-                                'We’ll email you when your ' +
-                                'order has been shipped.'
-                            );
-                    }
+                    successFulfillment.textContent =
+                        'We’ll email you when your order has been shipped.';
 
                     successPanel.hidden = false;
 
@@ -524,15 +511,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             },
 
-            onCancel() {
+            async onCancel() {
                 paymentInProgress = false;
+                let released = true;
 
-                setStatus(
-                    (
-                        'Checkout was canceled. ' +
-                        'Your cart is still saved.'
-                    )
-                );
+                if (activePayPalOrderId && activeCancelToken) {
+                    try {
+                        await apiRequest(
+                            '/api/merch/orders/' +
+                                encodeURIComponent(activePayPalOrderId) +
+                                '/cancel',
+                            {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    cancel_token: activeCancelToken
+                                })
+                            }
+                        );
+                    } catch (error) {
+                        released = false;
+                        console.error('Could not release cart hold:', error);
+                        setStatus(error.message, 'error');
+                    }
+                }
+                activePayPalOrderId = null;
+                activeCancelToken = null;
+                if (released) {
+                    refreshCartQuote();
+                    setStatus('Checkout was canceled. Your cart is still saved.');
+                } else {
+                    paymentReady = false;
+                }
             },
 
             onError(error) {
@@ -562,6 +572,6 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
-    updateFulfillmentDisplay();
     renderCart();
+    refreshCartQuote();
 });
