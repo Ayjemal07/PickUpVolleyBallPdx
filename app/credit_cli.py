@@ -14,6 +14,16 @@ def credits():
     """Reconcile PayPal memberships, safely previewing changes by default."""
 
 
+@credits.command('send-event-promotion-emails')
+@click.option('--limit', default=100, type=click.IntRange(1, 1000), show_default=True)
+@with_appcontext
+def send_event_promotion_emails(limit):
+    """Retry queued promotion emails without issuing any credits."""
+    from .event_notifications import deliver_promotion_emails
+    result = deliver_promotion_emails(limit=limit)
+    click.echo(json.dumps(result))
+
+
 def read_map(path):
     if path is None:
         return {}

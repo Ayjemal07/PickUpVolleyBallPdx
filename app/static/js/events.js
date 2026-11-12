@@ -25,6 +25,19 @@ function isFreeEventPrice(ticketPrice) {
     );
 }
 
+function configurePlusOnePolicy(checkboxId, limitId) {
+    const checkbox = document.getElementById(checkboxId);
+    const limit = document.getElementById(limitId);
+    if (!checkbox || !limit) return;
+    const update = () => {
+        limit.disabled = !checkbox.checked;
+        limit.required = checkbox.checked;
+        if (checkbox.checked && Number(limit.value) < 1) limit.value = '1';
+    };
+    checkbox.addEventListener('change', update);
+    update();
+}
+
 
 function configurePricingTypeSelector(
     selectId,
@@ -39,34 +52,19 @@ function configurePricingTypeSelector(
 
     const applyPricingType = () => {
         const isFree = select.value === "free";
-
-        if (isFree) {
-            if (!isFreeEventPrice(priceInput.value)) {
-                priceInput.dataset.lastPaidPrice =
-                    priceInput.value || "12";
-            }
-
-            priceInput.value = "0.00";
-            priceInput.readOnly = true;
-
-            if (helpText) {
-                helpText.textContent =
-                    "FREE events do not use PayPal " +
-                    "or event credits.";
-            }
-        } else {
-            priceInput.readOnly = false;
-
-            if (isFreeEventPrice(priceInput.value)) {
-                priceInput.value =
-                    priceInput.dataset.lastPaidPrice ||
-                    "12.00";
-            }
-
-            if (helpText) {
-                helpText.textContent = "";
-            }
+        const limited = select.value === 'limited';
+        const field = select.parentElement.querySelector('.free-spots-field');
+        if (field) {
+            field.hidden = !limited;
+            field.querySelector('input').disabled = !limited;
+            field.querySelector('input').required = limited;
         }
+
+        priceInput.readOnly = false;
+        if (isFreeEventPrice(priceInput.value)) priceInput.value = '12.00';
+        if (helpText) helpText.textContent =
+            'One free primary spot per email per event. Plus-ones always pay this ticket price.';
+
     };
 
     select.addEventListener(
@@ -287,6 +285,10 @@ configurePricingTypeSelector(
     "editTicketPrice",
     "editTicketPriceHelp"
 );
+
+configurePlusOnePolicy('allowGuests', 'guestLimit');
+configurePlusOnePolicy('recurringAllowGuests', 'recurringGuestLimit');
+configurePlusOnePolicy('editAllowGuests', 'editGuestLimit');
 
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof subStatus !== 'undefined' && subStatus === 'pending') {
@@ -666,8 +668,10 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById("editFullAddress").value = event.full_address || '';
             document.getElementById("editAllowGuests").checked = event.allow_guests;
             document.getElementById("editGuestLimit").value = event.guest_limit;
+            document.getElementById("editAllowGuests").dispatchEvent(new Event('change'));
             document.getElementById("editPricingType").value =
-                event.is_free ? "free" : "paid";
+                event.pricing_type || (event.free_spots === event.max_capacity ? "free" : event.free_spots ? "limited" : "paid");
+            document.getElementById("editFreeSpots").value = event.free_spots || 1;
 
             document.getElementById("editTicketPrice").value =
                 event.ticket_price;
@@ -874,6 +878,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                         <a href="/events/${event.id}" class="see-more-button">See More</a>
                     </p>
                     <p class="event-going"><strong>Who's Going:</strong> ${event.rsvp_count || 0} going</p>
+                    ${event.free_spots ? `<p class="event-price-free"><strong>${event.free_spots_remaining > 0 ? "FREE primary spots: " + event.free_spots_remaining + " left. One per email." : "Free primary spots claimed."} Plus-ones and paid primary spots: $${Number(event.ticket_price).toFixed(2)} each.</strong></p>` : ""}
                     ${event.is_free ? `
                         <p
                             class="event-price-free"
@@ -993,7 +998,6 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             const userAndGuests = 1 + currentGuestCount;
 
             const reachedGuestLimit =
-                guestLimit > 0 &&
                 currentGuestCount >= guestLimit;
 
             const reachedCapacity =
@@ -1035,97 +1039,37 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         }
 
         // Function to update total price and re-render PayPal buttons
-        function updatePriceAndPayPal(eventId, guestsSelected) {
-            const freeEvent = isFreeEventPrice(
-                currentTicketPrice
-            );
-
-            const courtesy = document.getElementById(
-                "freeEventCourtesy"
-            );
-
-            if (freeEvent) {
-                document.getElementById(
-                    "totalPriceSpan"
-                ).textContent = "0.00";
-
-                document.getElementById(
-                    "rsvp-action-container"
-                ).innerHTML = `
-                    <p
-                        style="
-                            margin: 0;
-                            text-align: center;
-                            font-size: 0.9em;
-                            color: #333;
-                        "
-                    >
-                        No PayPal payment or event credit will be used.
-                    </p>
-                `;
-
-                if (courtesy) {
-                    courtesy.style.display = "block";
-                }
-
-                renderActionButtons(
-                    eventId,
-                    0,
-                    guestsSelected
-                );
-
-                return;
+        let quoteVersion = 0;
+        let currentBookingFree = false;
+        async function updatePriceAndPayPal(eventId, guestsSelected) {
+            const version = ++quoteVersion;
+            const container = document.getElementById('paypal-container');
+            container.innerHTML = 'Checking price...';
+            try {
+                const response = await fetch('/api/events/' + eventId + '/quote', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({quantity: 1 + guestsSelected, is_edit: isEditingRsvp})
+                });
+                const pricing = await response.json();
+                if (version !== quoteVersion) return;
+                if (!response.ok) throw new Error(pricing.error);
+                currentBookingFree = Number(pricing.total) === 0 && pricing.credits === 0;
+                document.getElementById('totalPriceSpan').textContent = Number(pricing.total).toFixed(2);
+                document.getElementById('rsvp-action-container').textContent =
+                    pricing.removed_paid_spots
+                        ? (pricing.credits_to_return
+                            ? `Removing these paid plus-ones returns ${pricing.credits_to_return} event credit(s), valid for 30 days.`
+                            : 'Removing these paid plus-ones returns no credits because the event starts in less than 48 hours.')
+                        : pricing.free_spots
+                        ? 'Your primary spot: FREE. Plus-ones pay the regular ticket price.'
+                        : (pricing.credits ? 'Your primary spot uses 1 event credit.' : 'Regular ticket price applies.');
+                const courtesy = document.getElementById('freeEventCourtesy');
+                if (courtesy) courtesy.style.display = currentBookingFree ? 'block' : 'none';
+                renderActionButtons(eventId, Number(pricing.total), guestsSelected);
+            } catch (error) {
+                if (version === quoteVersion) container.textContent = error.message || 'Could not check price. Please reopen registration.';
             }
-
-            if (courtesy) {
-                courtesy.style.display = "none";
-            }
-
-            let totalAmount;
-            let message = ''; // This will hold user-facing messages
-
-            // --- Main Logic Starts Here ---
-
-            // SCENARIO 1: User is editing an existing RSVP.
-            if (isEditingRsvp) {
-                // For edits, calculate the cost of *additional* guests only.
-                const guestDifference = guestsSelected - initialGuestCount;
-                totalAmount = currentTicketPrice * guestDifference;
-            }
-            // SCENARIO 2: This is a brand new RSVP.
-            else {
-                // CHECK CENTRALIZED CREDITS
-                if (userEventCredits > 0) {
-                    const remainingBalance = userEventCredits - 1;
-
-                    // Restored Messaging: Shows exact balance deduction
-                    message = `
-                        <div style="text-align: left; line-height: 1.4; width: 100%;">
-                            <p style="margin-bottom: 5px;">Your spot will be covered by 1 Event Credit.</p>
-                            <p style="margin: 0; font-size: 0.9em; color: #333;">
-                                <strong>Credit Balance:</strong> ${userEventCredits} &rarr; ${remainingBalance}
-                            </p>
-                        </div>
-                    `;
-                    // Set total to 0 for the user (pay only for guests)
-                    // Logic: User uses 1 credit, pays for guests
-                    totalAmount = currentTicketPrice * guestsSelected;
-                } else {
-                    totalAmount = currentTicketPrice * (1 + guestsSelected);
-                }
-            }
-
-            // Ensure the displayed price is never negative (handles guest removal in edits).
-            const displayPrice = Math.max(0, totalAmount);
-            document.getElementById('totalPriceSpan').textContent = displayPrice.toFixed(2);
-            
-            // Display the relevant message (e.g., "Your spot is free!").
-            document.getElementById('rsvp-action-container').innerHTML = message;
-            
-            // This new function decides whether to show PayPal or a "Confirm Free RSVP" button.
-            renderActionButtons(eventId, totalAmount,guestsSelected);
         }
-
 
         function renderActionButtons(
             eventId,
@@ -1140,7 +1084,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
             paypalContainer.innerHTML = '';
 
             // FREE event: never use PayPal or credits.
-            if (isFreeEventPrice(currentTicketPrice)) {
+            if (currentBookingFree) {
                 if (
                     isEditingRsvp &&
                     guestsSelected === initialGuestCount
@@ -1160,7 +1104,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                 confirmButton.className = 'btn btn-success';
 
                 confirmButton.textContent = isEditingRsvp
-                    ? 'Update Free RSVP'
+                    ? 'Save RSVP Changes'
                     : 'Confirm Free RSVP';
 
                 paypalContainer.appendChild(confirmButton);
@@ -1222,7 +1166,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
 
                             confirmButton.textContent =
                                 isEditingRsvp
-                                    ? 'Update Free RSVP'
+                                    ? 'Save RSVP Changes'
                                     : 'Confirm Free RSVP';
                         }
                     }
@@ -1368,6 +1312,9 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                                 })
                             });
                             const orderData = await response.json();
+                            if (!response.ok || orderData.error) {
+                                throw new Error(orderData.error || 'Could not complete payment. Please refresh to review your RSVP.');
+                            }
                             const transaction = orderData.purchase_units?.[0]?.payments?.captures?.[0];
 
 
@@ -1386,7 +1333,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
                             location.reload(); // Reload to update attendee count and UI
                         } catch (error) {
                             console.error("Error capturing order:", error);
-                            alert("Failed to complete PayPal transaction. Please try again.");
+                            alert(error.message || "Failed to complete PayPal transaction. Please try again.");
                         }
                     },
                     onError: function(err) {
@@ -1575,7 +1522,7 @@ function renderEventCards(eventsToRender, containerType, flashMessage, flashEven
         guestIncrementBtn.onclick = function () {
             let count = parseInt(guestCountSpan.textContent);
             const userAndGuests = 1 + count;
-            if (userAndGuests < currentSpotsLeft && (currentGuestLimit === 0 || count < currentGuestLimit)) {
+            if (userAndGuests < currentSpotsLeft && count < currentGuestLimit) {
                 count++;
                 guestCountSpan.textContent = count;
                 updatePriceAndPayPal(currentEventId, count);
@@ -1782,7 +1729,8 @@ function initGuestCheckout(eventId, ticketPrice,guestLimit, maxCapacity, rsvpCou
         parsedGuestLimit,
         guestSpotsAvailable
     );
-    const freeEvent = isFreeEventPrice(ticketPrice);
+    let freeEvent = isFreeEventPrice(ticketPrice);
+    let guestQuoteVersion = 0;
     const priceDisplay = document.getElementById('guestTotalPrice');
     const countDisplay = document.getElementById('guestGuestCount');
 
@@ -1797,20 +1745,28 @@ function initGuestCheckout(eventId, ticketPrice,guestLimit, maxCapacity, rsvpCou
     }
     
     // Helper to update UI
-    const updatePrice = () => {
-        const total = freeEvent
-            ? 0
-            : (1 + guestCount) * parseFloat(ticketPrice);
-
-        if (priceDisplay) {
-            priceDisplay.textContent = freeEvent
-                ? "FREE"
-                : "$" + total.toFixed(2);
+    const updatePrice = async () => {
+        const version = ++guestQuoteVersion;
+        if (countDisplay) countDisplay.textContent = guestCount;
+        const actions = document.getElementById('guest-paypal-container');
+        if (actions) actions.textContent = 'Checking price...';
+        try {
+            const response = await fetch('/api/events/' + eventId + '/quote', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({quantity: 1 + guestCount, is_guest_checkout: true, email: document.getElementById('guestEmail').value})
+            });
+            const pricing = await response.json();
+            if (version !== guestQuoteVersion) return;
+            if (!response.ok) throw new Error(pricing.error);
+            freeEvent = Number(pricing.total) === 0;
+            if (priceDisplay) priceDisplay.textContent = (pricing.free_spots ? 'Your primary spot: FREE. Total for plus-ones: $' : 'Total: $') + Number(pricing.total).toFixed(2);
+            if (courtesy) courtesy.style.display = freeEvent ? 'block' : 'none';
+            renderGuestActions();
+        } catch (error) {
+            if (version === guestQuoteVersion && actions) actions.textContent = error.message;
         }
-        if(countDisplay) countDisplay.textContent = guestCount;
     };
-    updatePrice(); // Run once on init
-
+    document.getElementById('guestEmail').onchange = updatePrice;
     const decBtn = document.getElementById('guestGuestDecrement');
     const incBtn = document.getElementById('guestGuestIncrement');
     const guestCapacityInfo =
@@ -1897,6 +1853,7 @@ function initGuestCheckout(eventId, ticketPrice,guestLimit, maxCapacity, rsvpCou
         return;
     }
 
+    function renderGuestActions() {
     container.innerHTML = '';
 
     if (freeEvent) {
@@ -2057,6 +2014,7 @@ function initGuestCheckout(eventId, ticketPrice,guestLimit, maxCapacity, rsvpCou
                     body: JSON.stringify({
                         event_id: eventId,
                         quantity: 1 + guestCount, // You + Guests
+                        email: document.getElementById('guestEmail').value,
                         is_guest_checkout: true
                     })
                 }).then(res => res.json()).then(orderData => orderData.id);
@@ -2092,5 +2050,7 @@ function initGuestCheckout(eventId, ticketPrice,guestLimit, maxCapacity, rsvpCou
                 });
             }
         }).render('#guest-paypal-container');
+    }
+    updatePrice();
     
 }

@@ -147,6 +147,7 @@ class Event(db.Model):
     cancellation_reason = db.Column(db.String(255), nullable=True)  # New field for cancellation reason
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     ticket_price = db.Column(db.Float, nullable=False, default=10.0)
+    free_spots = db.Column(db.Integer, nullable=False, default=0, server_default='0')
     allow_guests = db.Column(db.Boolean, default=False)
     guest_limit = db.Column(db.Integer, nullable=True)
     attendees = db.relationship('EventAttendee', back_populates='event', cascade="all, delete-orphan")
@@ -172,12 +173,58 @@ class EventAttendee(db.Model):
 
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     guest_count = db.Column(db.Integer, nullable=False, default=0)
+    free_spots = db.Column(db.Integer, nullable=False, default=0, server_default='0')
+    promotion_compensated = db.Column(db.Boolean, nullable=False, default=False, server_default='0')
+
+    @property
+    def creditable_spots(self):
+        return max(0, 1 + (self.guest_count or 0) - (self.free_spots or 0)
+                   - int(bool(self.promotion_compensated)))
 
     user = db.relationship('User', backref='attendances')
     event = db.relationship('Event', back_populates='attendees')
 
 
 # Add to models.py
+
+class EventCheckout(db.Model):
+    """Server-side pricing snapshot, checked again before capturing payment."""
+    id = db.Column(db.String(255), primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.String(36), nullable=True)
+    rsvp_id = db.Column(db.Integer, nullable=True)
+    quantity = db.Column(db.Integer, nullable=False)
+    free_spots = db.Column(db.Integer, nullable=False)
+    credits = db.Column(db.Integer, nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    completed = db.Column(db.Boolean, nullable=False, default=False)
+    email = db.Column(db.String(150), nullable=True)
+
+
+class EventPromotionClaim(db.Model):
+    """One primary-attendee promotion per event/email, even after cancellation."""
+    __table_args__ = (db.UniqueConstraint('event_id', 'email', name='uq_event_promotion_email'),)
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id', ondelete='CASCADE'), nullable=False)
+    email = db.Column(db.String(150), nullable=False)
+    user_id = db.Column(db.String(36), nullable=True)
+    benefit = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class EventPromotionEmail(db.Model):
+    """Notification queued in the same transaction as its promotional credit."""
+    id = db.Column(db.Integer, primary_key=True)
+    grant_id = db.Column(db.Integer, db.ForeignKey('credit_grant.id'), nullable=False, unique=True)
+    event_id = db.Column(db.Integer, nullable=False, index=True)
+    recipient = db.Column(db.String(150), nullable=False)
+    subject = db.Column(db.String(255), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    sent_at = db.Column(db.DateTime, nullable=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    last_error = db.Column(db.String(1024), nullable=True)
+
 
 class Subscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
